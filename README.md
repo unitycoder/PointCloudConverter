@@ -1,2 +1,19 @@
 # PointCloudConverter
 PointCloud converter (commandline and GUI) for Point Cloud Viewer &amp; Tools (Unity plugin)
+
+### Building
+- Open project in VS2019
+- Press F5 to build
+- Executable is created in the /bin/ folder (you can launch it from command prompt, or from Explorer to use GUI)
+
+### Notes
+- See Project/PointCloudConverter Properties.. > Build Events / Post build: Small robocopy script is used to move output files into lib/ folder (so that executable is alone in the root folder)
+
+### Requirements
+- Windows 10
+- Visual Studio 2017 or later
+- To view converted Point Clouds inside Unity, this viewer is required: from Unity Asset Store: https://github.com/unitycoder/UnityPointCloudViewer
+
+### Pull Request
+This standalone converter is open-source, so you can create your own Forks and versions.
+Pull requests to improve this converter are welcome! (please create Issue first, so can comment on it)
