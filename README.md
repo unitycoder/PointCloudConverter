@@ -9,6 +9,14 @@ PointCloud converter (commandline and GUI) for Point Cloud Viewer &amp; Tools (U
 ### Notes
 - See Project/PointCloudConverter Properties.. > Build Events / Post build: Small robocopy script is used to move output files into lib/ folder (so that executable is alone in the root folder)
 
+### Import Formats
+- LAZ/LAS
+- (more to be added)
+
+### Export Formats
+- UCPC (V2) for https://github.com/unitycoder/UnityPointCloudViewer
+- PCROOT (V3) for https://github.com/unitycoder/UnityPointCloudViewer
+
 ### Requirements
 - Windows 10
 - Visual Studio 2017 or later
