@@ -74,12 +74,12 @@ namespace PointCloudConverter.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool flipYZ {
+        public bool swapYZ {
             get {
-                return ((bool)(this["flipYZ"]));
+                return ((bool)(this["swapYZ"]));
             }
             set {
-                this["flipYZ"] = value;
+                this["swapYZ"] = value;
             }
         }
         
@@ -109,25 +109,13 @@ namespace PointCloudConverter.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool useLimit {
-            get {
-                return ((bool)(this["useLimit"]));
-            }
-            set {
-                this["useLimit"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int limit {
+        public int maxImportPointCount {
             get {
-                return ((int)(this["limit"]));
+                return ((int)(this["maxImportPointCount"]));
             }
             set {
-                this["limit"] = value;
+                this["maxImportPointCount"] = value;
             }
         }
         
@@ -169,37 +157,13 @@ namespace PointCloudConverter.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool packColors {
-            get {
-                return ((bool)(this["packColors"]));
-            }
-            set {
-                this["packColors"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("64")]
-        public int packMagicValue {
+        public int packMagic {
             get {
-                return ((int)(this["packMagicValue"]));
+                return ((int)(this["packMagic"]));
             }
             set {
-                this["packMagicValue"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool skipPoints {
-            get {
-                return ((bool)(this["skipPoints"]));
-            }
-            set {
-                this["skipPoints"] = value;
+                this["packMagic"] = value;
             }
         }
         
@@ -212,18 +176,6 @@ namespace PointCloudConverter.Properties {
             }
             set {
                 this["skipEveryN"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool keepPoints {
-            get {
-                return ((bool)(this["keepPoints"]));
-            }
-            set {
-                this["keepPoints"] = value;
             }
         }
         
@@ -254,12 +206,120 @@ namespace PointCloudConverter.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int maxFiles {
+        public int maxFileCount {
             get {
-                return ((int)(this["maxFiles"]));
+                return ((int)(this["maxFileCount"]));
             }
             set {
-                this["maxFiles"] = value;
+                this["maxFileCount"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool useMinPointCount {
+            get {
+                return ((bool)(this["useMinPointCount"]));
+            }
+            set {
+                this["useMinPointCount"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool usePackMagic {
+            get {
+                return ((bool)(this["usePackMagic"]));
+            }
+            set {
+                this["usePackMagic"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool useMaxImportPointCount {
+            get {
+                return ((bool)(this["useMaxImportPointCount"]));
+            }
+            set {
+                this["useMaxImportPointCount"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool useSkip {
+            get {
+                return ((bool)(this["useSkip"]));
+            }
+            set {
+                this["useSkip"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool useKeep {
+            get {
+                return ((bool)(this["useKeep"]));
+            }
+            set {
+                this["useKeep"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool useMaxFileCount {
+            get {
+                return ((bool)(this["useMaxFileCount"]));
+            }
+            set {
+                this["useMaxFileCount"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool packColors {
+            get {
+                return ((bool)(this["packColors"]));
+            }
+            set {
+                this["packColors"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string importFormat {
+            get {
+                return ((string)(this["importFormat"]));
+            }
+            set {
+                this["importFormat"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string exportFormat {
+            get {
+                return ((string)(this["exportFormat"]));
+            }
+            set {
+                this["exportFormat"] = value;
             }
         }
     }

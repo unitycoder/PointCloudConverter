@@ -234,16 +234,16 @@ namespace PointCloudConverter
                                 }
                                 break;
 
-                            case "-flip":
-                                Console.WriteLine("flip = " + param);
+                            case "-swap":
+                                Console.WriteLine("swap = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
-                                    errors.Add("Invalid flip parameter: " + param);
+                                    errors.Add("Invalid swap parameter: " + param);
                                 }
                                 else
                                 {
-                                    importSettings.flipYZ = (param == "true");
+                                    importSettings.swapYZ = (param == "true");
                                 }
                                 break;
 

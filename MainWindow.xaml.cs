@@ -65,9 +65,10 @@ namespace PointCloudConverter
             // disable accesskeys without alt
             CoreCompatibilityPreferences.IsAltKeyRequiredInAccessKeyDefaultScope = true;
 
-            // TODO loadsettings
-
+            LoadSettings();
         }
+
+
 
         // main processing loop
         private static void ProcessAllFiles(ImportSettings importSettings)
@@ -172,7 +173,7 @@ namespace PointCloudConverter
                 point.z = importSettings.useScale ? point.z * importSettings.scale : point.z;
 
                 // flip if enabled
-                if (importSettings.flipYZ == true)
+                if (importSettings.swapYZ == true)
                 {
                     var tempZ = point.z;
                     point.z = point.y;
@@ -200,25 +201,50 @@ namespace PointCloudConverter
 
         private void btnConvert_Click(object sender, RoutedEventArgs e)
         {
-            // get fake args from GUI settings
+            // get args from GUI settings, TODO could directly create new import settings..
             var args = new List<string>();
 
-            // TODO add enabled args to list
+            // add enabled args to list, TODO use binding later?
+            args.Add("-input=" + txtInput.Text);
+            if (cmbImportFormat.SelectedItem != null)
+            {
+                args.Add("-importformat=" + cmbImportFormat.SelectedItem.ToString());
+            }
+            if (cmbExportFormat.SelectedItem != null)
+            {
+                args.Add("-exportformat=" + cmbExportFormat.SelectedItem.ToString());
+            }
+            args.Add("-output=" + txtOutput.Text);
+            if ((bool)chkAutoOffset.IsChecked) args.Add("-offset=" + (bool)chkAutoOffset.IsChecked);
+            args.Add("-gridsize=" + txtGridSize.Text);
+
+            if ((bool)chkUseMinPointCount.IsChecked) args.Add("-minpoints=" + txtMinPointCount.Text);
+            if ((bool)chkUseScale.IsChecked) args.Add("-scale=" + txtScale.Text);
+            if ((bool)chkSwapYZ.IsChecked) args.Add("-swap=" + (bool)chkSwapYZ.IsChecked);
+            if ((bool)chkPackColors.IsChecked) args.Add("-pack=" + (bool)chkPackColors.IsChecked);
+            if ((bool)chkUsePackMagic.IsChecked) args.Add("-packmagic=" + txtPackMagic.Text);
+            if ((bool)chkUseMaxImportPointCount.IsChecked) args.Add("-limit=" + txtMaxImportPointCount.Text);
+            if ((bool)chkUseSkip.IsChecked) args.Add("-skip=" + txtSkipEvery.Text);
+            if ((bool)chkUseKeep.IsChecked) args.Add("-keep=" + txtKeepEvery.Text);
+            if ((bool)chkUseMaxFileCount.IsChecked) args.Add("-maxfiles=" + txtMaxFileCount.Text);
+            if ((bool)chkRandomize.IsChecked) args.Add("-randomize=true");
 
             // check input files
             var importSettings = ArgParser.Parse(args.ToArray(), rootFolder);
             // TODO get error messages into log textbox (return in settings?)
 
             // if have files, process them
-            if (importSettings != null) ProcessAllFiles(importSettings);
-
+            if (importSettings != null)
+            {
+                // TODO lock UI, add cancel button, add progress bar
+                ProcessAllFiles(importSettings);
+            }
         }
-
 
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // TODO save settings
+            SaveSettings();
         }
 
         private void btnBrowseInput_Click(object sender, RoutedEventArgs e)
@@ -229,6 +255,75 @@ namespace PointCloudConverter
         private void btnBrowseOutput_Click(object sender, RoutedEventArgs e)
         {
             // TODO browse output filename or folder
+        }
+
+        private void LoadSettings()
+        {
+            foreach (var item in Enum.GetValues(typeof(ImportFormat)))
+            {
+                if ((ImportFormat)item == ImportFormat.Unknown) continue;
+                cmbImportFormat.Items.Add(item);
+            }
+
+            foreach (var item in Enum.GetValues(typeof(ExportFormat)))
+            {
+                if ((ExportFormat)item == ExportFormat.Unknown) continue;
+                cmbExportFormat.Items.Add(item);
+            }
+
+            // TODO check if format is available in list..
+            cmbImportFormat.Text = Properties.Settings.Default.importFormat;
+            cmbExportFormat.Text = Properties.Settings.Default.exportFormat;
+
+            txtInput.Text = Properties.Settings.Default.inputFile;
+            txtOutput.Text = Properties.Settings.Default.outputFile;
+            chkAutoOffset.IsChecked = Properties.Settings.Default.useAutoOffset;
+            txtGridSize.Text = Properties.Settings.Default.gridSize.ToString();
+            chkUseMinPointCount.IsChecked = Properties.Settings.Default.useMinPointCount;
+            txtMinPointCount.Text = Properties.Settings.Default.minimumPointCount.ToString();
+            chkUseScale.IsChecked = Properties.Settings.Default.useScale;
+            txtScale.Text = Properties.Settings.Default.scale.ToString();
+            chkSwapYZ.IsChecked = Properties.Settings.Default.swapYZ;
+            chkPackColors.IsChecked = Properties.Settings.Default.packColors;
+            chkUsePackMagic.IsChecked = Properties.Settings.Default.usePackMagic;
+            txtPackMagic.Text = Properties.Settings.Default.packMagic.ToString();
+            chkUseMaxImportPointCount.IsChecked = Properties.Settings.Default.useMaxImportPointCount;
+            txtMaxImportPointCount.Text = Properties.Settings.Default.maxImportPointCount.ToString();
+            chkUseSkip.IsChecked = Properties.Settings.Default.useSkip;
+            txtSkipEvery.Text = Properties.Settings.Default.skipEveryN.ToString();
+            chkUseKeep.IsChecked = Properties.Settings.Default.useKeep;
+            txtKeepEvery.Text = Properties.Settings.Default.keepEveryN.ToString();
+            chkUseMaxFileCount.IsChecked = Properties.Settings.Default.useMaxFileCount;
+            txtMaxFileCount.Text = Properties.Settings.Default.maxFileCount.ToString();
+            chkRandomize.IsChecked = Properties.Settings.Default.randomize;
+        }
+
+        void SaveSettings()
+        {
+            Properties.Settings.Default.importFormat = cmbImportFormat.Text;
+            Properties.Settings.Default.exportFormat = cmbExportFormat.Text;
+            Properties.Settings.Default.inputFile = txtInput.Text;
+            Properties.Settings.Default.outputFile = txtOutput.Text;
+            Properties.Settings.Default.useAutoOffset = (bool)chkAutoOffset.IsChecked;
+            Properties.Settings.Default.gridSize = Tools.ParseFloat(txtGridSize.Text);
+            Properties.Settings.Default.useMinPointCount = (bool)chkUseMinPointCount.IsChecked;
+            Properties.Settings.Default.minimumPointCount = Tools.ParseInt(txtMinPointCount.Text);
+            Properties.Settings.Default.useScale = (bool)chkUseScale.IsChecked;
+            Properties.Settings.Default.scale = Tools.ParseFloat(txtScale.Text);
+            Properties.Settings.Default.swapYZ = (bool)chkSwapYZ.IsChecked;
+            Properties.Settings.Default.packColors = (bool)chkPackColors.IsChecked;
+            Properties.Settings.Default.usePackMagic = (bool)chkUsePackMagic.IsChecked;
+            Properties.Settings.Default.packMagic = Tools.ParseInt(txtPackMagic.Text);
+            Properties.Settings.Default.useMaxImportPointCount = (bool)chkUseMaxImportPointCount.IsChecked;
+            Properties.Settings.Default.maxImportPointCount = Tools.ParseInt(txtMaxImportPointCount.Text);
+            Properties.Settings.Default.useSkip = (bool)chkUseSkip.IsChecked;
+            Properties.Settings.Default.skipEveryN = Tools.ParseInt(txtSkipEvery.Text);
+            Properties.Settings.Default.useKeep = (bool)chkUseKeep.IsChecked;
+            Properties.Settings.Default.keepEveryN = Tools.ParseInt(txtKeepEvery.Text);
+            Properties.Settings.Default.useMaxFileCount = (bool)chkUseMaxFileCount.IsChecked;
+            Properties.Settings.Default.maxFileCount = Tools.ParseInt(txtMaxFileCount.Text);
+            Properties.Settings.Default.randomize = (bool)chkRandomize.IsChecked;
+            Properties.Settings.Default.Save();
         }
 
     } // class

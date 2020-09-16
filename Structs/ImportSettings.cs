@@ -21,7 +21,7 @@ namespace PointCloudConverter
         public List<string> inputFiles = new List<string>();
         public string outputFile = null;
 
-        public bool flipYZ = true;
+        public bool swapYZ = true;
         public readonly bool readRGB = true; // NOTE always on for now
         public bool useAutoOffset = true;
         public float offsetX = 0;

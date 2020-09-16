@@ -14,7 +14,7 @@
     <Setting Name="outputFile" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <Setting Name="flipYZ" Type="System.Boolean" Scope="User">
+    <Setting Name="swapYZ" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="readRGB" Type="System.Boolean" Scope="User">
@@ -23,10 +23,7 @@
     <Setting Name="useAutoOffset" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="useLimit" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
-    </Setting>
-    <Setting Name="limit" Type="System.Int32" Scope="User">
+    <Setting Name="maxImportPointCount" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
     <Setting Name="randomize" Type="System.Boolean" Scope="User">
@@ -38,20 +35,11 @@
     <Setting Name="minimumPointCount" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1000</Value>
     </Setting>
-    <Setting Name="packColors" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
-    </Setting>
-    <Setting Name="packMagicValue" Type="System.Int32" Scope="User">
+    <Setting Name="packMagic" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">64</Value>
-    </Setting>
-    <Setting Name="skipPoints" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="skipEveryN" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">2</Value>
-    </Setting>
-    <Setting Name="keepPoints" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="keepEveryN" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">10</Value>
@@ -59,8 +47,35 @@
     <Setting Name="useMaxFiles" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="maxFiles" Type="System.Int32" Scope="User">
+    <Setting Name="maxFileCount" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="useMinPointCount" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="usePackMagic" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="useMaxImportPointCount" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="useSkip" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="useKeep" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="useMaxFileCount" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="packColors" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="importFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="exportFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
     </Setting>
   </Settings>
 </SettingsFile>

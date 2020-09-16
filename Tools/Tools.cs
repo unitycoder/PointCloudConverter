@@ -136,6 +136,22 @@ namespace PointCloudConverter
             }
         }
 
+        public static int ParseInt(string s)
+        {
+            int f = 0;
+            // TODO add invariant culture
+            int.TryParse(s, out f);
+            return f;
+        }
+
+        public static float ParseFloat(string s)
+        {
+            float f = 0;
+            // TODO add invariant culture
+            float.TryParse(s, out f);
+            return f;
+        }
+
         public static void PrintHelpAndExit(char argSeparator, bool waitEnter = false)
         {
             Console.ForegroundColor = ConsoleColor.Gray;
@@ -158,7 +174,7 @@ namespace PointCloudConverter
             Console.WriteLine("-gridsize" + argSeparator + "5\t\tGridsize in meters, splits cloud into tiles with this size. v3 only!\tDefault is 5");
             Console.WriteLine("-minpoints" + argSeparator + "1000\t\tIf tile has less points than this value, its discarded. Good for removing straypoints. v3 only!\tDefault is 1000");
             Console.WriteLine("-scale" + argSeparator + "0.1\t\tScale values into (Unity) Meters\tDefault is off");
-            Console.WriteLine("-flip" + argSeparator + "true or false\tSwaps Z and Y values, since unity Y is up\tDefault is true");
+            Console.WriteLine("-swap" + argSeparator + "true or false\tSwaps Z and Y values, since unity Y is up\tDefault is true");
             Console.WriteLine("-pack" + argSeparator + "true or false\tPacks color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&shader in viewer\tDefault is false");
             Console.WriteLine("-packmagic" + argSeparator + "64\t\tOptional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision issues\tDefault is 64");
             Console.WriteLine("-limit" + argSeparator + "10000\t\tLoad only this many points (good for testing settings first)\tDefault is off");
