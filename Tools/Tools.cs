@@ -145,15 +145,15 @@ namespace PointCloudConverter
             Console.WriteLine("");
             Console.WriteLine("--- Required Parameters ---");
             Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine("-input" + argSeparator + "yourfile.laz\tInput file with relative or absolute filepath (or basefolder with multiple files)");
+            Console.WriteLine("-input" + argSeparator + "yourfile.laz\tInput file with relative or absolute filepath (or folder with multiple files)");
             // TODO get list here for supported formats.. from interfaces, or from enum
-            Console.WriteLine("-exportformat" + argSeparator + "ucpc\tSupported export formats: UCPC (v2), PCROOT (v3))\tDefault is UCPC (v2)");
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("");
             Console.WriteLine("--- Optional parameters ---");
             Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine("-output" + argSeparator + "yourfile.ucpc\t(Default is same folder as input file. For v3 you dont need to set file extension)");
             Console.WriteLine("-importformat" + argSeparator + "laz\tSupported import formats: LAZ, LAS)\tDefault is LAS/LAZ");
+            Console.WriteLine("-exportformat" + argSeparator + "ucpc\tSupported export formats: UCPC (v2), PCROOT (v3))\tDefault is UCPC (v2)");
+            Console.WriteLine("-output" + argSeparator + "yourfile.ucpc\t(Default is same folder as input file. For v3 you dont need to set file extension)");
             Console.WriteLine("-offset" + argSeparator + "true or false\tAuto-offsets cloud near 0,0,0 by using the first point as offset value.\tDefault is true");
             Console.WriteLine("-gridsize" + argSeparator + "5\t\tGridsize in meters, splits cloud into tiles with this size. v3 only!\tDefault is 5");
             Console.WriteLine("-minpoints" + argSeparator + "1000\t\tIf tile has less points than this value, its discarded. Good for removing straypoints. v3 only!\tDefault is 1000");

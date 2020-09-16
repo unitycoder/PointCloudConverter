@@ -9,8 +9,8 @@ namespace PointCloudConverter
 {
     public class ImportSettings
     {
-        public IReader reader = null;
-        public IWriter writer;
+        public IReader reader = new LAZ();
+        public IWriter writer = new UCPC();
 
         public bool useScale = false;
         public float scale = 1;

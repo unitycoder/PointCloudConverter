@@ -430,6 +430,7 @@ namespace PointCloudConverter
                 }
             }
 
+            // check required settings
             if (importSettings.exportFormat == ExportFormat.Unknown)
             {
                 errors.Add("No export format defined (Example: -exportformat" + argValueSeparator + "UCPC)");
@@ -443,6 +444,13 @@ namespace PointCloudConverter
             if (importSettings.skipPoints == true && importSettings.keepPoints == true)
             {
                 errors.Add("Cannot have both -keep and -skip enabled");
+            }
+
+            if (importSettings.importFormat == ImportFormat.Unknown)
+            {
+                importSettings.importFormat = ImportFormat.LAS;
+                importSettings.reader = new LAZ();
+                Console.WriteLine("No import format defined, using Default: " + importSettings.importFormat.ToString());
             }
 
             //if (decimatePoints == true && (skipPoints == true || keepPoints == true))
