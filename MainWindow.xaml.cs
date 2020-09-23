@@ -1,4 +1,6 @@
-﻿using PointCloudConverter.Structs;
+﻿// standalone point cloud converter https://github.com/unitycoder/PointCloudConverter
+
+using PointCloudConverter.Structs;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -57,8 +59,6 @@ namespace PointCloudConverter
                 Environment.Exit(0);
             }
 
-
-
             // regular WPF starts from here
             this.Title = appname;
 
@@ -67,8 +67,6 @@ namespace PointCloudConverter
 
             LoadSettings();
         }
-
-
 
         // main processing loop
         private static void ProcessAllFiles(ImportSettings importSettings)
@@ -227,7 +225,7 @@ namespace PointCloudConverter
             if ((bool)chkUseSkip.IsChecked) args.Add("-skip=" + txtSkipEvery.Text);
             if ((bool)chkUseKeep.IsChecked) args.Add("-keep=" + txtKeepEvery.Text);
             if ((bool)chkUseMaxFileCount.IsChecked) args.Add("-maxfiles=" + txtMaxFileCount.Text);
-            if ((bool)chkRandomize.IsChecked) args.Add("-randomize=true");
+            args.Add("-randomize=" + (bool)chkRandomize.IsChecked);
 
             // check input files
             var importSettings = ArgParser.Parse(args.ToArray(), rootFolder);

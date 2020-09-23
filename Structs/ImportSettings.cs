@@ -21,6 +21,9 @@ namespace PointCloudConverter
         public List<string> inputFiles = new List<string>();
         public string outputFile = null;
 
+        // FIXME default values will be used unless otherwise specified.. randomize = true 
+        // TODO these should be export settings..
+
         public bool swapYZ = true;
         public readonly bool readRGB = true; // NOTE always on for now
         public bool useAutoOffset = true;
@@ -36,7 +39,7 @@ namespace PointCloudConverter
         public int packMagicValue = 64; // use lower value if your gridsize is very large, if gridsize=500 then try value 2
         public bool skipPoints = false;
         public int skipEveryN = 0;
-        public bool keepPoints = false;
+        public bool keepPoints = false; // TODO rename to useKeepPoints?
         public int keepEveryN = 0;
         public int maxFiles = 0;
         public bool batch = false;

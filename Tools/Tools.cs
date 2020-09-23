@@ -10,7 +10,11 @@ namespace PointCloudConverter
     public static class Tools
     {
         public static readonly int seed = Guid.NewGuid().GetHashCode();
-        public static readonly Random rnd = new Random(seed);
+        public static Random rnd = new Random(seed);
+        public static void ResetRandom()
+        {
+            rnd = new Random(seed);
+        }
 
         // force comma as decimal separator
         public static void ForceDotCultureSeparator()

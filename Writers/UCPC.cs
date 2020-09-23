@@ -126,6 +126,8 @@ namespace PointCloudConverter.Writers
             vectorPointer.Free();
 
             Tools.ShuffleXYZ(Tools.rnd, ref tempFloats);
+            // need to reset random to use same seed
+            Tools.ResetRandom();
 
             // create new file on top, NOTE seek didnt work?
             bsPoints = new BufferedStream(new FileStream(pointsTempFile, FileMode.Create, FileAccess.ReadWrite, FileShare.Read));
@@ -203,8 +205,10 @@ namespace PointCloudConverter.Writers
             Console.WriteLine("Output: " + importSettings.outputFile);
             Console.ForegroundColor = ConsoleColor.White;
 
+            var sep = '"';
+
             // combine files using commandline binary append
-            var cmd = "/C copy /b " + headerTempFile + "+" + pointsTempFile + "+" + colorsTempFile + " " + importSettings.outputFile;
+            var cmd = "/C copy /b " + sep + headerTempFile + sep + "+" + sep + pointsTempFile + sep + "+" + sep + colorsTempFile + sep + " " + sep + importSettings.outputFile + sep;
             var proc = Process.Start("CMD.exe", cmd);
             proc.WaitForExit();
 
