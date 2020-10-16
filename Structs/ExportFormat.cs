@@ -3,7 +3,7 @@
     public enum ExportFormat
     {
         Unknown,
-        UCPC,
-        PCROOT
+        UCPC, // V2
+        PCROOT // V3
     }
 }

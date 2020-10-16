@@ -1,5 +1,6 @@
 ﻿// standalone point cloud converter https://github.com/unitycoder/PointCloudConverter
 
+using Microsoft.Win32;
 using PointCloudConverter.Structs;
 using System;
 using System.Collections.Generic;
@@ -203,7 +204,7 @@ namespace PointCloudConverter
             var args = new List<string>();
 
             // add enabled args to list, TODO use binding later?
-            args.Add("-input=" + txtInput.Text);
+            args.Add("-input=" + txtInputFile.Text);
             if (cmbImportFormat.SelectedItem != null)
             {
                 args.Add("-importformat=" + cmbImportFormat.SelectedItem.ToString());
@@ -247,12 +248,34 @@ namespace PointCloudConverter
 
         private void btnBrowseInput_Click(object sender, RoutedEventArgs e)
         {
-            // TODO browse for single, multiple files or folder
+            // TODO browse for folder, not file
+
+            // select single file
+            var dialog = new OpenFileDialog();
+            dialog.Title = "Select file to import";
+            dialog.Filter = "LAS|*.las;*.laz";
+            dialog.InitialDirectory = Properties.Settings.Default.lastImportFolder;
+            if (dialog.ShowDialog() == true)
+            {
+                txtInputFile.Text = dialog.FileName;
+                if (string.IsNullOrEmpty(Path.GetDirectoryName(dialog.FileName)) == false) Properties.Settings.Default.lastImportFolder = Path.GetDirectoryName(dialog.FileName);
+            }
         }
 
         private void btnBrowseOutput_Click(object sender, RoutedEventArgs e)
         {
-            // TODO browse output filename or folder
+            // TODO browse output folder
+
+            // select single output filename
+            var dialog = new SaveFileDialog();
+            dialog.Title = "Set output folder and filename";
+            dialog.Filter = "UCPC (V2)|*.ucpc|PCROOT (V3)|*.pcroot";
+            dialog.InitialDirectory = Properties.Settings.Default.lastExportFolder;
+            if (dialog.ShowDialog() == true)
+            {
+                txtOutput.Text = dialog.FileName;
+                if (string.IsNullOrEmpty(Path.GetDirectoryName(dialog.FileName)) == false) Properties.Settings.Default.lastExportFolder = Path.GetDirectoryName(dialog.FileName);
+            }
         }
 
         private void LoadSettings()
@@ -273,7 +296,7 @@ namespace PointCloudConverter
             cmbImportFormat.Text = Properties.Settings.Default.importFormat;
             cmbExportFormat.Text = Properties.Settings.Default.exportFormat;
 
-            txtInput.Text = Properties.Settings.Default.inputFile;
+            txtInputFile.Text = Properties.Settings.Default.inputFile;
             txtOutput.Text = Properties.Settings.Default.outputFile;
             chkAutoOffset.IsChecked = Properties.Settings.Default.useAutoOffset;
             txtGridSize.Text = Properties.Settings.Default.gridSize.ToString();
@@ -300,7 +323,7 @@ namespace PointCloudConverter
         {
             Properties.Settings.Default.importFormat = cmbImportFormat.Text;
             Properties.Settings.Default.exportFormat = cmbExportFormat.Text;
-            Properties.Settings.Default.inputFile = txtInput.Text;
+            Properties.Settings.Default.inputFile = txtInputFile.Text;
             Properties.Settings.Default.outputFile = txtOutput.Text;
             Properties.Settings.Default.useAutoOffset = (bool)chkAutoOffset.IsChecked;
             Properties.Settings.Default.gridSize = Tools.ParseFloat(txtGridSize.Text);
