@@ -183,7 +183,7 @@ namespace PointCloudConverter
                 Color rgb = importSettings.reader.GetRGB();
 
                 // collect this point XYZ and RGB
-                importSettings.writer.AddPoint(i, point.x, point.y, point.z, rgb.r, rgb.g, rgb.b);
+                importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b);
             }
 
             importSettings.writer.Save(fileIndex);

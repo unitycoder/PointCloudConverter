@@ -13,7 +13,7 @@ namespace PointCloudConverter
         public IWriter writer = new UCPC();
 
         public bool useScale = false;
-        public float scale = 1;
+        public float scale = 1f;
 
         public ImportFormat importFormat = ImportFormat.LAS; //default to las for now
         public ExportFormat exportFormat = ExportFormat.UCPC; // defaults to UCPC (v2)
@@ -24,7 +24,7 @@ namespace PointCloudConverter
         // FIXME default values will be used unless otherwise specified.. randomize = true 
         // TODO these should be export settings..
 
-        public bool swapYZ = true;
+        public bool swapYZ = false;
         public readonly bool readRGB = true; // NOTE always on for now
         public bool useAutoOffset = true;
         public float offsetX = 0;
@@ -32,7 +32,7 @@ namespace PointCloudConverter
         public float offsetZ = 0;
         public bool useLimit = false;
         public int limit = 0;
-        public bool randomize = true;
+        public bool randomize = false;
         public float gridSize = 5;
         public int minimumPointCount = 1000;
         public bool packColors = false;

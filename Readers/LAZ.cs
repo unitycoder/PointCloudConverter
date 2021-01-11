@@ -90,9 +90,9 @@ namespace PointCloudConverter.Readers
             // Get precision coordinates
             var coordArray = new double[3];
             lazReader.laszip_get_coordinates(coordArray);
-            f.x = (float)coordArray[0];
-            f.y = (float)coordArray[1];
-            f.z = (float)coordArray[2];
+            f.x = coordArray[0];
+            f.y = coordArray[1];
+            f.z = coordArray[2];
 
             return f;
         }

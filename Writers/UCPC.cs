@@ -208,8 +208,12 @@ namespace PointCloudConverter.Writers
             var sep = '"';
 
             // combine files using commandline binary append
-            var cmd = "/C copy /b " + sep + headerTempFile + sep + "+" + sep + pointsTempFile + sep + "+" + sep + colorsTempFile + sep + " " + sep + importSettings.outputFile + sep;
-            var proc = Process.Start("CMD.exe", cmd);
+            var args = "/C copy /b " + sep + headerTempFile + sep + "+" + sep + pointsTempFile + sep + "+" + sep + colorsTempFile + sep + " " + sep + importSettings.outputFile + sep;
+            Process proc = new Process();
+            proc.StartInfo.FileName = "CMD.exe";
+            proc.StartInfo.Arguments = args;
+            proc.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            proc.Start();
             proc.WaitForExit();
 
             Console.WriteLine("Deleting temporary files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
