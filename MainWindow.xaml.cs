@@ -13,7 +13,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static string appname = "PointCloud Converter v1.72";
+        static string appname = "PointCloud Converter v1.73";
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
         // allow console output from WPF application https://stackoverflow.com/a/7559336/5452781
@@ -39,7 +39,7 @@ namespace PointCloudConverter
             Tools.FixDLLFoldersAndConfig(rootFolder);
             Tools.ForceDotCultureSeparator();
 
-            if (args.Length > 2)
+            if (args.Length > 1)
             {
                 AttachConsole(ATTACH_PARENT_PROCESS);
 
