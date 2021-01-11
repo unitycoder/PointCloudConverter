@@ -235,6 +235,10 @@ namespace PointCloudConverter
             // if have files, process them
             if (importSettings != null)
             {
+                // show output settings for commandline
+                var cl = string.Join(" ", args);
+                txtConsole.Text = cl;
+
                 // TODO lock UI, add cancel button, add progress bar
                 ProcessAllFiles(importSettings);
             }

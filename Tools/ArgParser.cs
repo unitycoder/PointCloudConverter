@@ -343,7 +343,7 @@ namespace PointCloudConverter
                                 Console.WriteLine("gridsize = " + param);
 
                                 bool gridSizeParsed = float.TryParse(param, out importSettings.gridSize);
-                                if (gridSizeParsed == false || importSettings.gridSize <= 0.5f)
+                                if (gridSizeParsed == false || importSettings.gridSize < 0.01f)
                                 {
                                     errors.Add("Invalid gridsize parameter: " + param);
                                 }

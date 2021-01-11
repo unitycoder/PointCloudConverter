@@ -10,7 +10,7 @@
 		<Button x:Name="btnBrowseInput" Content="..." HorizontalAlignment="Left" Margin="566,48,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseInput_Click" ToolTip="Browse for input file"/>
 		<TextBox x:Name="txtInputFile" HorizontalAlignment="Left" Height="23" Margin="20,48,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="541"/>
 		<Label x:Name="label" Content="Input file or folder:&#xD;&#xA;" HorizontalAlignment="Left" Margin="20,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
-		<Button x:Name="btnConvert" Content="Convert" HorizontalAlignment="Left" Margin="10,441,0,0" VerticalAlignment="Top" Width="563" Height="58" Click="btnConvert_Click"/>
+		<Button x:Name="btnConvert" Content="Convert" HorizontalAlignment="Left" Margin="10,441,0,0" VerticalAlignment="Top" Width="770" Height="58" Click="btnConvert_Click"/>
 		<Button x:Name="btnBrowseOutput" Content="..." HorizontalAlignment="Left" Margin="566,114,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseOutput_Click" ToolTip="Browse for output file"/>
 		<TextBox x:Name="txtOutput" HorizontalAlignment="Left" Height="23" Margin="20,114,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="541"/>
 		<Label x:Name="label_Copy" Content="Output:" HorizontalAlignment="Left" Margin="20,88,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
@@ -64,7 +64,8 @@
 		<StatusBar Margin="0" VerticalAlignment="Bottom">
 
 		</StatusBar>
-		<TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="71" Margin="10,508,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="563" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}"/>
+		<TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,526,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="770" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
+		<Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="5,503,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
 
 	</Grid>
 </Window>
