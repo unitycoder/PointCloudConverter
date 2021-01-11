@@ -24,7 +24,7 @@ namespace PointCloudConverter
         // FIXME default values will be used unless otherwise specified.. randomize = true 
         // TODO these should be export settings..
 
-        public bool swapYZ = false;
+        public bool swapYZ = true;
         public readonly bool readRGB = true; // NOTE always on for now
         public bool useAutoOffset = true;
         public float offsetX = 0;
