@@ -6,66 +6,67 @@
         xmlns:local="clr-namespace:PointCloudConverter"
         mc:Ignorable="d"
         Title="PointCloudConverter" Height="620.038" Width="800" Background="#FF252222" Closing="Window_Closing">
-	<Grid Margin="0,0,2,0">
-		<Button x:Name="btnBrowseInput" Content="..." HorizontalAlignment="Left" Margin="566,48,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseInput_Click" ToolTip="Browse for input file"/>
-		<TextBox x:Name="txtInputFile" HorizontalAlignment="Left" Height="23" Margin="20,48,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="541"/>
-		<Label x:Name="label" Content="Input file or folder:&#xD;&#xA;" HorizontalAlignment="Left" Margin="20,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
-		<Button x:Name="btnConvert" Content="Convert" HorizontalAlignment="Left" Margin="10,441,0,0" VerticalAlignment="Top" Width="770" Height="58" Click="btnConvert_Click"/>
-		<Button x:Name="btnBrowseOutput" Content="..." HorizontalAlignment="Left" Margin="566,114,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseOutput_Click" ToolTip="Browse for output file"/>
-		<TextBox x:Name="txtOutput" HorizontalAlignment="Left" Height="23" Margin="20,114,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="541"/>
-		<Label x:Name="label_Copy" Content="Output:" HorizontalAlignment="Left" Margin="20,88,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
-		<ComboBox x:Name="cmbExportFormat" HorizontalAlignment="Left" Margin="619,114,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True"/>
-		<Label x:Name="label_Copy1" Content="Export format:&#xD;&#xA;" HorizontalAlignment="Left" Margin="619,88,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
-		<ComboBox x:Name="cmbImportFormat" HorizontalAlignment="Left" Margin="619,48,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True"/>
-		<Label x:Name="label_Copy2" Content="Import format:&#xA;" HorizontalAlignment="Left" Margin="619,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
+    <Grid Margin="0,0,2,0">
+        <Button x:Name="btnBrowseInput" Content="..." HorizontalAlignment="Left" Margin="566,48,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseInput_Click" ToolTip="Browse for input file"/>
+        <TextBox x:Name="txtInputFile" HorizontalAlignment="Left" Height="23" Margin="20,48,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="541"/>
+        <Label x:Name="label" Content="Input file or folder:&#xD;&#xA;" HorizontalAlignment="Left" Margin="20,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
+        <Button x:Name="btnConvert" Content="Convert" HorizontalAlignment="Left" Margin="409,441,0,0" VerticalAlignment="Top" Width="371" Height="58" Click="btnConvert_Click"/>
+        <Button x:Name="btnBrowseOutput" Content="..." HorizontalAlignment="Left" Margin="566,114,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseOutput_Click" ToolTip="Browse for output file"/>
+        <TextBox x:Name="txtOutput" HorizontalAlignment="Left" Height="23" Margin="20,114,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="541"/>
+        <Label x:Name="label_Copy" Content="Output:" HorizontalAlignment="Left" Margin="20,88,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+        <ComboBox x:Name="cmbExportFormat" HorizontalAlignment="Left" Margin="619,114,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True"/>
+        <Label x:Name="label_Copy1" Content="Export format:&#xD;&#xA;" HorizontalAlignment="Left" Margin="619,88,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
+        <ComboBox x:Name="cmbImportFormat" HorizontalAlignment="Left" Margin="619,48,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True"/>
+        <Label x:Name="label_Copy2" Content="Import format:&#xA;" HorizontalAlignment="Left" Margin="619,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
 
-		<StackPanel HorizontalAlignment="Left" Height="238" Margin="20,198,0,0" VerticalAlignment="Top" Width="238">
-			<CheckBox x:Name="chkAutoOffset" Content="Auto-Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using the first point as offset value"/>
-			<StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-				<Label x:Name="label_Copy3" Content="Grid size:" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
-				<TextBox x:Name="txtGridSize" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="5" ToolTip="Gridsize in meters, splits cloud into tiles with this size. v3 only!"/>
-				<Label x:Name="label_Copy4" Content="m" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
-			</StackPanel>
-			<StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-				<CheckBox x:Name="chkUseMinPointCount" Content="Minimum point count per tile:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="If tile has less points than this value, its discarded. Good for removing straypoints. v3 only!"/>
-				<TextBox x:Name="txtMinPointCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="1000"/>
-			</StackPanel>
-			<StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-				<CheckBox x:Name="chkUseScale" Content="Scale:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Scale XYZ values (You need meters inside Unity)"/>
-				<TextBox x:Name="txtScale" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="0.1"/>
-			</StackPanel>
-			<CheckBox x:Name="chkSwapYZ" Content="Swap Y and Z" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Swaps Z and Y values, since unity Y is up"/>
-			<CheckBox x:Name="chkPackColors" Content="Pack Colors" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Packs color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&amp;shader in viewer"/>
-			<StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-				<CheckBox x:Name="chkUsePackMagic" Content="PackMagic:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Optional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision issues with packed data"/>
-				<TextBox x:Name="txtPackMagic" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="64"/>
-			</StackPanel>
-			<StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-				<CheckBox x:Name="chkUseMaxImportPointCount" Content="Maximum import point count:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Load only this many points (good for testing settings first)"/>
-				<TextBox x:Name="txtMaxImportPointCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40"/>
-			</StackPanel>
-			<StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-				<CheckBox x:Name="chkUseSkip" Content="Skip every:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Skip every Nth point (For reducing point count)"/>
-				<TextBox x:Name="txtSkipEvery" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="2"/>
-				<Label x:Name="label_Copyx4" Content="point" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
-			</StackPanel>
-			<StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-				<CheckBox x:Name="chkUseKeep" Content="Keep every:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Keep only every Nth point (For reducing point count)"/>
-				<TextBox x:Name="txtKeepEvery" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="10"/>
-				<Label x:Name="label_Copyxx4" Content="point" HorizontalAlignment="Left" Margin="0" Foreground="{DynamicResource MainText}" VerticalAlignment="Top"/>
-			</StackPanel>
-			<StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-				<CheckBox x:Name="chkUseMaxFileCount" Content="Maximum file count:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="For batch processing, parse only this many files (good for testing with few files first)"/>
-				<TextBox x:Name="txtMaxFileCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40"/>
-			</StackPanel>
-			<CheckBox x:Name="chkRandomize" Content="Randomize" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Randomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)"/>
-		</StackPanel>
-		<Label x:Name="label_Copy6" Content="Options" HorizontalAlignment="Left" Margin="20,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
-		<StatusBar Margin="0" VerticalAlignment="Bottom">
+        <StackPanel HorizontalAlignment="Left" Height="238" Margin="20,198,0,0" VerticalAlignment="Top" Width="277">
+            <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using the first point as offset value"/>
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                <Label x:Name="label_Copy3" Content="Grid size:" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+                <TextBox x:Name="txtGridSize" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="5" ToolTip="Gridsize in meters, splits cloud into tiles with this size. v3 only!"/>
+                <Label x:Name="label_Copy4" Content="m" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+            </StackPanel>
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                <CheckBox x:Name="chkUseMinPointCount" Content="Minimum point count per tile:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="If tile has less points than this value, its discarded. Good for removing straypoints. v3 only!"/>
+                <TextBox x:Name="txtMinPointCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="1000"/>
+            </StackPanel>
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                <CheckBox x:Name="chkUseScale" Content="Scale:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Scale XYZ values (You need meters inside Unity)"/>
+                <TextBox x:Name="txtScale" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="0.1"/>
+            </StackPanel>
+            <CheckBox x:Name="chkSwapYZ" Content="Swap Y and Z" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Swaps Z and Y values, since unity Y is up"/>
+            <CheckBox x:Name="chkPackColors" Content="Pack Colors" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Packs color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&amp;shader in viewer"/>
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                <CheckBox x:Name="chkUsePackMagic" Content="PackMagic:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Optional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision issues with packed data"/>
+                <TextBox x:Name="txtPackMagic" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="64"/>
+            </StackPanel>
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                <CheckBox x:Name="chkUseMaxImportPointCount" Content="Maximum import point count:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Load only this many points (good for testing settings first)"/>
+                <TextBox x:Name="txtMaxImportPointCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="90"/>
+            </StackPanel>
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                <CheckBox x:Name="chkUseSkip" Content="Skip every:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Skip every Nth point (For reducing point count)"/>
+                <TextBox x:Name="txtSkipEvery" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="2"/>
+                <Label x:Name="label_Copyx4" Content="point" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+            </StackPanel>
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                <CheckBox x:Name="chkUseKeep" Content="Keep every:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Keep only every Nth point (For reducing point count)"/>
+                <TextBox x:Name="txtKeepEvery" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="10"/>
+                <Label x:Name="label_Copyxx4" Content="point" HorizontalAlignment="Left" Margin="0" Foreground="{DynamicResource MainText}" VerticalAlignment="Top"/>
+            </StackPanel>
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                <CheckBox x:Name="chkUseMaxFileCount" Content="Maximum file count:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="For batch processing, parse only this many files (good for testing with few files first)"/>
+                <TextBox x:Name="txtMaxFileCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="92"/>
+            </StackPanel>
+            <CheckBox x:Name="chkRandomize" Content="Randomize" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Randomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)"/>
+        </StackPanel>
+        <Label x:Name="label_Copy6" Content="Options" HorizontalAlignment="Left" Margin="20,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
+        <StatusBar Margin="0" VerticalAlignment="Bottom">
 
-		</StatusBar>
-		<TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,526,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="770" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
-		<Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="5,503,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
+        </StatusBar>
+        <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,526,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="770" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
+        <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="5,503,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
+        <Button x:Name="btnGetParams" Content="Get Commandline params" HorizontalAlignment="Left" Margin="10,440,0,0" VerticalAlignment="Top" Width="214" Height="58" Click="btnGetParams_Click"/>
 
-	</Grid>
+    </Grid>
 </Window>

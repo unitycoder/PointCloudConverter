@@ -207,6 +207,11 @@ namespace PointCloudConverter.Writers
 
             var sep = '"';
 
+            // fix slashes, forward slashes fail in command prompt too
+            headerTempFile = headerTempFile.Replace("/", "\\");
+            pointsTempFile = pointsTempFile.Replace("/", "\\");
+            colorsTempFile = colorsTempFile.Replace("/", "\\");
+
             // combine files using commandline binary append
             var args = "/C copy /b " + sep + headerTempFile + sep + "+" + sep + pointsTempFile + sep + "+" + sep + colorsTempFile + sep + " " + sep + importSettings.outputFile + sep;
             Process proc = new Process();

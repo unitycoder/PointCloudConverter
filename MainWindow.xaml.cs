@@ -182,7 +182,7 @@ namespace PointCloudConverter
                 // get point color
                 Color rgb = importSettings.reader.GetRGB();
 
-                // collect this point XYZ and RGB
+                // collect this point XYZ and RGB into node
                 importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b);
             }
 
@@ -200,6 +200,11 @@ namespace PointCloudConverter
 
         private void btnConvert_Click(object sender, RoutedEventArgs e)
         {
+            StartProcess();
+        }
+
+        void StartProcess(bool skipProcess = true)
+        {
             // get args from GUI settings, TODO could directly create new import settings..
             var args = new List<string>();
 
@@ -215,7 +220,8 @@ namespace PointCloudConverter
             }
             args.Add("-output=" + txtOutput.Text);
             if ((bool)chkAutoOffset.IsChecked) args.Add("-offset=" + (bool)chkAutoOffset.IsChecked);
-            args.Add("-gridsize=" + txtGridSize.Text);
+
+            if (cmbExportFormat.SelectedItem.ToString().ToUpper().Contains("PCROOT")) args.Add("-gridsize=" + txtGridSize.Text);
 
             if ((bool)chkUseMinPointCount.IsChecked) args.Add("-minpoints=" + txtMinPointCount.Text);
             if ((bool)chkUseScale.IsChecked) args.Add("-scale=" + txtScale.Text);
@@ -238,12 +244,12 @@ namespace PointCloudConverter
                 // show output settings for commandline
                 var cl = string.Join(" ", args);
                 txtConsole.Text = cl;
+                Console.WriteLine(cl);
 
                 // TODO lock UI, add cancel button, add progress bar
-                ProcessAllFiles(importSettings);
+                if (skipProcess == true) ProcessAllFiles(importSettings);
             }
         }
-
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -351,5 +357,9 @@ namespace PointCloudConverter
             Properties.Settings.Default.Save();
         }
 
+        private void btnGetParams_Click(object sender, RoutedEventArgs e)
+        {
+            StartProcess(false);
+        }
     } // class
 } // namespace
