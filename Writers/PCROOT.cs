@@ -37,6 +37,14 @@ namespace PointCloudConverter.Writers
         {
             var res = true;
 
+            // clear old nodes
+            nodeX.Clear();
+            nodeY.Clear();
+            nodeZ.Clear();
+            nodeR.Clear();
+            nodeG.Clear();
+            nodeB.Clear();
+
             importSettings = _importSettings;
 
             return res;
