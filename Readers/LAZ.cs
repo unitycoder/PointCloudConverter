@@ -45,6 +45,7 @@ namespace PointCloudConverter.Readers
             return (int)lazReader.header.number_of_point_records;
         }
 
+
         Color IReader.GetRGB()
         {
             var c = new Color();
@@ -55,9 +56,9 @@ namespace PointCloudConverter.Readers
             // try to detect if colors are outside 0-255 range?
             if (p.rgb[0].ToString("X").Length > 2)
             {
-                c.r = Tools.LUT255[(byte)(p.rgb[0] / 255)];
-                c.g = Tools.LUT255[(byte)(p.rgb[1] / 255)];
-                c.b = Tools.LUT255[(byte)(p.rgb[2] / 255)];
+                c.r = Tools.LUT255[(byte)(p.rgb[0] / 256f)];
+                c.g = Tools.LUT255[(byte)(p.rgb[1] / 256f)];
+                c.b = Tools.LUT255[(byte)(p.rgb[2] / 256f)];
             }
             else // its 0-255
             {

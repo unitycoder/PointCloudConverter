@@ -181,6 +181,7 @@ namespace PointCloudConverter
 
                 // get point color
                 Color rgb = importSettings.reader.GetRGB();
+                
 
                 // collect this point XYZ and RGB into node
                 importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b);
