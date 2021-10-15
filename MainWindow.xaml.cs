@@ -220,6 +220,7 @@ namespace PointCloudConverter
                 args.Add("-exportformat=" + cmbExportFormat.SelectedItem.ToString());
             }
             args.Add("-output=" + txtOutput.Text);
+
             if ((bool)chkAutoOffset.IsChecked) args.Add("-offset=" + (bool)chkAutoOffset.IsChecked);
 
             if (cmbExportFormat.SelectedItem.ToString().ToUpper().Contains("PCROOT")) args.Add("-gridsize=" + txtGridSize.Text);
@@ -234,6 +235,7 @@ namespace PointCloudConverter
             if ((bool)chkUseKeep.IsChecked) args.Add("-keep=" + txtKeepEvery.Text);
             if ((bool)chkUseMaxFileCount.IsChecked) args.Add("-maxfiles=" + txtMaxFileCount.Text);
             args.Add("-randomize=" + (bool)chkRandomize.IsChecked);
+
 
             // check input files
             var importSettings = ArgParser.Parse(args.ToArray(), rootFolder);

@@ -102,6 +102,5 @@ namespace PointCloudConverter.Readers
         {
             lazReader.laszip_close_reader();
         }
-
     } // class
 } // namespace

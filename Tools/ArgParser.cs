@@ -3,8 +3,11 @@ using PointCloudConverter.Structs;
 using PointCloudConverter.Writers;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace PointCloudConverter
@@ -12,6 +15,72 @@ namespace PointCloudConverter
     public class ArgParser
     {
         const char argValueSeparator = '=';
+
+        [DllImport("shell32.dll", SetLastError = true)]
+        static extern IntPtr CommandLineToArgvW([MarshalAs(UnmanagedType.LPWStr)] string lpCmdLine, out int pNumArgs);
+
+        [DllImport("kernel32.dll")]
+        static extern IntPtr LocalFree(IntPtr hMem);
+
+        static string[] SplitArgs(string unsplitArgumentLine)
+        {
+            int numberOfArgs;
+            IntPtr ptrToSplitArgs;
+            string[] splitArgs;
+
+            ptrToSplitArgs = CommandLineToArgvW(unsplitArgumentLine, out numberOfArgs);
+
+            // CommandLineToArgvW returns NULL upon failure.
+            if (ptrToSplitArgs == IntPtr.Zero)
+                throw new ArgumentException("Unable to split argument.", new Win32Exception());
+
+            // Make sure the memory ptrToSplitArgs to is freed, even upon failure.
+            try
+            {
+                splitArgs = new string[numberOfArgs];
+
+                // ptrToSplitArgs is an array of pointers to null terminated Unicode strings.
+                // Copy each of these strings into our split argument array.
+                for (int i = 0; i < numberOfArgs; i++)
+                    splitArgs[i] = Marshal.PtrToStringUni(Marshal.ReadIntPtr(ptrToSplitArgs, i * IntPtr.Size));
+
+                return splitArgs;
+            }
+            finally
+            {
+                // Free memory obtained by CommandLineToArgW.
+                LocalFree(ptrToSplitArgs);
+            }
+        }
+
+        static string Reverse(string s)
+        {
+            char[] charArray = s.ToCharArray();
+            Array.Reverse(charArray);
+            return new string(charArray);
+        }
+
+        static string GetEscapedCommandLine()
+        {
+            StringBuilder sb = new StringBuilder();
+            bool gotQuote = false;
+            foreach (var c in Environment.CommandLine.Reverse())
+            {
+                if (c == '"')
+                    gotQuote = true;
+                else if (gotQuote && c == '\\')
+                {
+                    // double it
+                    sb.Append('\\');
+                }
+                else
+                    gotQuote = false;
+
+                sb.Append(c);
+            }
+
+            return Reverse(sb.ToString());
+        }
 
         public static ImportSettings Parse(string[] args, string rootFolder)
         {
@@ -24,12 +93,11 @@ namespace PointCloudConverter
             // parse commandline arguments
             if (args != null && args.Length > 0)
             {
-                var realArgs = args;
+                // folder backslash quote fix https://stackoverflow.com/a/9288040/5452781
+                var realArgs = SplitArgs(GetEscapedCommandLine()).Skip(1).ToArray();
+
                 for (int i = 0; i < realArgs.Length; i++)
                 {
-                    // FIXME this fails on -input="C:\asdf\etryj\folder\" -importformat=las
-                    // it becomes          -input=C:\asdf\etryj\folder" -importformat=las
-                    // because backslash in \", apparently https://stackoverflow.com/a/9288040/5452781
                     var cmds = realArgs[i].ToLower().Split(argValueSeparator);
 
                     // FIXME cannot use contains, it could be in folder or filename
@@ -112,10 +180,11 @@ namespace PointCloudConverter
                                     // TODO parse/sort args in required order, not in given order
                                     var filePaths = Directory.GetFiles(param).Where(file => Regex.IsMatch(file, @"^.+\.(las|laz)$", RegexOptions.IgnoreCase)).ToArray();
 
+                                    // NOTE: should know maxfiles limit here, so that it doesnt list all the files
                                     for (int j = 0; j < filePaths.Length; j++)
                                     {
                                         Console.ForegroundColor = ConsoleColor.Gray;
-                                        Console.WriteLine("Added file: " + filePaths[j]);
+                                        Console.WriteLine("Found file: " + filePaths[j]);
                                         Console.ForegroundColor = ConsoleColor.White;
                                         importSettings.inputFiles.Add(filePaths[j]);
                                     }
@@ -130,6 +199,12 @@ namespace PointCloudConverter
                                     }
                                     else
                                     {
+                                        // TODO check if compatible format
+                                        //var ext = Path.GetExtension(param).ToLower();
+
+                                        // TODO find better way to check all readers
+                                        //if (ext == "las" ||ext == "laz")
+                                        Console.WriteLine("added " + param);
                                         importSettings.inputFiles.Add(param);
                                     }
                                 }
@@ -163,13 +238,16 @@ namespace PointCloudConverter
                                     }
                                     else // single file
                                     {
-                                        inputFileName = Path.GetFileNameWithoutExtension(importSettings.inputFiles[0]);
+                                        if (importSettings.inputFiles.Count > 0)
+                                        {
+                                            inputFileName = Path.GetFileNameWithoutExtension(importSettings.inputFiles[0]);
+                                        }
                                     }
 
                                     // had we already set inputfile
                                     if (string.IsNullOrEmpty(inputFileName) == true)
                                     {
-                                        errors.Add("-input not defined before -output, failed to create target filename");
+                                        errors.Add("-input not defined before -output or Input file doesnt exist, failed to create target filename");
                                     }
                                     else // have filename, create output filename from it
                                     {
@@ -389,7 +467,7 @@ namespace PointCloudConverter
                                 break;
 
                             default:
-                                errors.Add("Unrecognized option: " + cmd + ":" + param);
+                                errors.Add("Unrecognized option: " + cmd + argValueSeparator + param);
                                 break;
                         }
                     }
