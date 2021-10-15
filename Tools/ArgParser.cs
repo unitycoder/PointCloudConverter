@@ -151,6 +151,7 @@ namespace PointCloudConverter
                                         case "PCROOT":
                                             importSettings.writer = new PCROOT();
                                             importSettings.exportFormat = ExportFormat.PCROOT;
+                                            importSettings.randomize = true; // required for V3
                                             break;
                                         default:
                                             importSettings.writer = new UCPC();
@@ -560,6 +561,11 @@ namespace PointCloudConverter
                 importSettings.importFormat = ImportFormat.LAS;
                 importSettings.reader = new LAZ();
                 Console.WriteLine("No import format defined, using Default: " + importSettings.importFormat.ToString());
+            }
+
+            if (importSettings.randomize == false && importSettings.exportFormat == ExportFormat.PCROOT)
+            {
+                errors.Add("V3 pcroot export format requires -randomize=true to randomize points");
             }
 
             //if (decimatePoints == true && (skipPoints == true || keepPoints == true))
