@@ -138,11 +138,24 @@ namespace PointCloudConverter
                 if (fileIndex == 0)
                 {
                     // offset cloud to be near 0,0,0
-                    importSettings.offsetX = -bounds.minX;
-                    importSettings.offsetY = -bounds.minY;
-                    importSettings.offsetZ = -bounds.minZ;
+                    importSettings.offsetX = bounds.minX;
+                    importSettings.offsetY = bounds.minY;
+                    importSettings.offsetZ = bounds.minZ;
                 }
             }
+            else if (importSettings.useManualOffset == true)
+            {
+                importSettings.offsetX = importSettings.manualOffsetX;
+                importSettings.offsetY = importSettings.manualOffsetY;
+                importSettings.offsetZ = importSettings.manualOffsetZ;
+            }
+            else
+            {
+                importSettings.offsetX = 0;
+                importSettings.offsetY = 0;
+                importSettings.offsetZ = 0;
+            }
+
 
             var writerRes = importSettings.writer.InitWriter(importSettings, pointCount);
             if (writerRes == false)
@@ -161,10 +174,10 @@ namespace PointCloudConverter
                 Float3 point = importSettings.reader.GetXYZ();
                 if (point.hasError == true) break;
 
-                // add offset if enabled
-                point.x = importSettings.useAutoOffset ? point.x + importSettings.offsetX : point.x;
-                point.y = importSettings.useAutoOffset ? point.y + importSettings.offsetY : point.y;
-                point.z = importSettings.useAutoOffset ? point.z + importSettings.offsetZ : point.z;
+                // add offsets (its 0 if not used)
+                point.x -= importSettings.offsetX;
+                point.y -= importSettings.offsetY;
+                point.z -= importSettings.offsetZ;
 
                 // scale if enabled
                 point.x = importSettings.useScale ? point.x * importSettings.scale : point.x;
@@ -181,7 +194,7 @@ namespace PointCloudConverter
 
                 // get point color
                 Color rgb = importSettings.reader.GetRGB();
-                
+
 
                 // collect this point XYZ and RGB into node
                 importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b);

@@ -33,8 +33,8 @@ namespace PointCloudConverter
         public bool useLimit = false;
         public int limit = 0;
         public bool randomize = false;
-        public float gridSize = 5;
-        public int minimumPointCount = 1000;
+        public float gridSize = 25;
+        public int minimumPointCount = 500;
         public bool packColors = false;
         public int packMagicValue = 64; // use lower value if your gridsize is very large, if gridsize=500 then try value 2
         public bool skipPoints = false;
@@ -43,5 +43,9 @@ namespace PointCloudConverter
         public int keepEveryN = 0;
         public int maxFiles = 0;
         public bool batch = false;
+        public bool useManualOffset = false;
+        public float manualOffsetX = 0;
+        public float manualOffsetY = 0;
+        public float manualOffsetZ = 0;
     }
 }

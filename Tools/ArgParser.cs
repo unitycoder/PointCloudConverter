@@ -180,7 +180,7 @@ namespace PointCloudConverter
                                     // TODO parse/sort args in required order, not in given order
                                     var filePaths = Directory.GetFiles(param).Where(file => Regex.IsMatch(file, @"^.+\.(las|laz)$", RegexOptions.IgnoreCase)).ToArray();
 
-                                    // NOTE: should know maxfiles limit here, so that it doesnt list all the files
+
                                     for (int j = 0; j < filePaths.Length; j++)
                                     {
                                         Console.ForegroundColor = ConsoleColor.Gray;
@@ -393,13 +393,44 @@ namespace PointCloudConverter
                             case "-offset":
                                 Console.WriteLine("offset = " + param);
 
+                                // check if its true or false
                                 if (param != "false" && param != "true")
                                 {
-                                    errors.Add("Invalid offset parameter: " + param);
+                                    // check if its valid integer x,z
+                                    if (param.IndexOf(',') > -1)
+                                    {
+                                        var temp = param.Split(',');
+                                        if (temp.Length == 3)
+                                        {
+
+                                            float xOff, yOff, zOff;
+                                            if (float.TryParse(temp[0].Trim(), out xOff) && float.TryParse(temp[1].Trim(), out yOff) && float.TryParse(temp[2].Trim(), out zOff))
+                                            {
+                                                importSettings.manualOffsetX = -xOff;
+                                                importSettings.manualOffsetY = -yOff;
+                                                importSettings.manualOffsetZ = -zOff;
+                                                importSettings.useManualOffset = true;
+                                                importSettings.useAutoOffset = false;
+                                            }
+                                            else
+                                            {
+                                                errors.Add("Invalid manual offset parameters for x,y,z: " + param);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            errors.Add("Wrong amount of manual offset parameters for x,y,z: " + param);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        errors.Add("Invalid offset parameter: " + param);
+                                    }
                                 }
-                                else
+                                else // autooffset
                                 {
                                     importSettings.useAutoOffset = (param == "true");
+                                    importSettings.useManualOffset = false;
                                 }
                                 break;
 
@@ -434,9 +465,9 @@ namespace PointCloudConverter
                             case "-minpoints":
                                 Console.WriteLine("minPoints = " + param);
                                 bool minpointsParsed = int.TryParse(param, out importSettings.minimumPointCount);
-                                if (minpointsParsed == false || importSettings.minimumPointCount <= 1)
+                                if (minpointsParsed == false || importSettings.minimumPointCount < 1)
                                 {
-                                    errors.Add("Invalid minpoints parameter: " + param + " (should be >1)");
+                                    errors.Add("Invalid minpoints parameter: " + param + " (should be >0)");
                                 }
                                 else // got value
                                 {
