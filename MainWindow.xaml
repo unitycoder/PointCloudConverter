@@ -23,7 +23,7 @@
             <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using the first point as offset value"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                 <Label x:Name="label_Copy3" Content="Grid size:" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
-                <TextBox x:Name="txtGridSize" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="5" ToolTip="Gridsize in meters, splits cloud into tiles with this size. v3 only!"/>
+                <TextBox x:Name="txtGridSize" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="10" ToolTip="Gridsize in meters, splits cloud into tiles with this size. v3 only!"/>
                 <Label x:Name="label_Copy4" Content="m" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
             </StackPanel>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">

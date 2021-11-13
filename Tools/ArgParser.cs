@@ -90,11 +90,14 @@ namespace PointCloudConverter
             // if there are any errors, they are added to this list, then importing is aborted after parsing arguments
             List<string> errors = new List<string>();
 
+            // handle manual args (null is default args, not used)
+            if (args==null) args = SplitArgs(GetEscapedCommandLine()).Skip(1).ToArray();
+
             // parse commandline arguments
             if (args != null && args.Length > 0)
             {
                 // folder backslash quote fix https://stackoverflow.com/a/9288040/5452781
-                var realArgs = SplitArgs(GetEscapedCommandLine()).Skip(1).ToArray();
+                var realArgs = args;
 
                 for (int i = 0; i < realArgs.Length; i++)
                 {
@@ -110,6 +113,8 @@ namespace PointCloudConverter
                     {
                         var cmd = cmds[0];
                         var param = cmds[1];
+
+                        //Console.WriteLine("cmd= " + cmd);
 
                         // check params
                         switch (cmd)

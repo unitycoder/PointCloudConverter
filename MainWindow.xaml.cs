@@ -47,8 +47,8 @@ namespace PointCloudConverter
                 Console.WriteLine("\n::: " + appname + " :::\n");
                 Console.ForegroundColor = ConsoleColor.White;
 
-                // check args
-                var importSettings = ArgParser.Parse(args, rootFolder);
+                // check args, null here because we get the args later
+                var importSettings = ArgParser.Parse(null, rootFolder);
 
                 // if have files, process them
                 if (importSettings != null) ProcessAllFiles(importSettings);
@@ -224,6 +224,7 @@ namespace PointCloudConverter
 
             // add enabled args to list, TODO use binding later?
             args.Add("-input=" + txtInputFile.Text);
+
             if (cmbImportFormat.SelectedItem != null)
             {
                 args.Add("-importformat=" + cmbImportFormat.SelectedItem.ToString());
