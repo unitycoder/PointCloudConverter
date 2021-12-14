@@ -1,6 +1,9 @@
 # PointCloudConverter
 PointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp; Tools (Unity plugin)](https://assetstore.unity.com/packages/tools/utilities/point-cloud-viewer-and-tools-16019?aid=1101lGti)
 
+### Download prebuild exe
+- https://github.com/unitycoder/UnityPointCloudViewer/wiki/Commandline-Tools
+
 ### Building
 - Open project in VS2019
 - Press F5 to build
