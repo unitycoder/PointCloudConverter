@@ -11,7 +11,6 @@ namespace PointCloudConverter.Writers
     public class UCPC : IWriter
     {
         ImportSettings importSettings;
-        Bounds bounds;
         int pointCount;
 
         BufferedStream bsPoints = null;
@@ -25,6 +24,13 @@ namespace PointCloudConverter.Writers
         string colorsTempFile;
         string headerTempFile;
 
+        static float cloudMinX = float.PositiveInfinity;
+        static float cloudMinY = float.PositiveInfinity;
+        static float cloudMinZ = float.PositiveInfinity;
+        static float cloudMaxX = float.NegativeInfinity;
+        static float cloudMaxY = float.NegativeInfinity;
+        static float cloudMaxZ = float.NegativeInfinity;
+
         bool IWriter.InitWriter(ImportSettings _importSettings, int _pointCount)
         {
             importSettings = _importSettings;
@@ -33,6 +39,13 @@ namespace PointCloudConverter.Writers
             pointsTempFile = importSettings.outputFile + "_PointsTemp";
             colorsTempFile = importSettings.outputFile + "_ColorsTemp";
             headerTempFile = importSettings.outputFile + "_Header";
+
+            cloudMinX = float.PositiveInfinity;
+            cloudMinY = float.PositiveInfinity;
+            cloudMinZ = float.PositiveInfinity;
+            cloudMaxX = float.NegativeInfinity;
+            cloudMaxY = float.NegativeInfinity;
+            cloudMaxZ = float.NegativeInfinity;
 
             try
             {
@@ -54,10 +67,8 @@ namespace PointCloudConverter.Writers
             return true;
         }
 
-        void IWriter.CreateHeader(int pointCount, Bounds _bounds)
+        void IWriter.CreateHeader(int pointCount)
         {
-            bounds = _bounds;
-
             // create header data file 
             // write header v2 : 34 bytes
             byte[] magic = new byte[] { 0x75, 0x63, 0x70, 0x63 }; // ucpc
@@ -75,12 +86,12 @@ namespace PointCloudConverter.Writers
 
             writerHeaderV2.Write(pointCount); // 4b
             // output bounds 4+4+4+4+4+4
-            writerHeaderV2.Write(bounds.minX);
-            writerHeaderV2.Write(bounds.minY);
-            writerHeaderV2.Write(bounds.minZ);
-            writerHeaderV2.Write(bounds.maxX);
-            writerHeaderV2.Write(bounds.maxY);
-            writerHeaderV2.Write(bounds.maxZ);
+            writerHeaderV2.Write(cloudMinX);
+            writerHeaderV2.Write(cloudMinY);
+            writerHeaderV2.Write(cloudMinZ);
+            writerHeaderV2.Write(cloudMaxX);
+            writerHeaderV2.Write(cloudMaxY);
+            writerHeaderV2.Write(cloudMaxZ);
 
             // close header
             writerHeaderV2.Close();
@@ -186,19 +197,27 @@ namespace PointCloudConverter.Writers
             // keep points
             if (importSettings.keepPoints == true && (index % importSettings.keepEveryN != 0)) return;
 
+            // get bounds
+            if (x < cloudMinX) cloudMinX = x;
+            if (x > cloudMaxX) cloudMaxX = x;
+            if (y < cloudMinY) cloudMinY = y;
+            if (y > cloudMaxY) cloudMaxY = y;
+            if (z < cloudMinZ) cloudMinZ = z;
+            if (z > cloudMaxZ) cloudMaxZ = z;
+
             importSettings.writer.WriteXYZ(x, y, z);
             importSettings.writer.WriteRGB(r, g, b);
         }
 
         void IWriter.Save(int fileIndex)
         {
-            importSettings.writer.CreateHeader(pointCount, bounds);
+            importSettings.writer.CreateHeader(pointCount);
             if (importSettings.randomize == true) importSettings.writer.Randomize();
             importSettings.writer.Close();
-            importSettings.writer.Cleanup();
+            importSettings.writer.Cleanup(fileIndex);
         }
 
-        void IWriter.Cleanup()
+        void IWriter.Cleanup(int fileIndex)
         {
             Console.WriteLine("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "m" + Path.GetFileName(colorsTempFile));
             Console.ForegroundColor = ConsoleColor.Green;
@@ -213,7 +232,8 @@ namespace PointCloudConverter.Writers
             colorsTempFile = colorsTempFile.Replace("/", "\\");
 
             // combine files using commandline binary append
-            var args = "/C copy /b " + sep + headerTempFile + sep + "+" + sep + pointsTempFile + sep + "+" + sep + colorsTempFile + sep + " " + sep + importSettings.outputFile + sep;
+            var outputFile = importSettings.outputFile + Path.GetFileNameWithoutExtension(importSettings.inputFiles[fileIndex]) + ".ucpc";
+            var args = "/C copy /b " + sep + headerTempFile + sep + "+" + sep + pointsTempFile + sep + "+" + sep + colorsTempFile + sep + " " + sep + outputFile + sep;
             Process proc = new Process();
             proc.StartInfo.FileName = "CMD.exe";
             proc.StartInfo.Arguments = args;

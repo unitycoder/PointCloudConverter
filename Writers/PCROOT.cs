@@ -50,7 +50,7 @@ namespace PointCloudConverter.Writers
             return res;
         }
 
-        void IWriter.CreateHeader(int pointCount, Bounds bounds)
+        void IWriter.CreateHeader(int pointCount)
         {
 
         }
@@ -70,7 +70,7 @@ namespace PointCloudConverter.Writers
 
         }
 
-        void IWriter.Cleanup()
+        void IWriter.Cleanup(int fileIndex)
         {
 
         }

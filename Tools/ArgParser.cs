@@ -91,7 +91,7 @@ namespace PointCloudConverter
             List<string> errors = new List<string>();
 
             // handle manual args (null is default args, not used)
-            if (args==null) args = SplitArgs(GetEscapedCommandLine()).Skip(1).ToArray();
+            if (args == null) args = SplitArgs(GetEscapedCommandLine()).Skip(1).ToArray();
 
             // parse commandline arguments
             if (args != null && args.Length > 0)
@@ -236,11 +236,11 @@ namespace PointCloudConverter
                                 {
                                     string inputFileName = null;
 
-                                    // batch, so we dont have filename
+                                    // batch, so we dont have filename, Should use original base filenames then
                                     if (importSettings.batch == true)
                                     {
                                         // give timestamp name for now, if no name given
-                                        inputFileName = "batch_" + DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                                        //inputFileName = "batch_" + DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
                                     }
                                     else // single file
                                     {
@@ -250,10 +250,11 @@ namespace PointCloudConverter
                                         }
                                     }
 
-                                    // had we already set inputfile
+                                    // do we already set inputfile
                                     if (string.IsNullOrEmpty(inputFileName) == true)
                                     {
-                                        errors.Add("-input not defined before -output or Input file doesnt exist, failed to create target filename");
+                                        // leavy empty for batch
+                                        //errors.Add("-input not defined before -output or Input file doesnt exist, failed to create target filename");
                                     }
                                     else // have filename, create output filename from it
                                     {
@@ -327,7 +328,7 @@ namespace PointCloudConverter
                                 }
                                 else
                                 {
-                                    importSettings.swapYZ = (param == "true");
+                                    importSettings.swapYZ = param == "true";
                                 }
                                 break;
 
@@ -525,6 +526,30 @@ namespace PointCloudConverter
                 if (importSettings.batch == true)
                 {
                     Console.WriteLine("Found " + importSettings.inputFiles.Count + " files..");
+
+                    // if no output folder given
+                    if (string.IsNullOrEmpty(importSettings.outputFile) == true)
+                    {
+                        if (importSettings.exportFormat == ExportFormat.UCPC)
+                        {
+                            // we'll use same folder as input then
+                            if (importSettings.inputFiles != null && importSettings.inputFiles.Count > 1)
+                            {
+                                importSettings.outputFile = Path.GetDirectoryName(importSettings.inputFiles[0]) + Path.DirectorySeparatorChar;
+                                Console.WriteLine("importSettings.outputFile=" + importSettings.outputFile);
+                            }
+                            else
+                            {
+                                errors.Add("(D) No input files found, so cannot determine output folder either..");
+                            }
+                        }
+                        else if (importSettings.exportFormat == ExportFormat.PCROOT)
+                        {
+                            // we should ask for export folder, otherwise source folder is filled with files
+                            errors.Add("(C) -output file or folder not defined (its required for V3 PCROOT format)");
+                        }
+                    }
+
                 }
                 else // not in batch
                 {
@@ -551,10 +576,10 @@ namespace PointCloudConverter
                 errors.Add("No export format defined (Example: -exportformat" + argValueSeparator + "UCPC)");
             }
 
-            if (importSettings.batch == true && importSettings.exportFormat != ExportFormat.PCROOT)
-            {
-                errors.Add("Folder batch is only supported for PCROOT (v3) version: -exportformat=pcroot");
-            }
+            //if (importSettings.batch == true && importSettings.exportFormat != ExportFormat.PCROOT)
+            //{
+            //    errors.Add("Folder batch is only supported for PCROOT (v3) version: -exportformat=pcroot");
+            //}
 
             if (importSettings.skipPoints == true && importSettings.keepPoints == true)
             {

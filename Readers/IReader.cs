@@ -5,7 +5,7 @@ namespace PointCloudConverter.Readers
     public interface IReader
     {
         // open filestream
-        bool InitReader(string file);
+        bool InitReader(ImportSettings importSettings, int fileIndex);
         // returns total point count, this is required to correctly read all points
         int GetPointCount();
         // bounds are used for AutoOffset

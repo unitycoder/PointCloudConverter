@@ -18,9 +18,10 @@ namespace PointCloudConverter.Readers
         laszip_dll lazReader = new laszip_dll();
         bool compressed = false;
 
-        bool IReader.InitReader(string file)
+        bool IReader.InitReader(ImportSettings importSettings, int fileIndex)
         {
             // TODO check errors
+            var file = importSettings.inputFiles[fileIndex];
             lazReader.laszip_open_reader(file, ref compressed);
             return true;
         }

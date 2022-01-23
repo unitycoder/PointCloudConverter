@@ -28,7 +28,6 @@ namespace PointCloudConverter
         public MainWindow()
         {
             InitializeComponent();
-            Main();
         }
 
         private void Main()
@@ -96,7 +95,7 @@ namespace PointCloudConverter
         // process single file
         static void ParseFile(ImportSettings importSettings, int fileIndex)
         {
-            var res = importSettings.reader.InitReader(importSettings.inputFiles[fileIndex]);
+            var res = importSettings.reader.InitReader(importSettings, fileIndex);
             if (res == false)
             {
                 Console.WriteLine("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
@@ -112,11 +111,13 @@ namespace PointCloudConverter
             {
                 var afterSkip = (int)Math.Floor(pointCount - (pointCount / (float)importSettings.skipEveryN));
                 Console.WriteLine("Skip every X points is enabled, original points: " + fullPointCount + ", After skipping:" + afterSkip);
+                pointCount = afterSkip;
             }
 
             if (importSettings.keepPoints == true)
             {
                 Console.WriteLine("Keep every x points is enabled, original points: " + fullPointCount + ", After keeping:" + (pointCount / importSettings.keepEveryN));
+                pointCount = pointCount / importSettings.keepEveryN;
             }
 
             if (importSettings.useLimit == true)
@@ -187,9 +188,9 @@ namespace PointCloudConverter
                 // flip if enabled
                 if (importSettings.swapYZ == true)
                 {
-                    var tempZ = point.z;
+                    var temp = point.z;
                     point.z = point.y;
-                    point.y = tempZ;
+                    point.y = temp;
                 }
 
                 // get point color
@@ -377,6 +378,11 @@ namespace PointCloudConverter
         private void btnGetParams_Click(object sender, RoutedEventArgs e)
         {
             StartProcess(false);
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            Main();
         }
     } // class
 } // namespace
