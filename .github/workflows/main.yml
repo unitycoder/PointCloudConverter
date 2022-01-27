@@ -24,12 +24,7 @@ jobs:
         
         run: |
           # cancel early, if not build commit
-          echo "${{ github.event.commits[0].message }}" | findstr /C:"#BUILD">nul && (
-            REM TRUE
-          ) || (
-            REM FALSE
-            exit(1)
-          )
+          Echo "${{ github.event.commits[0].message }}" | findstr /C:"#BUILD">nul && (Echo.TRUE) || (exit(1))
           Install-Module 7Zip4PowerShell -Force -Verbose 
       - uses: actions/checkout@v2
       
