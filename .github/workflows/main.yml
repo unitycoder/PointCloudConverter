@@ -24,7 +24,14 @@ jobs:
         
         run: |
           # cancel early, if not build commit
-          Echo "${{ github.event.commits[0].message }}" | findstr /C:"#BUILD">nul && (Echo.TRUE) || (exit(1))
+          $strVal ='${{ github.event.commits[0].message }}'
+          if($strVal -clike '*#BUILD*') 
+          {
+                Write-Host 'True'
+          } else {
+                Write-Host 'False'
+                exit(1)
+          }
           Install-Module 7Zip4PowerShell -Force -Verbose 
       - uses: actions/checkout@v2
       
