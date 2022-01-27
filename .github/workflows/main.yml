@@ -50,7 +50,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: Release ${{ steps.version.outputs.version }}
           body: |
             Automated Release by GitHub Action CI
           draft: false
@@ -63,6 +63,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./SampleX64.ZIP
-          asset_name: SampleX64.ZIP
+          asset_path: ./PointCloudConverterX64.ZIP
+          asset_name: PointCloudConverterX64.ZIP
           asset_content_type: application/zip
