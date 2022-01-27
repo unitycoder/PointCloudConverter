@@ -23,9 +23,13 @@ jobs:
         shell: powershell
         
         run: |
-          if [[ "${{ github.event.commits[0].message }}" != *"#BUILD"* ]]; then
+          # cancel early, if not build commit
+          echo "${{ github.event.commits[0].message }}" | findstr /C:"#BUILD">nul && (
+            REM TRUE
+          ) || (
+            REM FALSE
             exit(1)
-          fi
+          )
           Install-Module 7Zip4PowerShell -Force -Verbose 
       - uses: actions/checkout@v2
       
