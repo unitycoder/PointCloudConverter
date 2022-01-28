@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
 
 namespace PointCloudConverter
@@ -25,9 +26,14 @@ namespace PointCloudConverter
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool FreeConsole();
 
+        Thread workerThread;
+        static bool abort = false;
+        public static MainWindow mainWindowStatic;
+
         public MainWindow()
         {
             InitializeComponent();
+            mainWindowStatic = this;
             Main();
         }
 
@@ -51,7 +57,11 @@ namespace PointCloudConverter
                 var importSettings = ArgParser.Parse(null, rootFolder);
 
                 // if have files, process them
-                if (importSettings != null) ProcessAllFiles(importSettings);
+                if (importSettings != null)
+                {
+                    // NOTE no background thread from commandline
+                    ProcessAllFiles(importSettings);
+                }
 
                 // end output
                 Console.WriteLine("Exit");
@@ -70,8 +80,11 @@ namespace PointCloudConverter
         }
 
         // main processing loop
-        private static void ProcessAllFiles(ImportSettings importSettings)
+        //private static void ProcessAllFiles(ImportSettings importSettings)
+        private static void ProcessAllFiles(System.Object importSettingsObject)
         {
+            var importSettings = (ImportSettings)importSettingsObject;
+
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
@@ -84,6 +97,8 @@ namespace PointCloudConverter
             {
                 Console.WriteLine("\nReading file (" + i + "/" + (len - 1) + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
 
+                //if (abort==true) 
+
                 // do actual point cloud parsing for this file
                 ParseFile(importSettings, i);
             }
@@ -91,6 +106,16 @@ namespace PointCloudConverter
             stopwatch.Stop();
             Console.WriteLine("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
             stopwatch.Reset();
+
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                mainWindowStatic.HideProcessingPanel();
+            }));
+        }
+
+        void HideProcessingPanel()
+        {
+            gridProcessingPanel.Visibility = Visibility.Hidden;
         }
 
         // process single file
@@ -218,9 +243,10 @@ namespace PointCloudConverter
         {
             SaveSettings();
             StartProcess();
+            gridProcessingPanel.Visibility = Visibility.Visible;
         }
 
-        void StartProcess(bool skipProcess = true)
+        void StartProcess(bool doProcess = true)
         {
             // get args from GUI settings, TODO could directly create new import settings..
             var args = new List<string>();
@@ -267,13 +293,27 @@ namespace PointCloudConverter
                 Console.WriteLine(cl);
 
                 // TODO lock UI, add cancel button, add progress bar
-                if (skipProcess == true) ProcessAllFiles(importSettings);
+                if (doProcess == true)
+                {
+                    ParameterizedThreadStart start = new ParameterizedThreadStart(ProcessAllFiles);
+                    workerThread = new Thread(start);
+                    workerThread.IsBackground = true;
+                    workerThread.Start(importSettings);
+                }
             }
         }
+
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             SaveSettings();
+
+            abort = true;
+            if (workerThread != null)
+            {
+                workerThread.Abort();
+                Environment.Exit(Environment.ExitCode);
+            }
         }
 
         private void btnBrowseInput_Click(object sender, RoutedEventArgs e)
@@ -385,6 +425,16 @@ namespace PointCloudConverter
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+        }
+
+        private void BtnCancel_Click(object sender, RoutedEventArgs e)
+        {
+            abort = true;
+            if (workerThread != null)
+            {
+                workerThread.Abort();
+                Environment.Exit(Environment.ExitCode);
+            }
         }
     } // class
 } // namespace

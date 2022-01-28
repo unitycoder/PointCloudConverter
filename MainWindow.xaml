@@ -67,6 +67,9 @@
         <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,526,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="770" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
         <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="5,503,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
         <Button x:Name="btnGetParams" Content="Get Commandline params" HorizontalAlignment="Left" Margin="10,440,0,0" VerticalAlignment="Top" Width="214" Height="58" Click="btnGetParams_Click"/>
+        <Grid x:Name="gridProcessingPanel" Background="#A3000000" Visibility="Hidden">
+            <Button x:Name="btnCancel" Content="Stop processing!" HorizontalAlignment="Center" Margin="0" VerticalAlignment="Center" Width="214" Height="58" Click="BtnCancel_Click"/>
+        </Grid>
 
     </Grid>
 </Window>
