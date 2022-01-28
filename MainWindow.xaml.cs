@@ -28,6 +28,7 @@ namespace PointCloudConverter
         public MainWindow()
         {
             InitializeComponent();
+            Main();
         }
 
         private void Main()
@@ -382,7 +383,6 @@ namespace PointCloudConverter
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            Main();
         }
     } // class
 } // namespace
