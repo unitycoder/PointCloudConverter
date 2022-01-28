@@ -216,6 +216,7 @@ namespace PointCloudConverter
 
         private void btnConvert_Click(object sender, RoutedEventArgs e)
         {
+            SaveSettings();
             StartProcess();
         }
 
@@ -327,6 +328,7 @@ namespace PointCloudConverter
 
             txtInputFile.Text = Properties.Settings.Default.inputFile;
             txtOutput.Text = Properties.Settings.Default.outputFile;
+
             chkAutoOffset.IsChecked = Properties.Settings.Default.useAutoOffset;
             txtGridSize.Text = Properties.Settings.Default.gridSize.ToString();
             chkUseMinPointCount.IsChecked = Properties.Settings.Default.useMinPointCount;
