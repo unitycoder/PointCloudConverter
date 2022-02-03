@@ -56,6 +56,8 @@ namespace PointCloudConverter
                 // check args, null here because we get the args later
                 var importSettings = ArgParser.Parse(null, rootFolder);
 
+                
+
                 // if have files, process them
                 if (importSettings != null)
                 {
@@ -241,9 +243,9 @@ namespace PointCloudConverter
 
         private void btnConvert_Click(object sender, RoutedEventArgs e)
         {
+            gridProcessingPanel.Visibility = Visibility.Visible;
             SaveSettings();
             StartProcess();
-            gridProcessingPanel.Visibility = Visibility.Visible;
         }
 
         void StartProcess(bool doProcess = true)
@@ -300,6 +302,11 @@ namespace PointCloudConverter
                     workerThread.IsBackground = true;
                     workerThread.Start(importSettings);
                 }
+            }
+            else
+            {
+                HideProcessingPanel();
+                txtConsole.Text = "Operation failed! Errors in arguments.";
             }
         }
 

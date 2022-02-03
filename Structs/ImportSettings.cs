@@ -12,6 +12,9 @@ namespace PointCloudConverter
         public IReader reader = new LAZ();
         public IWriter writer = new UCPC();
 
+        public bool haveError = false; // if errors during parsing args
+        public string[] errorMessages = null; // last error message(s)
+
         public bool useScale = false;
         public float scale = 1f;
 

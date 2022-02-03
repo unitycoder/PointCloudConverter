@@ -614,6 +614,7 @@ namespace PointCloudConverter
                     Console.WriteLine(i + "> " + errors[i]);
                 }
                 Console.ForegroundColor = ConsoleColor.White;
+
                 return null;
             }
             else
