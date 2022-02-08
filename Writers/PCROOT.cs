@@ -220,7 +220,7 @@ namespace PointCloudConverter.Writers
 
                     if (importSettings.packColors == true)
                     {
-                        float pxx = px;
+                        //float pxx = px;
 
                         // get local coords within tile
                         var keys = nodeData.Key.Split('_');

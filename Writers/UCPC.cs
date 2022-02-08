@@ -72,9 +72,17 @@ namespace PointCloudConverter.Writers
             // create header data file 
             // write header v2 : 34 bytes
             byte[] magic = new byte[] { 0x75, 0x63, 0x70, 0x63 }; // ucpc
-            writerHeaderV2.Write(magic); // 4b
-            writerHeaderV2.Write((byte)2); // 1b
-            writerHeaderV2.Write(importSettings.readRGB); // 1b
+            writerHeaderV2.Write(magic); // 4b magic
+            if (importSettings.packColors == true)
+            {
+                writerHeaderV2.Write((byte)3); // 1b version
+                writerHeaderV2.Write(false); // 1b contains RGB
+            }
+            else
+            {
+                writerHeaderV2.Write((byte)2); // 1b version
+                writerHeaderV2.Write(true); // 1b contains RGB
+            }
 
             if (importSettings.skipPoints == true)
             {
@@ -98,18 +106,45 @@ namespace PointCloudConverter.Writers
             bsHeaderV2.Dispose();
         }
 
+        float prev_x, prev_y, prev_z;
         void IWriter.WriteXYZ(float x, float y, float z)
         {
-            writerPoints.Write(x);
-            writerPoints.Write(y);
-            writerPoints.Write(z);
+            if (importSettings.packColors == true)
+            {
+                prev_x = x;
+                prev_y = y;
+                prev_z = z;
+            }
+            else
+            {
+                writerPoints.Write(x);
+                writerPoints.Write(y);
+                writerPoints.Write(z);
+            }
+
         }
 
         void IWriter.WriteRGB(float r, float g, float b)
         {
-            writerColorsV2.Write(r);
-            writerColorsV2.Write(g);
-            writerColorsV2.Write(b);
+            if (importSettings.packColors == true)
+            {
+                // pack red and x
+                r = Tools.SuperPacker(r * 0.98f, prev_x, 1024); // NOTE fixed for now, until update shaders and header to contain packmagic value
+                // pack green and y
+                g = Tools.SuperPacker(g * 0.98f, prev_y, 1024);
+                // pack blue and z
+                b = Tools.SuperPacker(b * 0.98f, prev_z, 1024);
+                writerPoints.Write(r);
+                writerPoints.Write(g);
+                writerPoints.Write(b);
+            }
+            else
+            {
+                writerColorsV2.Write(r);
+                writerColorsV2.Write(g);
+                writerColorsV2.Write(b);
+
+            }
         }
 
         void IWriter.Randomize()
@@ -150,42 +185,49 @@ namespace PointCloudConverter.Writers
                 writerPoints.Write(tempFloats[i]);
             }
 
-            // new files for colors
-            writerColorsV2.Flush();
-            bsColorsV2.Flush();
-            writerColorsV2.Close();
-            bsColorsV2.Dispose();
-
-            Console.WriteLine("Randomizing " + pointCount + " colors...");
-
-            tempBytes = null;
-            using (FileStream fs = File.Open(colorsTempFile, FileMode.Open, FileAccess.Read, FileShare.None))
-            using (BufferedStream bs = new BufferedStream(fs))
-            using (BinaryReader binaryReader = new BinaryReader(bs))
+            if (importSettings.packColors == true)
             {
-                tempBytes = binaryReader.ReadBytes(pointCount * 4 * 3);
+
             }
-
-            tempFloats = new float[pointCount * 3];
-
-            // convert to float array, TODO no need if can output writeallbytes
-            vectorPointer = GCHandle.Alloc(tempFloats, GCHandleType.Pinned);
-            pV = vectorPointer.AddrOfPinnedObject();
-            Marshal.Copy(tempBytes, 0, pV, pointCount * 4 * 3);
-            vectorPointer.Free();
-
-            // actual point randomization
-            Tools.ShuffleXYZ(Tools.rnd, ref tempFloats);
-
-            // create new file on top, seek didnt work?
-            bsColorsV2 = new BufferedStream(new FileStream(colorsTempFile, FileMode.Create, FileAccess.ReadWrite, FileShare.Read));
-            writerColorsV2 = new BinaryWriter(bsColorsV2);
-
-            // TODO why not use writeallbytes? check 2gb file limit then use that
-
-            for (int i = 0; i < pointCount * 3; i++)
+            else
             {
-                writerColorsV2.Write(tempFloats[i]);
+                // new files for colors
+                writerColorsV2.Flush();
+                bsColorsV2.Flush();
+                writerColorsV2.Close();
+                bsColorsV2.Dispose();
+
+                Console.WriteLine("Randomizing " + pointCount + " colors...");
+
+                tempBytes = null;
+                using (FileStream fs = File.Open(colorsTempFile, FileMode.Open, FileAccess.Read, FileShare.None))
+                using (BufferedStream bs = new BufferedStream(fs))
+                using (BinaryReader binaryReader = new BinaryReader(bs))
+                {
+                    tempBytes = binaryReader.ReadBytes(pointCount * 4 * 3);
+                }
+
+                tempFloats = new float[pointCount * 3];
+
+                // convert to float array, TODO no need if can output writeallbytes
+                vectorPointer = GCHandle.Alloc(tempFloats, GCHandleType.Pinned);
+                pV = vectorPointer.AddrOfPinnedObject();
+                Marshal.Copy(tempBytes, 0, pV, pointCount * 4 * 3);
+                vectorPointer.Free();
+
+                // actual point randomization
+                Tools.ShuffleXYZ(Tools.rnd, ref tempFloats);
+
+                // create new file on top, seek didnt work?
+                bsColorsV2 = new BufferedStream(new FileStream(colorsTempFile, FileMode.Create, FileAccess.ReadWrite, FileShare.Read));
+                writerColorsV2 = new BinaryWriter(bsColorsV2);
+
+                // TODO why not use writeallbytes? check 2gb file limit then use that
+
+                for (int i = 0; i < pointCount * 3; i++)
+                {
+                    writerColorsV2.Write(tempFloats[i]);
+                }
             }
         }
 
@@ -219,7 +261,14 @@ namespace PointCloudConverter.Writers
 
         void IWriter.Cleanup(int fileIndex)
         {
-            Console.WriteLine("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "m" + Path.GetFileName(colorsTempFile));
+            if (importSettings.packColors == true)
+            {
+                Console.WriteLine("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile));
+            }
+            else
+            {
+                Console.WriteLine("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
+            }
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Output: " + importSettings.outputFile);
             Console.ForegroundColor = ConsoleColor.White;
@@ -232,8 +281,33 @@ namespace PointCloudConverter.Writers
             colorsTempFile = colorsTempFile.Replace("/", "\\");
 
             // combine files using commandline binary append
-            var outputFile = importSettings.outputFile + Path.GetFileNameWithoutExtension(importSettings.inputFiles[fileIndex]) + ".ucpc";
-            var args = "/C copy /b " + sep + headerTempFile + sep + "+" + sep + pointsTempFile + sep + "+" + sep + colorsTempFile + sep + " " + sep + outputFile + sep;
+            string outputFile = "";
+            if (Directory.Exists(importSettings.outputFile)) // its output folder, take filename from source
+            {
+                outputFile = importSettings.outputFile + Path.GetFileNameWithoutExtension(importSettings.inputFiles[fileIndex]) + ".ucpc";
+            }
+            else // its not folder
+            {
+                // its filename with extension, use that
+                if (Path.GetExtension(importSettings.outputFile).ToLower() == ".ucpc")
+                {
+                    outputFile = importSettings.outputFile;
+                }
+                else // its filename without extension
+                {
+                    outputFile = importSettings.outputFile + ".ucpc";
+                }
+            }
+
+            string args = "";
+            if (importSettings.packColors == true)
+            {
+                args = "/C copy /b " + sep + headerTempFile + sep + "+" + sep + pointsTempFile + sep + " " + sep + outputFile + sep;
+            }
+            else // non packed
+            {
+                args = "/C copy /b " + sep + headerTempFile + sep + "+" + sep + pointsTempFile + sep + "+" + sep + colorsTempFile + sep + " " + sep + outputFile + sep;
+            }
             Process proc = new Process();
             proc.StartInfo.FileName = "CMD.exe";
             proc.StartInfo.Arguments = args;
@@ -242,9 +316,9 @@ namespace PointCloudConverter.Writers
             proc.WaitForExit();
 
             Console.WriteLine("Deleting temporary files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
-            File.Delete(headerTempFile);
-            File.Delete(pointsTempFile);
-            File.Delete(colorsTempFile);
+            if (File.Exists(headerTempFile)) File.Delete(headerTempFile);
+            if (File.Exists(pointsTempFile)) File.Delete(pointsTempFile);
+            if (File.Exists(colorsTempFile)) File.Delete(colorsTempFile);
         }
 
         void IWriter.Close()

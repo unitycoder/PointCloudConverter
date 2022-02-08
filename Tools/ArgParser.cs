@@ -576,6 +576,12 @@ namespace PointCloudConverter
                 errors.Add("No export format defined (Example: -exportformat" + argValueSeparator + "UCPC)");
             }
 
+            //// check mismatching settings for v2 vs v3
+            //if (importSettings.exportFormat == ExportFormat.UCPC)
+            //{
+            //    //if (importSettings.gridSize)
+            //}
+
             //if (importSettings.batch == true && importSettings.exportFormat != ExportFormat.PCROOT)
             //{
             //    errors.Add("Folder batch is only supported for PCROOT (v3) version: -exportformat=pcroot");
