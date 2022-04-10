@@ -10,8 +10,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 
-// PointCloudConverter.exe -input="D:\Unity\PRODUCTS\GIT\PointCloudViewerPro\Assets\GITIGNORE\LAS\batch/" -randomize=true -gridsize=250 -flip:true -minpoints=5000 -version:3 -offset=true -exportformat=pcroot -output="D:/Unity/PRODUCTS/GIT/PointCloudViewerPro/Assets/StreamingAssets/form/x.pcroot"
-
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
@@ -82,7 +80,6 @@ namespace PointCloudConverter
         }
 
         // main processing loop
-        //private static void ProcessAllFiles(ImportSettings importSettings)
         private static void ProcessAllFiles(System.Object importSettingsObject)
         {
             var importSettings = (ImportSettings)importSettingsObject;
