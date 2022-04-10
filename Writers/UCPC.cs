@@ -143,7 +143,6 @@ namespace PointCloudConverter.Writers
                 writerColorsV2.Write(r);
                 writerColorsV2.Write(g);
                 writerColorsV2.Write(b);
-
             }
         }
 
@@ -280,7 +279,6 @@ namespace PointCloudConverter.Writers
             pointsTempFile = pointsTempFile.Replace("/", "\\");
             colorsTempFile = colorsTempFile.Replace("/", "\\");
 
-            // combine files using commandline binary append
             string outputFile = "";
             if (Directory.Exists(importSettings.outputFile)) // its output folder, take filename from source
             {
@@ -299,6 +297,7 @@ namespace PointCloudConverter.Writers
                 }
             }
 
+            // combine files using commandline binary append
             string args = "";
             if (importSettings.packColors == true)
             {

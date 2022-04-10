@@ -50,5 +50,38 @@ namespace PointCloudConverter
         public float manualOffsetX = 0;
         public float manualOffsetY = 0;
         public float manualOffsetZ = 0;
+
+        public override string ToString()
+        {
+            string t = "";
+            t += " useScale=" + useScale;
+            t += "\n scale=" + scale;
+            t += "\n inputFiles=" + inputFiles;
+            t += "\n outputFile=" + outputFile;
+            t += "\n swapYZ=" + swapYZ;
+            t += "\n readRGB=" + readRGB;
+            t += "\n useAutoOffset=" + useAutoOffset;
+            t += "\n offsetX=" + offsetX;
+            t += "\n offsetY=" + offsetY;
+            t += "\n offsetZ=" + offsetZ;
+            t += "\n useLimit=" + useLimit;
+            t += "\n limit=" + limit;
+            t += "\n randomize=" + randomize;
+            t += "\n gridSize=" + gridSize;
+            t += "\n minimumPointCount=" + minimumPointCount;
+            t += "\n packColors=" + packColors;
+            t += "\n packMagicValue=" + packMagicValue;
+            t += "\n skipPoints=" + skipPoints;
+            t += "\n skipEveryN=" + skipEveryN;
+            t += "\n keepPoints=" + keepPoints;
+            t += "\n keepEveryN=" + keepEveryN;
+            t += "\n maxFiles=" + maxFiles;
+            t += "\n batch=" + batch;
+            t += "\n useManualOffset=" + useManualOffset;
+            t += "\n manualOffsetX=" + manualOffsetX;
+            t += "\n manualOffsetX=" + manualOffsetX;
+            t += "\n manualOffsetX=" + manualOffsetX;
+            return t;
+        }
     }
 }

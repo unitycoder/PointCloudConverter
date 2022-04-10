@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 
+// PointCloudConverter.exe -input="D:\Unity\PRODUCTS\GIT\PointCloudViewerPro\Assets\GITIGNORE\LAS\batch/" -randomize=true -gridsize=250 -flip:true -minpoints=5000 -version:3 -offset=true -exportformat=pcroot -output="D:/Unity/PRODUCTS/GIT/PointCloudViewerPro/Assets/StreamingAssets/form/x.pcroot"
+
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
@@ -56,8 +58,6 @@ namespace PointCloudConverter
                 // check args, null here because we get the args later
                 var importSettings = ArgParser.Parse(null, rootFolder);
 
-                
-
                 // if have files, process them
                 if (importSettings != null)
                 {
@@ -98,6 +98,7 @@ namespace PointCloudConverter
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
                 Console.WriteLine("\nReading file (" + i + "/" + (len - 1) + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
+                Debug.WriteLine("\nReading file (" + i + "/" + (len - 1) + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
 
                 //if (abort==true) 
 
@@ -224,7 +225,6 @@ namespace PointCloudConverter
                 // get point color
                 Color rgb = importSettings.reader.GetRGB();
 
-
                 // collect this point XYZ and RGB into node
                 importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b);
             }
@@ -325,8 +325,6 @@ namespace PointCloudConverter
 
         private void btnBrowseInput_Click(object sender, RoutedEventArgs e)
         {
-            // TODO browse for folder, not file
-
             // select single file
             var dialog = new OpenFileDialog();
             dialog.Title = "Select file to import";

@@ -45,6 +45,13 @@ namespace PointCloudConverter.Writers
             nodeG.Clear();
             nodeB.Clear();
 
+            cloudMinX = float.PositiveInfinity;
+            cloudMinY = float.PositiveInfinity;
+            cloudMinZ = float.PositiveInfinity;
+            cloudMaxX = float.NegativeInfinity;
+            cloudMaxY = float.NegativeInfinity;
+            cloudMaxZ = float.NegativeInfinity;
+
             importSettings = _importSettings;
 
             return res;
