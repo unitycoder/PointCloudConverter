@@ -620,13 +620,11 @@ namespace PointCloudConverter
                     Console.WriteLine(i + "> " + errors[i]);
                 }
                 Console.ForegroundColor = ConsoleColor.White;
+                importSettings.errors = errors;
+            }
 
-                return null;
-            }
-            else
-            {
-                return importSettings;
-            }
+            // return always, but note that we might have errors
+            return importSettings;
         }
     }
 }

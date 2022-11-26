@@ -38,12 +38,16 @@ namespace PointCloudConverter.Writers
             var res = true;
 
             // clear old nodes
+            nodeBounds.Clear();
             nodeX.Clear();
             nodeY.Clear();
             nodeZ.Clear();
             nodeR.Clear();
             nodeG.Clear();
             nodeB.Clear();
+
+            bsPoints = null;
+            writerPoints = null;
 
             cloudMinX = float.PositiveInfinity;
             cloudMinY = float.PositiveInfinity;
@@ -317,7 +321,7 @@ namespace PointCloudConverter.Writers
                 var tilerootdata = new List<string>();
                 var outputFileRoot = Path.Combine(baseFolder, fileOnly) + ".pcroot";
 
-                // add to tileroot list
+                // add to tileroot listS
                 long totalPointCount = 0;
                 for (int i = 0, len = nodeBounds.Count; i < len; i++)
                 {

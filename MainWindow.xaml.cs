@@ -9,12 +9,13 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static string appname = "PointCloud Converter v1.74";
+        static string appname = "PointCloud Converter v1.75";
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
         // allow console output from WPF application https://stackoverflow.com/a/7559336/5452781
@@ -281,10 +282,9 @@ namespace PointCloudConverter
 
             // check input files
             var importSettings = ArgParser.Parse(args.ToArray(), rootFolder);
-            // TODO get error messages into log textbox (return in settings?)
 
             // if have files, process them
-            if (importSettings != null)
+            if (importSettings.errors.Count == 0)
             {
                 // show output settings for commandline
                 var cl = string.Join(" ", args);
@@ -303,7 +303,7 @@ namespace PointCloudConverter
             else
             {
                 HideProcessingPanel();
-                txtConsole.Text = "Operation failed! Errors in arguments.";
+                txtConsole.Text = "Operation failed! " + string.Join(Environment.NewLine, importSettings.errors);
             }
         }
 
@@ -342,7 +342,40 @@ namespace PointCloudConverter
             var dialog = new SaveFileDialog();
             dialog.Title = "Set output folder and filename";
             dialog.Filter = "UCPC (V2)|*.ucpc|PCROOT (V3)|*.pcroot";
-            dialog.InitialDirectory = Properties.Settings.Default.lastExportFolder;
+
+            // take folder from field
+            if (string.IsNullOrEmpty(txtOutput.Text) == false)
+            {
+                // check if folder exists, if not take parent folder
+                if (Directory.Exists(Path.GetDirectoryName(txtOutput.Text)) == true)
+                {
+                    dialog.InitialDirectory = txtOutput.Text;
+                }
+                else
+                {
+                    var folder = Path.GetDirectoryName(txtOutput.Text);
+                    // fix slashes
+                    folder = folder.Replace("\\", "/");
+                    for (int i = folder.Length - 1; i > -1; i--)
+                    {
+                        if (folder[i] == '/')
+                        {
+                            if (Directory.Exists(folder.Substring(0, i)))
+                            {
+                                dialog.InitialDirectory = folder.Substring(0, i).Replace("/", "\\");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            else // no path
+            {
+                dialog.InitialDirectory = Properties.Settings.Default.lastExportFolder;
+            }
+
+            Console.WriteLine(dialog.InitialDirectory);
+
             if (dialog.ShowDialog() == true)
             {
                 txtOutput.Text = dialog.FileName;
@@ -437,6 +470,12 @@ namespace PointCloudConverter
                 workerThread.Abort();
                 Environment.Exit(Environment.ExitCode);
             }
+        }
+
+        private void cmbExportFormat_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // updatae file extension, if set
+            txtOutput.Text = Path.ChangeExtension(txtOutput.Text, "." + cmbExportFormat.SelectedValue.ToString().ToLower());
         }
     } // class
 } // namespace

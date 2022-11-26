@@ -13,7 +13,7 @@ namespace PointCloudConverter
         public IWriter writer = new UCPC();
 
         public bool haveError = false; // if errors during parsing args
-        public string[] errorMessages = null; // last error message(s)
+        //public string[] errorMessages = null; // last error message(s)
 
         public bool useScale = false;
         public float scale = 1f;
@@ -23,6 +23,8 @@ namespace PointCloudConverter
 
         public List<string> inputFiles = new List<string>();
         public string outputFile = null;
+
+        public List<string> errors = new List<string>(); // return errors to UI
 
         // FIXME default values will be used unless otherwise specified.. randomize = true 
         // TODO these should be export settings..

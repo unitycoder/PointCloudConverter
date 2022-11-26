@@ -14,7 +14,7 @@
         <Button x:Name="btnBrowseOutput" Content="..." HorizontalAlignment="Left" Margin="636,114,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseOutput_Click" ToolTip="Browse for output file"/>
         <TextBox x:Name="txtOutput" HorizontalAlignment="Left" Height="23" Margin="20,114,0,0" VerticalAlignment="Top" Width="611"/>
         <Label x:Name="label_Copy" Content="Output:" HorizontalAlignment="Left" Margin="20,88,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
-        <ComboBox x:Name="cmbExportFormat" HorizontalAlignment="Left" Margin="719,114,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True"/>
+        <ComboBox x:Name="cmbExportFormat" HorizontalAlignment="Left" Margin="719,114,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True" SelectionChanged="cmbExportFormat_SelectionChanged"/>
         <Label x:Name="label_Copy1" Content="Export format:&#xD;&#xA;" HorizontalAlignment="Left" Margin="719,88,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
         <ComboBox x:Name="cmbImportFormat" HorizontalAlignment="Left" Margin="719,48,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True"/>
         <Label x:Name="label_Copy2" Content="Import format:&#xA;" HorizontalAlignment="Left" Margin="719,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
