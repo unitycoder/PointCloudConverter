@@ -58,7 +58,7 @@ namespace PointCloudConverter
                 var importSettings = ArgParser.Parse(null, rootFolder);
 
                 // if have files, process them
-                if (importSettings != null)
+                if (importSettings.errors.Count == 0)
                 {
                     // NOTE no background thread from commandline
                     ProcessAllFiles(importSettings);
@@ -95,8 +95,8 @@ namespace PointCloudConverter
             // loop input files
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
-                Console.WriteLine("\nReading file (" + i + "/" + (len - 1) + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
-                Debug.WriteLine("\nReading file (" + i + "/" + (len - 1) + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
+                Console.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
+                Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
 
                 //if (abort==true) 
 
