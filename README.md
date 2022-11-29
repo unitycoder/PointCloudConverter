@@ -8,7 +8,7 @@ PointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp; Tools (
 - https://github.com/unitycoder/PointCloudConverter/wiki/Commandline-Arguments
 
 ### Building
-- Open project in VS2019
+- Open project in VS2019 or later
 - Press F5 to build
 - Executable is created in the /bin/ folder (you can launch it from command prompt, or from Explorer to use GUI)
 
