@@ -39,7 +39,7 @@ namespace PointCloudConverter
         public int limit = 0;
         public bool randomize = false;
         public float gridSize = 25;
-        public int minimumPointCount = 500;
+        public int minimumPointCount = 0;
         public bool packColors = false;
         public int packMagicValue = 64; // use lower value if your gridsize is very large, if gridsize=500 then try value 2
         public bool skipPoints = false;

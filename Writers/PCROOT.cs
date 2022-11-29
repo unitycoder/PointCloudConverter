@@ -139,7 +139,10 @@ namespace PointCloudConverter.Writers
 
         void IWriter.Save(int fileIndex)
         {
-            int skippedCounter = 0;
+            // TEST 
+            bool useLossyFiltering = false;
+            int skippedNodesCounter = 0;
+            int skippedPointsCounter = 0;
 
             string fileOnly = Path.GetFileNameWithoutExtension(importSettings.outputFile);
             string baseFolder = Path.GetDirectoryName(importSettings.outputFile);
@@ -159,7 +162,7 @@ namespace PointCloudConverter.Writers
             {
                 if (nodeData.Value.Count < importSettings.minimumPointCount)
                 {
-                    skippedCounter++;
+                    skippedNodesCounter++;
                     continue;
                 }
 
@@ -208,6 +211,13 @@ namespace PointCloudConverter.Writers
                 // FIXME this is wrong value, if file is appended.. but for now append is disabled
                 int totalPointsWritten = 0;
 
+                // TESTING
+                int cells = 32;
+                float center = (1f / (float)cells) / 2f;
+                bool[] usedGrid = null;
+
+                if (useLossyFiltering == true) usedGrid = new bool[cells * cells * cells];
+
                 // output all points within that node tile
                 for (int i = 0, len = nodeTempX.Count; i < len; i++)
                 {
@@ -217,6 +227,7 @@ namespace PointCloudConverter.Writers
                     // keep points
                     if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
+                    // original world positions
                     float px = nodeTempX[i];
                     float py = nodeTempY[i];
                     float pz = nodeTempZ[i];
@@ -250,10 +261,71 @@ namespace PointCloudConverter.Writers
                         // pack blue and z
                         pz = Tools.SuperPacker(nodeTempB[i] * 0.98f, pz, importSettings.gridSize * importSettings.packMagicValue);
                     }
+                    else if (useLossyFiltering == true)
+                    {
+                        // get local coords within tile
+                        var keys = nodeData.Key.Split('_');
+                        // TODO no need to parse, we should know these values?
+                        cellX = int.Parse(keys[0]);
+                        cellY = int.Parse(keys[1]);
+                        cellZ = int.Parse(keys[2]);
+                        px -= (cellX * importSettings.gridSize);
+                        py -= (cellY * importSettings.gridSize);
+                        pz -= (cellZ * importSettings.gridSize);
 
-                    writerPoints.Write(px);
-                    writerPoints.Write(py);
-                    writerPoints.Write(pz);
+                        byte packx = (byte)(px * cells);
+                        byte packy = (byte)(py * cells);
+                        byte packz = (byte)(pz * cells);
+                        var index = packx + cells * (packy + cells * packz);
+
+                        // TODO could decide which point is more important or stronger color?
+                        if (usedGrid[index] == true)
+                        {
+                            skippedPointsCounter++;
+                            continue;
+                        }
+
+                        usedGrid[index] = true;
+
+                        //if (i < 3) Console.WriteLine("px: " + px + " py: " + py + " pz: " + pz + " index: " + index + " packx: " + packx + " packy: " + packy + " packz: " + packz);
+
+                    }
+
+                    if (useLossyFiltering == true)
+                    {
+                        byte bx = (byte)(px * cells);
+                        byte by = (byte)(py * cells);
+                        byte bz = (byte)(pz * cells);
+
+                        float h = 0f;
+                        float s = 0f;
+                        float v = 0f;
+                        RGBtoHSV(nodeTempR[i], nodeTempG[i], nodeTempB[i], out h, out s, out v);
+
+                        if (i < 3) Console.WriteLine("h: " + h + " s: " + s + " v: " + v);
+
+                        // fix values
+                        h = h / 360f;
+
+                        byte bh = (byte)(h * 255f);
+                        byte bs = (byte)(s * 255f);
+                        byte bv = (byte)(v * 255f);
+                        byte huepacked = (byte)(bh >> 2);
+                        // cut off 3 bits, then move in the middle bits
+                        byte satpacked = (byte)(bs >> 3);
+                        // cut off 3 bits
+                        byte valpacked = (byte)(bv >> 3);
+                        uint hsv655 = (uint)((huepacked << 10) + (satpacked << 5) + valpacked);
+
+                        uint combinedXYZHSV = (uint)(((bz | by << 5 | bx << 10)) << 16) + hsv655;
+                        writerPoints.Write((uint)combinedXYZHSV);
+                    }
+                    else
+                    {
+                        writerPoints.Write(px);
+                        writerPoints.Write(py);
+                        writerPoints.Write(pz);
+                    }
 
                     totalPointsWritten++;
                 } // loop all points in tile (node)
@@ -262,7 +334,7 @@ namespace PointCloudConverter.Writers
                 writerPoints.Close();
                 bsPoints.Dispose();
 
-                if (importSettings.packColors == false)
+                if (importSettings.packColors == false || useLossyFiltering == false)
                 {
                     // save separate RGB
                     BufferedStream bsColors;
@@ -312,7 +384,7 @@ namespace PointCloudConverter.Writers
                 cb.cellZ = cellZ;
 
                 nodeBounds.Add(cb);
-            } // loop all nodes
+            } // loop all nodes foreach
 
             // save rootfile
             // only save after last file, TODO should save this if process fails or user cancels, so no need to start from 0 again.. but then needs some merge or continue from index n feature
@@ -334,6 +406,7 @@ namespace PointCloudConverter.Writers
 
                 int versionID = importSettings.packColors ? 2 : 1; // (1 = original, 2 = packed v3 format)
                 if (importSettings.packColors == true) versionID = 2;
+                if (useLossyFiltering == true) versionID = 3;
 
                 // add global header settings to first row
                 //               version,          gridsize,                   pointcount,             boundsMinX,       boundsMinY,       boundsMinZ,       boundsMaxX,       boundsMaxY,       boundsMaxZ
@@ -348,7 +421,8 @@ namespace PointCloudConverter.Writers
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Done saving v3 : " + outputFileRoot);
                 Console.ForegroundColor = ConsoleColor.White;
-                if (skippedCounter > 0) Console.WriteLine("*Skipped " + skippedCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
+                if (skippedNodesCounter > 0) Console.WriteLine("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
+                if (useLossyFiltering == true && skippedPointsCounter > 0) Console.WriteLine("*Skipped " + skippedPointsCounter + " points due to bytepacked grid filtering");
 
                 if ((tilerootdata.Count - 1) <= 0)
                 {
@@ -357,8 +431,41 @@ namespace PointCloudConverter.Writers
                     Console.ForegroundColor = ConsoleColor.White;
                 }
             }
+        } // Save()
 
+        void RGBtoHSV(float r, float g, float b, out float h, out float s, out float v)
+        {
+            float min, max, delta;
+
+            min = Math.Min(Math.Min(r, g), b);
+            max = Math.Max(Math.Max(r, g), b);
+            v = max; // v
+
+            delta = max - min;
+
+            if (max != 0)
+                s = delta / max; // s
+            else
+            {
+                // r = g = b = 0 // s = 0, v is undefined
+                s = 0;
+                h = -1;
+                return;
+            }
+
+            if (r == max)
+                h = (g - b) / delta; // between yellow & magenta
+            else if (g == max)
+                h = 2 + (b - r) / delta; // between cyan & yellow
+            else
+                h = 4 + (r - g) / delta; // between magenta & cyan
+
+            h *= 60; // degrees
+
+            if (h < 0) h += 360;
         }
-    }
 
-}
+
+
+    } // class
+} // namespace

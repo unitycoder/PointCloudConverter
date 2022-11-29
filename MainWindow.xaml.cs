@@ -264,13 +264,13 @@ namespace PointCloudConverter
             }
             args.Add("-output=" + txtOutput.Text);
 
-            if ((bool)chkAutoOffset.IsChecked) args.Add("-offset=" + (bool)chkAutoOffset.IsChecked);
+            args.Add("-offset=" + (bool)chkAutoOffset.IsChecked);
 
             if (cmbExportFormat.SelectedItem.ToString().ToUpper().Contains("PCROOT")) args.Add("-gridsize=" + txtGridSize.Text);
 
             if ((bool)chkUseMinPointCount.IsChecked) args.Add("-minpoints=" + txtMinPointCount.Text);
             if ((bool)chkUseScale.IsChecked) args.Add("-scale=" + txtScale.Text);
-            if ((bool)chkSwapYZ.IsChecked) args.Add("-swap=" + (bool)chkSwapYZ.IsChecked);
+            args.Add("-swap=" + (bool)chkSwapYZ.IsChecked);
             if ((bool)chkPackColors.IsChecked) args.Add("-pack=" + (bool)chkPackColors.IsChecked);
             if ((bool)chkUsePackMagic.IsChecked) args.Add("-packmagic=" + txtPackMagic.Text);
             if ((bool)chkUseMaxImportPointCount.IsChecked) args.Add("-limit=" + txtMaxImportPointCount.Text);
@@ -326,7 +326,39 @@ namespace PointCloudConverter
             var dialog = new OpenFileDialog();
             dialog.Title = "Select file to import";
             dialog.Filter = "LAS|*.las;*.laz";
-            dialog.InitialDirectory = Properties.Settings.Default.lastImportFolder;
+
+            // take folder from field
+            if (string.IsNullOrEmpty(txtInputFile.Text) == false)
+            {
+                // check if folder exists, if not take parent folder
+                if (Directory.Exists(Path.GetDirectoryName(txtInputFile.Text)) == true)
+                {
+                    dialog.InitialDirectory = Path.GetDirectoryName(txtInputFile.Text);
+                }
+                else // take parent
+                {
+                    var folder = Path.GetDirectoryName(txtInputFile.Text);
+                    // fix slashes
+                    folder = folder.Replace("\\", "/");
+                    for (int i = folder.Length - 1; i > -1; i--)
+                    {
+                        if (folder[i] == '/')
+                        {
+                            if (Directory.Exists(folder.Substring(0, i)))
+                            {
+                                dialog.InitialDirectory = folder.Substring(0, i).Replace("/", "\\");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            else // no path given
+            {
+                dialog.InitialDirectory = Properties.Settings.Default.lastImportFolder;
+            }
+
+
             if (dialog.ShowDialog() == true)
             {
                 txtInputFile.Text = dialog.FileName;
@@ -343,15 +375,17 @@ namespace PointCloudConverter
             dialog.Title = "Set output folder and filename";
             dialog.Filter = "UCPC (V2)|*.ucpc|PCROOT (V3)|*.pcroot";
 
+            dialog.FilterIndex = cmbExportFormat.SelectedIndex + 1;
+
             // take folder from field
             if (string.IsNullOrEmpty(txtOutput.Text) == false)
             {
                 // check if folder exists, if not take parent folder
                 if (Directory.Exists(Path.GetDirectoryName(txtOutput.Text)) == true)
                 {
-                    dialog.InitialDirectory = txtOutput.Text;
+                    dialog.InitialDirectory = Path.GetDirectoryName(txtOutput.Text);
                 }
-                else
+                else // take parent
                 {
                     var folder = Path.GetDirectoryName(txtOutput.Text);
                     // fix slashes
@@ -369,12 +403,10 @@ namespace PointCloudConverter
                     }
                 }
             }
-            else // no path
+            else // no path given
             {
                 dialog.InitialDirectory = Properties.Settings.Default.lastExportFolder;
             }
-
-            Console.WriteLine(dialog.InitialDirectory);
 
             if (dialog.ShowDialog() == true)
             {
