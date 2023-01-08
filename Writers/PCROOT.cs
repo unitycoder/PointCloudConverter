@@ -38,7 +38,6 @@ namespace PointCloudConverter.Writers
             var res = true;
 
             // clear old nodes
-            nodeBounds.Clear();
             nodeX.Clear();
             nodeY.Clear();
             nodeZ.Clear();
@@ -48,14 +47,6 @@ namespace PointCloudConverter.Writers
 
             bsPoints = null;
             writerPoints = null;
-
-            cloudMinX = float.PositiveInfinity;
-            cloudMinY = float.PositiveInfinity;
-            cloudMinZ = float.PositiveInfinity;
-            cloudMaxX = float.NegativeInfinity;
-            cloudMaxY = float.NegativeInfinity;
-            cloudMaxZ = float.NegativeInfinity;
-
             importSettings = _importSettings;
 
             return res;
@@ -430,6 +421,17 @@ namespace PointCloudConverter.Writers
                     Console.WriteLine("Error> No tiles found! Try enable -scale (to make your cloud to smaller) Or make -gridsize bigger, or set -limit point count to smaller value");
                     Console.ForegroundColor = ConsoleColor.White;
                 }
+
+                // cleanup after last file
+                nodeBounds.Clear();
+
+                cloudMinX = float.PositiveInfinity;
+                cloudMinY = float.PositiveInfinity;
+                cloudMinZ = float.PositiveInfinity;
+                cloudMaxX = float.NegativeInfinity;
+                cloudMaxY = float.NegativeInfinity;
+                cloudMaxZ = float.NegativeInfinity;
+
             }
         } // Save()
 
