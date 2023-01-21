@@ -279,7 +279,6 @@ namespace PointCloudConverter.Writers
                         usedGrid[index] = true;
 
                         //if (i < 3) Console.WriteLine("px: " + px + " py: " + py + " pz: " + pz + " index: " + index + " packx: " + packx + " packy: " + packy + " packz: " + packz);
-
                     }
 
                     if (useLossyFiltering == true)
@@ -325,7 +324,8 @@ namespace PointCloudConverter.Writers
                 writerPoints.Close();
                 bsPoints.Dispose();
 
-                if (importSettings.packColors == false || useLossyFiltering == false)
+                // NOTE useLossyFiltering is for testing only
+                if (importSettings.packColors == false && useLossyFiltering == false)
                 {
                     // save separate RGB
                     BufferedStream bsColors;
