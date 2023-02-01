@@ -20,6 +20,10 @@
         <Label x:Name="label_Copy2" Content="Import format:&#xA;" HorizontalAlignment="Left" Margin="719,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
 
         <StackPanel HorizontalAlignment="Left" Height="238" Margin="20,198,0,0" VerticalAlignment="Top" Width="277">
+            <StackPanel Orientation="Horizontal">
+                <CheckBox x:Name="chkImportRGB" Content="Read RGB" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads RGB color values" Checked="chkImportRGB_Checked" Unchecked="chkImportRGB_Unchecked"/>
+                <CheckBox x:Name="chkImportIntensity" Content="Read Intensity" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportIntensity_Checked" Unchecked="chkImportIntensity_Unchecked"/>
+            </StackPanel>
             <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using the first point as offset value"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
@@ -75,7 +79,7 @@
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
             <CheckBox x:Name="chkPackColors" Content="Pack Colors" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Packs color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&amp;shader in viewer"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <CheckBox x:Name="chkUsePackMagic" Content="PackMagic:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Optional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision issues with packed data"/>
+                <CheckBox x:Name="chkUsePackMagic" Content="PackMagic:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Optional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision or color issues with packed data"/>
                 <TextBox x:Name="txtPackMagic" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="64"/>
             </StackPanel>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>

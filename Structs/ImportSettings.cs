@@ -30,7 +30,8 @@ namespace PointCloudConverter
         // TODO these should be export settings..
 
         public bool swapYZ = true;
-        public readonly bool readRGB = true; // NOTE always on for now
+        public bool importRGB = true; // this or intensity must be on
+        public bool importIntensity = false;
         public bool useAutoOffset = true;
         public float offsetX = 0;
         public float offsetY = 0;
@@ -61,7 +62,8 @@ namespace PointCloudConverter
             t += "\n inputFiles=" + inputFiles;
             t += "\n outputFile=" + outputFile;
             t += "\n swapYZ=" + swapYZ;
-            t += "\n readRGB=" + readRGB;
+            t += "\n readRGB=" + importRGB;
+            t += "\n readIntensity=" + importIntensity;
             t += "\n useAutoOffset=" + useAutoOffset;
             t += "\n offsetX=" + offsetX;
             t += "\n offsetY=" + offsetY;

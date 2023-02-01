@@ -93,6 +93,7 @@ namespace PointCloudConverter.Writers
             if (z > cloudMaxZ) cloudMaxZ = z;
 
             // add to correct cell, MOVE to writer
+            // TODO handle bytepacked gridsize here
             int cellX = (int)(x / importSettings.gridSize);
             int cellY = (int)(y / importSettings.gridSize);
             int cellZ = (int)(z / importSettings.gridSize);
@@ -132,6 +133,11 @@ namespace PointCloudConverter.Writers
         {
             // TEST 
             bool useLossyFiltering = false;
+            if (useLossyFiltering)
+            {
+                Console.WriteLine("************* useLossyFiltering ****************");
+            }
+
             int skippedNodesCounter = 0;
             int skippedPointsCounter = 0;
 
@@ -203,11 +209,14 @@ namespace PointCloudConverter.Writers
                 int totalPointsWritten = 0;
 
                 // TESTING
-                int cells = 32;
-                float center = (1f / (float)cells) / 2f;
-                bool[] usedGrid = null;
+                int fixedGridSize = 10; // one tile is this size
+                int cellsInTile = 64; // how many subtiles in one tile
+                //float center = (1f / (float)cells) / 2f;
+                bool[] reservedGridCells = null;
 
-                if (useLossyFiltering == true) usedGrid = new bool[cells * cells * cells];
+                if (useLossyFiltering == true) reservedGridCells = new bool[cellsInTile * cellsInTile * cellsInTile];
+
+                //Console.WriteLine("nodeTempX.Count="+ nodeTempX.Count);
 
                 // output all points within that node tile
                 for (int i = 0, len = nodeTempX.Count; i < len; i++)
@@ -218,7 +227,7 @@ namespace PointCloudConverter.Writers
                     // keep points
                     if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
-                    // original world positions
+                    // get original world positions
                     float px = nodeTempX[i];
                     float py = nodeTempY[i];
                     float pz = nodeTempZ[i];
@@ -241,6 +250,7 @@ namespace PointCloudConverter.Writers
                         cellX = int.Parse(keys[0]);
                         cellY = int.Parse(keys[1]);
                         cellZ = int.Parse(keys[2]);
+                        // offset to local coords
                         px -= (cellX * importSettings.gridSize);
                         py -= (cellY * importSettings.gridSize);
                         pz -= (cellZ * importSettings.gridSize);
@@ -256,43 +266,54 @@ namespace PointCloudConverter.Writers
                     {
                         // get local coords within tile
                         var keys = nodeData.Key.Split('_');
-                        // TODO no need to parse, we should know these values?
+                        // TODO no need to parse, we should know these values? these are world cell grid coors
+                        // TODO take reserved grid cells earlier, when reading points! not here on 2nd pass..
                         cellX = int.Parse(keys[0]);
                         cellY = int.Parse(keys[1]);
                         cellZ = int.Parse(keys[2]);
-                        px -= (cellX * importSettings.gridSize);
-                        py -= (cellY * importSettings.gridSize);
-                        pz -= (cellZ * importSettings.gridSize);
+                        // offset point inside local tile
+                        px -= (cellX * fixedGridSize);
+                        py -= (cellY * fixedGridSize);
+                        pz -= (cellZ * fixedGridSize);
+                        //byte packx = (byte)(px * cells);
+                        //byte packy = (byte)(py * cells);
+                        //byte packz = (byte)(pz * cells);
+                        // normalize into tile coords
+                        px /= (float)cellsInTile;
+                        py /= (float)cellsInTile;
+                        pz /= (float)cellsInTile;
+                        byte packx = (byte)(px * cellsInTile);
+                        byte packy = (byte)(py * cellsInTile);
+                        byte packz = (byte)(pz * cellsInTile);
 
-                        byte packx = (byte)(px * cells);
-                        byte packy = (byte)(py * cells);
-                        byte packz = (byte)(pz * cells);
-                        var index = packx + cells * (packy + cells * packz);
+                        var reservedTileLocalCellIndex = packx + cellsInTile * (packy + cellsInTile * packz);
+
+                        if (i < 10) Console.WriteLine("cellX:" + cellX + " cellY:" + cellY + " cellZ:" + cellZ + "  px: " + px + " py: " + py + " pz: " + pz + " localIndex: " + reservedTileLocalCellIndex + " packx: " + packx + " packy: " + packy + " packz: " + packz);
+
 
                         // TODO could decide which point is more important or stronger color?
-                        if (usedGrid[index] == true)
+                        if (reservedGridCells[reservedTileLocalCellIndex] == true)
                         {
                             skippedPointsCounter++;
                             continue;
                         }
 
-                        usedGrid[index] = true;
+                        reservedGridCells[reservedTileLocalCellIndex] = true;
 
-                        //if (i < 3) Console.WriteLine("px: " + px + " py: " + py + " pz: " + pz + " index: " + index + " packx: " + packx + " packy: " + packy + " packz: " + packz);
                     }
 
                     if (useLossyFiltering == true)
                     {
-                        byte bx = (byte)(px * cells);
-                        byte by = (byte)(py * cells);
-                        byte bz = (byte)(pz * cells);
+                        byte bx = (byte)(px * cellsInTile);
+                        byte by = (byte)(py * cellsInTile);
+                        byte bz = (byte)(pz * cellsInTile);
 
                         float h = 0f;
                         float s = 0f;
                         float v = 0f;
                         RGBtoHSV(nodeTempR[i], nodeTempG[i], nodeTempB[i], out h, out s, out v);
 
-                        if (i < 3) Console.WriteLine("h: " + h + " s: " + s + " v: " + v);
+                        //if (i < 3) Console.WriteLine("h: " + h + " s: " + s + " v: " + v);
 
                         // fix values
                         h = h / 360f;
@@ -300,14 +321,16 @@ namespace PointCloudConverter.Writers
                         byte bh = (byte)(h * 255f);
                         byte bs = (byte)(s * 255f);
                         byte bv = (byte)(v * 255f);
-                        byte huepacked = (byte)(bh >> 2);
+                        // cut off 3 bits (from 8 bits)
+                        byte huepacked = (byte)(bh >> 3);
                         // cut off 3 bits, then move in the middle bits
                         byte satpacked = (byte)(bs >> 3);
-                        // cut off 3 bits
-                        byte valpacked = (byte)(bv >> 3);
-                        uint hsv655 = (uint)((huepacked << 10) + (satpacked << 5) + valpacked);
+                        // cut off 4 bits (from 8 bits)
+                        byte valpacked = (byte)(bv >> 4);
+                        // combine H (5 bits), S (5 bits), V (4 bits)
+                        uint hsv554 = (uint)((huepacked << 9) + (satpacked << 5) + valpacked);
 
-                        uint combinedXYZHSV = (uint)(((bz | by << 5 | bx << 10)) << 16) + hsv655;
+                        uint combinedXYZHSV = (uint)(((bz + by << 6 + bx << 12)) << 14) + hsv554;
                         writerPoints.Write((uint)combinedXYZHSV);
                     }
                     else

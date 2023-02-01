@@ -174,6 +174,8 @@ namespace PointCloudConverter
             Console.WriteLine("-importformat" + argSeparator + "laz\tSupported import formats: LAZ, LAS)\tDefault is LAS/LAZ");
             Console.WriteLine("-exportformat" + argSeparator + "ucpc\tSupported export formats: UCPC (v2), PCROOT (v3))\tDefault is UCPC (v2)");
             Console.WriteLine("-output" + argSeparator + "yourfile.ucpc\t(Default is same folder as input file. For v3 you dont need to set file extension)");
+            Console.WriteLine("-rgb" + argSeparator + "true or false\tReads RGB colors\tDefault is true");
+            Console.WriteLine("-intensity" + argSeparator + "true or false\tReads Intensity as RGB color\tDefault is false");
             Console.WriteLine("-offset" + argSeparator + "true or false\tAuto-offsets cloud near 0,0,0 by using the first point as offset value\tDefault is true");
             Console.WriteLine("-gridsize" + argSeparator + "5\t\tGridsize in meters, splits cloud into tiles with this size. v3 only!\tDefault is 5, minimum is 0.1 (Note: values below 1 are not really tested)");
             Console.WriteLine("-minpoints" + argSeparator + "1000\t\tIf tile has less points than this value, its discarded. Good for removing straypoints. v3 only!\tDefault is 1000");

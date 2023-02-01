@@ -493,6 +493,32 @@ namespace PointCloudConverter
                                 {
                                     importSettings.randomize = (param == "true");
                                 }
+                                break;                            
+                                
+                            case "-rgb":
+                                Console.WriteLine("rgb = " + param);
+
+                                if (param != "false" && param != "true")
+                                {
+                                    errors.Add("Invalid rgb parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.importRGB = (param == "true");
+                                }
+                                break;
+                                
+                            case "-intensity":
+                                Console.WriteLine("intensity = " + param);
+
+                                if (param != "false" && param != "true")
+                                {
+                                    errors.Add("Invalid intensity parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.importIntensity = (param == "true");
+                                }
                                 break;
 
                             case "?":
@@ -574,6 +600,12 @@ namespace PointCloudConverter
             if (importSettings.exportFormat == ExportFormat.Unknown)
             {
                 errors.Add("No export format defined (Example: -exportformat" + argValueSeparator + "UCPC)");
+            }
+
+            // cannot have both rgb & intensity
+            if (importSettings.importRGB == true && importSettings.importIntensity == true)
+            {
+                errors.Add("Cannot have both -rgb and -intensity enabled");
             }
 
             //// check mismatching settings for v2 vs v3

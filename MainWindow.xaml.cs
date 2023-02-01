@@ -15,7 +15,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static string appname = "PointCloud Converter v1.75";
+        static string appname = "PointCloud Converter v1.76";
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
         // allow console output from WPF application https://stackoverflow.com/a/7559336/5452781
@@ -30,6 +30,8 @@ namespace PointCloudConverter
         Thread workerThread;
         static bool abort = false;
         public static MainWindow mainWindowStatic;
+        bool isInitialiazing = true;
+
 
         public MainWindow()
         {
@@ -265,6 +267,8 @@ namespace PointCloudConverter
             args.Add("-output=" + txtOutput.Text);
 
             args.Add("-offset=" + (bool)chkAutoOffset.IsChecked);
+            args.Add("-rgb=" + (bool)chkImportRGB.IsChecked);
+            args.Add("-intensity=" + (bool)chkImportIntensity.IsChecked);
 
             if (cmbExportFormat.SelectedItem.ToString().ToUpper().Contains("PCROOT")) args.Add("-gridsize=" + txtGridSize.Text);
 
@@ -436,6 +440,9 @@ namespace PointCloudConverter
             txtInputFile.Text = Properties.Settings.Default.inputFile;
             txtOutput.Text = Properties.Settings.Default.outputFile;
 
+            chkImportRGB.IsChecked = Properties.Settings.Default.importRGB;
+            chkImportIntensity.IsChecked = Properties.Settings.Default.importIntensity;
+            
             chkAutoOffset.IsChecked = Properties.Settings.Default.useAutoOffset;
             txtGridSize.Text = Properties.Settings.Default.gridSize.ToString();
             chkUseMinPointCount.IsChecked = Properties.Settings.Default.useMinPointCount;
@@ -455,6 +462,8 @@ namespace PointCloudConverter
             chkUseMaxFileCount.IsChecked = Properties.Settings.Default.useMaxFileCount;
             txtMaxFileCount.Text = Properties.Settings.Default.maxFileCount.ToString();
             chkRandomize.IsChecked = Properties.Settings.Default.randomize;
+            
+            isInitialiazing = false;
         }
 
         void SaveSettings()
@@ -508,6 +517,45 @@ namespace PointCloudConverter
         {
             // updatae file extension, if set
             txtOutput.Text = Path.ChangeExtension(txtOutput.Text, "." + cmbExportFormat.SelectedValue.ToString().ToLower());
+        }
+
+        private void chkImportRGB_Checked(object sender, RoutedEventArgs e)
+        {
+            // not available at init
+            if (isInitialiazing == true) return;
+            
+            chkImportIntensity.IsChecked = false;
+            Properties.Settings.Default.importRGB = true;
+            Properties.Settings.Default.Save();
+        }
+
+        private void chkImportIntensity_Checked(object sender, RoutedEventArgs e)
+        {
+            if (isInitialiazing == true) return;
+            
+            chkImportRGB.IsChecked = false;
+            Properties.Settings.Default.importIntensity = true;
+            Properties.Settings.Default.Save();
+        }
+
+        private void chkImportIntensity_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (isInitialiazing == true) return; 
+            Properties.Settings.Default.importIntensity = false;
+
+            chkImportRGB.IsChecked = true;
+            Properties.Settings.Default.importRGB = true;
+            Properties.Settings.Default.Save();
+        }
+
+        private void chkImportRGB_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (isInitialiazing == true) return;
+            Properties.Settings.Default.importRGB = false;
+
+            chkImportIntensity.IsChecked = true;
+            Properties.Settings.Default.importIntensity = true;
+            Properties.Settings.Default.Save();
         }
     } // class
 } // namespace

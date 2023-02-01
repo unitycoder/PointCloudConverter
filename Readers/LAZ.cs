@@ -17,11 +17,15 @@ namespace PointCloudConverter.Readers
     {
         laszip_dll lazReader = new laszip_dll();
         bool compressed = false;
+        bool importRGB = true;
+        //bool importIntensity = false;
 
         bool IReader.InitReader(ImportSettings importSettings, int fileIndex)
         {
             // TODO check errors
             var file = importSettings.inputFiles[fileIndex];
+            importRGB = importSettings.importRGB;
+            //importIntensity = importSettings.readIntensity;
             lazReader.laszip_open_reader(file, ref compressed);
             return true;
         }
@@ -54,19 +58,30 @@ namespace PointCloudConverter.Readers
             // get point reference
             var p = lazReader.point;
 
-            // try to detect if colors are outside 0-255 range?
-            if (p.rgb[0].ToString("X").Length > 2)
+            if (importRGB == true)
             {
-                c.r = Tools.LUT255[(byte)(p.rgb[0] / 256f)];
-                c.g = Tools.LUT255[(byte)(p.rgb[1] / 256f)];
-                c.b = Tools.LUT255[(byte)(p.rgb[2] / 256f)];
+                // try to detect if colors are outside 0-255 range? TODO just check value?
+                if (p.rgb[0].ToString("X").Length > 2)
+                {
+                    c.r = Tools.LUT255[(byte)(p.rgb[0] / 256f)];
+                    c.g = Tools.LUT255[(byte)(p.rgb[1] / 256f)];
+                    c.b = Tools.LUT255[(byte)(p.rgb[2] / 256f)];
+                }
+                else // its 0-255
+                {
+                    c.r = Tools.LUT255[(byte)(p.rgb[0])];
+                    c.g = Tools.LUT255[(byte)(p.rgb[1])];
+                    c.b = Tools.LUT255[(byte)(p.rgb[2])];
+                }
             }
-            else // its 0-255
+            else // use intensity
             {
-                c.r = Tools.LUT255[(byte)(p.rgb[0])];
-                c.g = Tools.LUT255[(byte)(p.rgb[1])];
-                c.b = Tools.LUT255[(byte)(p.rgb[2])];
+                float i = Tools.LUT255[(byte)(p.intensity)];
+                c.r = i;
+                c.g = i;
+                c.b = i;
             }
+
             return c;
         }
 
