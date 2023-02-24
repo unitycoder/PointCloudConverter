@@ -10,6 +10,9 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
+using Color = PointCloudConverter.Structs.Color;
 
 namespace PointCloudConverter
 {
@@ -90,13 +93,20 @@ namespace PointCloudConverter
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
+
             // if user has set maxFiles param, loop only that many files
             importSettings.maxFiles = importSettings.maxFiles > 0 ? importSettings.maxFiles : importSettings.inputFiles.Count;
             importSettings.maxFiles = Math.Min(importSettings.maxFiles, importSettings.inputFiles.Count);
 
+            StartProgressTimer();
+
+
             // loop input files
+            progressFile = 0;
+            progressTotalFiles = importSettings.maxFiles-1;
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
+                progressFile = i;
                 Console.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
                 Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
 
@@ -113,12 +123,46 @@ namespace PointCloudConverter
             Application.Current.Dispatcher.Invoke(new Action(() =>
             {
                 mainWindowStatic.HideProcessingPanel();
+                // clear timer
+                progressTimerThread.Stop();
+                mainWindowStatic.progressBarFiles.Foreground = Brushes.Green;
+                mainWindowStatic.progressBarPoints.Foreground = Brushes.Green;
             }));
         }
 
         void HideProcessingPanel()
         {
             gridProcessingPanel.Visibility = Visibility.Hidden;
+        }
+
+        // progress bar data
+        static int progressPoint = 0;
+        static int progressTotalPoints = 0;
+        static int progressFile = 0;
+        static int progressTotalFiles = 0;
+        static DispatcherTimer progressTimerThread;
+
+        static void StartProgressTimer()
+        {
+            progressTimerThread = new DispatcherTimer(DispatcherPriority.Background, Application.Current.Dispatcher);
+            progressTimerThread.Tick += ProgressTick;
+            progressTimerThread.Interval = TimeSpan.FromSeconds(1);
+            progressTimerThread.Start();
+
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                mainWindowStatic.progressBarFiles.Foreground = Brushes.Red;
+                mainWindowStatic.progressBarPoints.Foreground = Brushes.Red;
+            }));
+        }
+
+        static void ProgressTick(object sender, EventArgs e)
+        {
+            if (progressTotalPoints > 0)
+            {
+                mainWindowStatic.progressBarFiles.Value = progressFile / (float)progressTotalFiles;
+                mainWindowStatic.progressBarPoints.Value = progressPoint / (float)progressTotalPoints;
+            }
         }
 
         // process single file
@@ -194,6 +238,9 @@ namespace PointCloudConverter
                 return;
             }
 
+            progressPoint = 0;
+            progressTotalPoints = pointCount;
+
             // Loop all points
             for (int i = 0; i < fullPointCount; i++)
             {
@@ -222,11 +269,18 @@ namespace PointCloudConverter
                     point.y = temp;
                 }
 
+                // flip Z if enabled
+                if (importSettings.invertZ == true)
+                {
+                    point.z = -point.z;
+                }
+
                 // get point color
                 Color rgb = importSettings.reader.GetRGB();
 
                 // collect this point XYZ and RGB into node
                 importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b);
+                progressPoint = i;
             }
 
             importSettings.writer.Save(fileIndex);
@@ -275,6 +329,7 @@ namespace PointCloudConverter
             if ((bool)chkUseMinPointCount.IsChecked) args.Add("-minpoints=" + txtMinPointCount.Text);
             if ((bool)chkUseScale.IsChecked) args.Add("-scale=" + txtScale.Text);
             args.Add("-swap=" + (bool)chkSwapYZ.IsChecked);
+            if ((bool)chkInvertZ.IsChecked) args.Add("-invertZ=" + (bool)chkInvertZ.IsChecked);
             if ((bool)chkPackColors.IsChecked) args.Add("-pack=" + (bool)chkPackColors.IsChecked);
             if ((bool)chkUsePackMagic.IsChecked) args.Add("-packmagic=" + txtPackMagic.Text);
             if ((bool)chkUseMaxImportPointCount.IsChecked) args.Add("-limit=" + txtMaxImportPointCount.Text);
@@ -442,7 +497,7 @@ namespace PointCloudConverter
 
             chkImportRGB.IsChecked = Properties.Settings.Default.importRGB;
             chkImportIntensity.IsChecked = Properties.Settings.Default.importIntensity;
-            
+
             chkAutoOffset.IsChecked = Properties.Settings.Default.useAutoOffset;
             txtGridSize.Text = Properties.Settings.Default.gridSize.ToString();
             chkUseMinPointCount.IsChecked = Properties.Settings.Default.useMinPointCount;
@@ -450,6 +505,7 @@ namespace PointCloudConverter
             chkUseScale.IsChecked = Properties.Settings.Default.useScale;
             txtScale.Text = Properties.Settings.Default.scale.ToString();
             chkSwapYZ.IsChecked = Properties.Settings.Default.swapYZ;
+            chkInvertZ.IsChecked = Properties.Settings.Default.invertZ;
             chkPackColors.IsChecked = Properties.Settings.Default.packColors;
             chkUsePackMagic.IsChecked = Properties.Settings.Default.usePackMagic;
             txtPackMagic.Text = Properties.Settings.Default.packMagic.ToString();
@@ -462,7 +518,7 @@ namespace PointCloudConverter
             chkUseMaxFileCount.IsChecked = Properties.Settings.Default.useMaxFileCount;
             txtMaxFileCount.Text = Properties.Settings.Default.maxFileCount.ToString();
             chkRandomize.IsChecked = Properties.Settings.Default.randomize;
-            
+
             isInitialiazing = false;
         }
 
@@ -479,6 +535,7 @@ namespace PointCloudConverter
             Properties.Settings.Default.useScale = (bool)chkUseScale.IsChecked;
             Properties.Settings.Default.scale = Tools.ParseFloat(txtScale.Text);
             Properties.Settings.Default.swapYZ = (bool)chkSwapYZ.IsChecked;
+            Properties.Settings.Default.invertZ = (bool)chkInvertZ.IsChecked;
             Properties.Settings.Default.packColors = (bool)chkPackColors.IsChecked;
             Properties.Settings.Default.usePackMagic = (bool)chkUsePackMagic.IsChecked;
             Properties.Settings.Default.packMagic = Tools.ParseInt(txtPackMagic.Text);
@@ -523,7 +580,7 @@ namespace PointCloudConverter
         {
             // not available at init
             if (isInitialiazing == true) return;
-            
+
             chkImportIntensity.IsChecked = false;
             Properties.Settings.Default.importRGB = true;
             Properties.Settings.Default.Save();
@@ -532,7 +589,7 @@ namespace PointCloudConverter
         private void chkImportIntensity_Checked(object sender, RoutedEventArgs e)
         {
             if (isInitialiazing == true) return;
-            
+
             chkImportRGB.IsChecked = false;
             Properties.Settings.Default.importIntensity = true;
             Properties.Settings.Default.Save();
@@ -540,7 +597,7 @@ namespace PointCloudConverter
 
         private void chkImportIntensity_Unchecked(object sender, RoutedEventArgs e)
         {
-            if (isInitialiazing == true) return; 
+            if (isInitialiazing == true) return;
             Properties.Settings.Default.importIntensity = false;
 
             chkImportRGB.IsChecked = true;

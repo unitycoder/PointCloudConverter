@@ -332,6 +332,19 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-invertz":
+                                Console.WriteLine("invertz = " + param);
+
+                                if (param != "true" && param != "false")
+                                {
+                                    errors.Add("Invalid invertz parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.invertZ = param == "true";
+                                }
+                                break;
+
                             case "-pack":
                                 Console.WriteLine("pack = " + param);
 
