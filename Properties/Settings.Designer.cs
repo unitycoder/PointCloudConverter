@@ -382,5 +382,17 @@ namespace PointCloudConverter.Properties {
                 this["invertZ"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool invertX {
+            get {
+                return ((bool)(this["invertX"]));
+            }
+            set {
+                this["invertX"] = value;
+            }
+        }
     }
 }

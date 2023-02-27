@@ -32,6 +32,7 @@
                 <TextBox x:Name="txtScale" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="0.1"/>
             </StackPanel>
             <CheckBox x:Name="chkSwapYZ" Content="Swap Y and Z" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Swaps Z and Y values, since unity Y is up"/>
+            <CheckBox x:Name="chkInvertX" Content="Invert X" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Inverts X value (x=-x)"/>
             <CheckBox x:Name="chkInvertZ" Content="Invert Z" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Inverts Z value (z=-z)"/>
 
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
@@ -61,7 +62,10 @@
                 <ProgressBar x:Name="progressBarFiles" Height="10" Width="190" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Files to process"/>
             </StatusBarItem>
             <StatusBarItem>
-                <ProgressBar x:Name="progressBarPoints" Height="10" Width="690" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Points to process (in current file)"/>
+                <ProgressBar x:Name="progressBarPoints" Height="10" Width="490" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Points to process (in current file)"/>
+            </StatusBarItem>
+            <StatusBarItem>
+                <Label x:Name="lblStatus" Foreground="{DynamicResource MainText}">Status</Label>
             </StatusBarItem>
         </StatusBar>
         <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,526,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="877" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>

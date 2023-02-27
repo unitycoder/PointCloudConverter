@@ -332,6 +332,19 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-invertx":
+                                Console.WriteLine("invertx = " + param);
+
+                                if (param != "true" && param != "false")
+                                {
+                                    errors.Add("Invalid invertx parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.invertX = param == "true";
+                                }
+                                break;
+
                             case "-invertz":
                                 Console.WriteLine("invertz = " + param);
 

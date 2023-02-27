@@ -103,7 +103,7 @@ namespace PointCloudConverter
 
             // loop input files
             progressFile = 0;
-            progressTotalFiles = importSettings.maxFiles-1;
+            progressTotalFiles = importSettings.maxFiles - 1;
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
                 progressFile = i;
@@ -123,6 +123,8 @@ namespace PointCloudConverter
             Application.Current.Dispatcher.Invoke(new Action(() =>
             {
                 mainWindowStatic.HideProcessingPanel();
+                // call update one more time
+                ProgressTick(null, null);
                 // clear timer
                 progressTimerThread.Stop();
                 mainWindowStatic.progressBarFiles.Foreground = Brushes.Green;
@@ -141,6 +143,7 @@ namespace PointCloudConverter
         static int progressFile = 0;
         static int progressTotalFiles = 0;
         static DispatcherTimer progressTimerThread;
+        public static string lastStatusMessage = "";
 
         static void StartProgressTimer()
         {
@@ -153,6 +156,7 @@ namespace PointCloudConverter
             {
                 mainWindowStatic.progressBarFiles.Foreground = Brushes.Red;
                 mainWindowStatic.progressBarPoints.Foreground = Brushes.Red;
+                mainWindowStatic.lblStatus.Content = "";
             }));
         }
 
@@ -162,6 +166,7 @@ namespace PointCloudConverter
             {
                 mainWindowStatic.progressBarFiles.Value = progressFile / (float)progressTotalFiles;
                 mainWindowStatic.progressBarPoints.Value = progressPoint / (float)progressTotalPoints;
+                mainWindowStatic.lblStatus.Content = lastStatusMessage;
             }
         }
 
@@ -239,7 +244,9 @@ namespace PointCloudConverter
             }
 
             progressPoint = 0;
-            progressTotalPoints = pointCount;
+            progressTotalPoints = importSettings.useLimit ? pointCount : fullPointCount;
+
+            lastStatusMessage = "Processing points..";
 
             // Loop all points
             for (int i = 0; i < fullPointCount; i++)
@@ -275,6 +282,12 @@ namespace PointCloudConverter
                     point.z = -point.z;
                 }
 
+                // flip X if enabled
+                if (importSettings.invertX == true)
+                {
+                    point.x = -point.x;
+                }
+
                 // get point color
                 Color rgb = importSettings.reader.GetRGB();
 
@@ -283,12 +296,15 @@ namespace PointCloudConverter
                 progressPoint = i;
             }
 
+            lastStatusMessage = "Saving files..";
             importSettings.writer.Save(fileIndex);
+            lastStatusMessage = "Finished saving..";
             importSettings.reader.Close();
 
             // if this was last file
             if (fileIndex == (importSettings.maxFiles - 1))
             {
+                lastStatusMessage = "Done!";
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Finished!");
                 Console.ForegroundColor = ConsoleColor.White;
@@ -329,6 +345,7 @@ namespace PointCloudConverter
             if ((bool)chkUseMinPointCount.IsChecked) args.Add("-minpoints=" + txtMinPointCount.Text);
             if ((bool)chkUseScale.IsChecked) args.Add("-scale=" + txtScale.Text);
             args.Add("-swap=" + (bool)chkSwapYZ.IsChecked);
+            if ((bool)chkInvertX.IsChecked) args.Add("-invertX=" + (bool)chkInvertX.IsChecked);
             if ((bool)chkInvertZ.IsChecked) args.Add("-invertZ=" + (bool)chkInvertZ.IsChecked);
             if ((bool)chkPackColors.IsChecked) args.Add("-pack=" + (bool)chkPackColors.IsChecked);
             if ((bool)chkUsePackMagic.IsChecked) args.Add("-packmagic=" + txtPackMagic.Text);
@@ -505,6 +522,7 @@ namespace PointCloudConverter
             chkUseScale.IsChecked = Properties.Settings.Default.useScale;
             txtScale.Text = Properties.Settings.Default.scale.ToString();
             chkSwapYZ.IsChecked = Properties.Settings.Default.swapYZ;
+            chkInvertX.IsChecked = Properties.Settings.Default.invertX;
             chkInvertZ.IsChecked = Properties.Settings.Default.invertZ;
             chkPackColors.IsChecked = Properties.Settings.Default.packColors;
             chkUsePackMagic.IsChecked = Properties.Settings.Default.usePackMagic;
@@ -535,6 +553,7 @@ namespace PointCloudConverter
             Properties.Settings.Default.useScale = (bool)chkUseScale.IsChecked;
             Properties.Settings.Default.scale = Tools.ParseFloat(txtScale.Text);
             Properties.Settings.Default.swapYZ = (bool)chkSwapYZ.IsChecked;
+            Properties.Settings.Default.invertX = (bool)chkInvertX.IsChecked;
             Properties.Settings.Default.invertZ = (bool)chkInvertZ.IsChecked;
             Properties.Settings.Default.packColors = (bool)chkPackColors.IsChecked;
             Properties.Settings.Default.usePackMagic = (bool)chkUsePackMagic.IsChecked;
