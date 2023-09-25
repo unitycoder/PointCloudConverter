@@ -18,7 +18,7 @@ namespace PointCloudConverter.Readers
         laszip_dll lazReader = new laszip_dll();
         bool compressed = false;
         bool importRGB = true;
-        //bool importIntensity = false;
+        bool customIntensityRange = false;
 
         bool IReader.InitReader(ImportSettings importSettings, int fileIndex)
         {
@@ -26,6 +26,7 @@ namespace PointCloudConverter.Readers
             var file = importSettings.inputFiles[fileIndex];
             importRGB = importSettings.importRGB;
             //importIntensity = importSettings.readIntensity;
+            customIntensityRange = importSettings.useCustomIntensityRange;
             lazReader.laszip_open_reader(file, ref compressed);
             return true;
         }
@@ -76,7 +77,15 @@ namespace PointCloudConverter.Readers
             }
             else // use intensity
             {
-                float i = Tools.LUT255[(byte)(p.intensity)];
+                float i = 0;
+                if (customIntensityRange) // NOTE now only supports 65535 as custom range
+                {
+                    i = Tools.LUT255[(byte)(p.intensity / 255f)];
+                }
+                else
+                {
+                    i = Tools.LUT255[(byte)(p.intensity)];
+                }
                 c.r = i;
                 c.g = i;
                 c.b = i;

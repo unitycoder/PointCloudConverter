@@ -72,10 +72,15 @@
         <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="5,503,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
         <Button x:Name="btnGetParams" Content="Get Commandline params" HorizontalAlignment="Left" Margin="10,440,0,0" VerticalAlignment="Top" Width="214" Height="58" Click="btnGetParams_Click"/>
         <StackPanel HorizontalAlignment="Left" Height="149" Margin="320,198,0,0" VerticalAlignment="Top" Width="234">
-            <Label x:Name="label_Copy3" Content="(none)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+            <CheckBox x:Name="chkPackColors" Content="Pack Colors" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Packs color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&amp;shader in viewer"/>
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                <CheckBox x:Name="chkUsePackMagic" Content="PackMagic:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Optional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision or color issues with packed data"/>
+                <TextBox x:Name="txtPackMagic" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="64"/>
+            </StackPanel>
+                <CheckBox x:Name="chkCustomIntensityRange" Content="Custom intensity range (0-65535)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Expected default range is 0-255, but often it can be 0-65535"/>
         </StackPanel>
-        <Label x:Name="label_Copy9" Content="V2 (ucpc) Options" HorizontalAlignment="Left" Margin="318,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
-        <Label x:Name="label_Copy10" Content="V3 (pcroot) Options" HorizontalAlignment="Left" Margin="623,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
+        <Label x:Name="label_Copy9" Content="V2 (.ucpc) &amp; V3 (.pcroot) Options" HorizontalAlignment="Left" Margin="318,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
+        <Label x:Name="label_Copy10" Content="V3 (.pcroot) Options" HorizontalAlignment="Left" Margin="623,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
         <StackPanel HorizontalAlignment="Left" Height="238" Margin="624,198,-111,0" VerticalAlignment="Top" Width="277">
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                 <Label x:Name="label_Copy11" Content="Grid size:" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
@@ -87,11 +92,6 @@
                 <TextBox x:Name="txtMinPointCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="1000"/>
             </StackPanel>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
-            <CheckBox x:Name="chkPackColors" Content="Pack Colors" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Packs color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&amp;shader in viewer"/>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <CheckBox x:Name="chkUsePackMagic" Content="PackMagic:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Optional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision or color issues with packed data"/>
-                <TextBox x:Name="txtPackMagic" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="64"/>
-            </StackPanel>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
         </StackPanel>

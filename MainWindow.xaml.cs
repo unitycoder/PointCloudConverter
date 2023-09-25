@@ -18,7 +18,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static string appname = "PointCloud Converter v1.76";
+        static string appname = "PointCloud Converter - 25.09.2023";
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
         // allow console output from WPF application https://stackoverflow.com/a/7559336/5452781
@@ -104,6 +104,7 @@ namespace PointCloudConverter
             // loop input files
             progressFile = 0;
             progressTotalFiles = importSettings.maxFiles - 1;
+            if (progressTotalFiles < 0) progressTotalFiles = 0;
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
                 progressFile = i;
@@ -164,7 +165,7 @@ namespace PointCloudConverter
         {
             if (progressTotalPoints > 0)
             {
-                mainWindowStatic.progressBarFiles.Value = progressFile / (float)progressTotalFiles;
+                mainWindowStatic.progressBarFiles.Value = progressFile / (float)(progressTotalFiles + 1);
                 mainWindowStatic.progressBarPoints.Value = progressPoint / (float)progressTotalPoints;
                 mainWindowStatic.lblStatus.Content = lastStatusMessage;
             }
@@ -355,6 +356,7 @@ namespace PointCloudConverter
             if ((bool)chkUseMaxFileCount.IsChecked) args.Add("-maxfiles=" + txtMaxFileCount.Text);
             args.Add("-randomize=" + (bool)chkRandomize.IsChecked);
 
+            if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
 
             // check input files
             var importSettings = ArgParser.Parse(args.ToArray(), rootFolder);
@@ -536,6 +538,7 @@ namespace PointCloudConverter
             chkUseMaxFileCount.IsChecked = Properties.Settings.Default.useMaxFileCount;
             txtMaxFileCount.Text = Properties.Settings.Default.maxFileCount.ToString();
             chkRandomize.IsChecked = Properties.Settings.Default.randomize;
+            chkCustomIntensityRange.IsChecked = Properties.Settings.Default.customintensityrange;
 
             isInitialiazing = false;
         }
@@ -567,6 +570,7 @@ namespace PointCloudConverter
             Properties.Settings.Default.useMaxFileCount = (bool)chkUseMaxFileCount.IsChecked;
             Properties.Settings.Default.maxFileCount = Tools.ParseInt(txtMaxFileCount.Text);
             Properties.Settings.Default.randomize = (bool)chkRandomize.IsChecked;
+            Properties.Settings.Default.customintensityrange = (bool)chkCustomIntensityRange.IsChecked;
             Properties.Settings.Default.Save();
         }
 

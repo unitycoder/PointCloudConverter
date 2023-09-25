@@ -29,12 +29,12 @@ namespace PointCloudConverter
         // FIXME default values will be used unless otherwise specified.. randomize = true 
         // TODO these should be export settings..
 
-        public bool swapYZ = true;
-        public bool invertX = false;
-        public bool invertZ = false;
         public bool importRGB = true; // this or intensity must be on
         public bool importIntensity = false;
         public bool useAutoOffset = true;
+        public bool swapYZ = true;
+        public bool invertX = false;
+        public bool invertZ = false;
         public float offsetX = 0;
         public float offsetY = 0;
         public float offsetZ = 0;
@@ -55,6 +55,7 @@ namespace PointCloudConverter
         public float manualOffsetX = 0;
         public float manualOffsetY = 0;
         public float manualOffsetZ = 0;
+        public bool useCustomIntensityRange = false; // if false, 0-255 range is used, if ture: 0-65535
 
         public override string ToString()
         {
@@ -89,6 +90,7 @@ namespace PointCloudConverter
             t += "\n manualOffsetX=" + manualOffsetX;
             t += "\n manualOffsetX=" + manualOffsetX;
             t += "\n manualOffsetX=" + manualOffsetX;
+            t += "\n useCustomIntensityRange=" + useCustomIntensityRange;
             return t;
         }
     }

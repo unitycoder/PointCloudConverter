@@ -332,6 +332,19 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-customintensityrange":
+                                Console.WriteLine("customintensityrange = " + param);
+
+                                if (param != "true" && param != "false")
+                                {
+                                    errors.Add("Invalid useCustomIntensityRange parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.useCustomIntensityRange = param == "true";
+                                }
+                                break;
+
                             case "-invertx":
                                 Console.WriteLine("invertx = " + param);
 
@@ -519,8 +532,8 @@ namespace PointCloudConverter
                                 {
                                     importSettings.randomize = (param == "true");
                                 }
-                                break;                            
-                                
+                                break;
+
                             case "-rgb":
                                 Console.WriteLine("rgb = " + param);
 
@@ -533,7 +546,7 @@ namespace PointCloudConverter
                                     importSettings.importRGB = (param == "true");
                                 }
                                 break;
-                                
+
                             case "-intensity":
                                 Console.WriteLine("intensity = " + param);
 
