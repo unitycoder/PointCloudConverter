@@ -637,5 +637,31 @@ namespace PointCloudConverter
             Properties.Settings.Default.importIntensity = true;
             Properties.Settings.Default.Save();
         }
+
+        private void txtInputFile_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effects = DragDropEffects.Copy;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        private void txtInputFile_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (files.Length > 0)
+                {
+                    txtInputFile.Text = files[0];
+                }
+            }
+        }
+
     } // class
 } // namespace

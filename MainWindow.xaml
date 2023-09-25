@@ -8,7 +8,7 @@
         Title="PointCloudConverter" Height="640" Width="907" Background="#FF252222" Closing="Window_Closing" Loaded="Window_Loaded">
     <Grid Margin="0,0,2,0">
         <Button x:Name="btnBrowseInput" Content="..." HorizontalAlignment="Left" Margin="636,48,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseInput_Click" ToolTip="Browse for input file"/>
-        <TextBox x:Name="txtInputFile" HorizontalAlignment="Left" Height="23" Margin="20,48,0,0" VerticalAlignment="Top" Width="611"/>
+        <TextBox x:Name="txtInputFile" HorizontalAlignment="Left" AllowDrop="True" Height="23" Margin="20,48,0,0" VerticalAlignment="Top" Width="611" PreviewDrop="txtInputFile_Drop" PreviewDragOver="txtInputFile_DragEnter"/>
         <Label x:Name="label" Content="Input file or folder:&#xD;&#xA;" HorizontalAlignment="Left" Margin="20,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
         <Button x:Name="btnConvert" Content="Convert" HorizontalAlignment="Left" Margin="516,441,0,0" VerticalAlignment="Top" Width="371" Height="58" Click="btnConvert_Click"/>
         <Button x:Name="btnBrowseOutput" Content="..." HorizontalAlignment="Left" Margin="636,114,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseOutput_Click" ToolTip="Browse for output file"/>
@@ -29,7 +29,7 @@
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                 <CheckBox x:Name="chkUseScale" Content="Scale:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Scale XYZ values (You need meters inside Unity)"/>
-                <TextBox x:Name="txtScale" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="0.1"/>
+                <TextBox x:Name="txtScale" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="0.1" />
             </StackPanel>
             <CheckBox x:Name="chkSwapYZ" Content="Swap Y and Z" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Swaps Z and Y values, since unity Y is up"/>
             <CheckBox x:Name="chkInvertX" Content="Invert X" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Inverts X value (x=-x)"/>
