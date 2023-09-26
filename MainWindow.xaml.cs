@@ -663,5 +663,9 @@ namespace PointCloudConverter
             }
         }
 
+        private void btnHelp_Click(object sender, RoutedEventArgs e)
+        {
+            Process.Start("https://github.com/unitycoder/PointCloudConverter/wiki");
+        }
     } // class
 } // namespace

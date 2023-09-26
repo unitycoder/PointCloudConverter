@@ -77,7 +77,7 @@
                 <CheckBox x:Name="chkUsePackMagic" Content="PackMagic:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Optional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision or color issues with packed data"/>
                 <TextBox x:Name="txtPackMagic" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="64"/>
             </StackPanel>
-                <CheckBox x:Name="chkCustomIntensityRange" Content="Custom intensity range (0-65535)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Expected default range is 0-255, but often it can be 0-65535"/>
+            <CheckBox x:Name="chkCustomIntensityRange" Content="Custom intensity range (0-65535)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Expected default range is 0-255, but often it can be 0-65535"/>
         </StackPanel>
         <Label x:Name="label_Copy9" Content="V2 (.ucpc) &amp; V3 (.pcroot) Options" HorizontalAlignment="Left" Margin="318,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
         <Label x:Name="label_Copy10" Content="V3 (.pcroot) Options" HorizontalAlignment="Left" Margin="623,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
@@ -100,5 +100,6 @@
         <Grid x:Name="gridProcessingPanel" Background="#A3000000" Visibility="Hidden">
             <Button x:Name="btnCancel" Content="Stop processing!" HorizontalAlignment="Center" Margin="0" VerticalAlignment="Center" Width="214" Height="58" Click="BtnCancel_Click"/>
         </Grid>
+        <Button x:Name="btnHelp" Content="?" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="Open github documentation" Click="btnHelp_Click" Margin="0,5,5,0" Width="16"/>
     </Grid>
 </Window>
