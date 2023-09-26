@@ -42,7 +42,9 @@ namespace PointCloudConverter
                 // ptrToSplitArgs is an array of pointers to null terminated Unicode strings.
                 // Copy each of these strings into our split argument array.
                 for (int i = 0; i < numberOfArgs; i++)
+                {
                     splitArgs[i] = Marshal.PtrToStringUni(Marshal.ReadIntPtr(ptrToSplitArgs, i * IntPtr.Size));
+                }
 
                 return splitArgs;
             }
@@ -84,7 +86,6 @@ namespace PointCloudConverter
 
         public static ImportSettings Parse(string[] args, string rootFolder)
         {
-
             ImportSettings importSettings = new ImportSettings();
 
             // if there are any errors, they are added to this list, then importing is aborted after parsing arguments
@@ -570,11 +571,15 @@ namespace PointCloudConverter
                                 break;
 
                             default:
-                                errors.Add("Unrecognized option: " + cmd + argValueSeparator + param);
+                                errors.Add("Unrecognized argument: " + cmd + argValueSeparator + param);
                                 break;
-                        }
+                        } // switch
                     }
-                }
+                    else // bad arg (often due to missing "" around path with spaces)
+                    {
+                        errors.Add("Unknown argument: " + cmds[0]);
+                    }
+                } // for args
             }
             else // if no commandline args
             {
