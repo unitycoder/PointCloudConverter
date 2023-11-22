@@ -18,7 +18,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static string appname = "PointCloud Converter - 25.09.2023";
+        static string appname = "PointCloud Converter - 22.11.2023";
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
         // allow console output from WPF application https://stackoverflow.com/a/7559336/5452781

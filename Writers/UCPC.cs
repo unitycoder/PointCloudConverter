@@ -170,6 +170,7 @@ namespace PointCloudConverter.Writers
             Marshal.Copy(tempBytes, 0, pV, pointCount * 4 * 3);
             vectorPointer.Free();
 
+            Tools.ResetRandom();
             Tools.ShuffleXYZ(Tools.rnd, ref tempFloats);
             // need to reset random to use same seed
             Tools.ResetRandom();

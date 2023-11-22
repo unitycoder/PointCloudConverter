@@ -54,6 +54,7 @@
                 <TextBox x:Name="txtMaxFileCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="92"/>
             </StackPanel>
             <CheckBox x:Name="chkRandomize" Content="Randomize" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Randomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)"/>
+            <!--<CheckBox x:Name="chkOpenOutput" Content="Open output folder" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Open Explorer to Output folder after finished processing"/>-->
             <!--<CheckBox x:Name="chkReadMetaData" Content="Import metadata" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads LAs/LAZ metadata and saves into file"/>-->
         </StackPanel>
         <Label x:Name="label_Copy6" Content="Global Options" HorizontalAlignment="Left" Margin="20,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
