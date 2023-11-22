@@ -406,5 +406,65 @@ namespace PointCloudConverter.Properties {
                 this["customintensityrange"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool openOutputFolder {
+            get {
+                return ((bool)(this["openOutputFolder"]));
+            }
+            set {
+                this["openOutputFolder"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool useManualOffset {
+            get {
+                return ((bool)(this["useManualOffset"]));
+            }
+            set {
+                this["useManualOffset"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public float manualOffsetX {
+            get {
+                return ((float)(this["manualOffsetX"]));
+            }
+            set {
+                this["manualOffsetX"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public float manualOffsetY {
+            get {
+                return ((float)(this["manualOffsetY"]));
+            }
+            set {
+                this["manualOffsetY"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public float manualOffsetZ {
+            get {
+                return ((float)(this["manualOffsetZ"]));
+            }
+            set {
+                this["manualOffsetZ"] = value;
+            }
+        }
     }
 }

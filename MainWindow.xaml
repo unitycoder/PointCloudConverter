@@ -5,12 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PointCloudConverter"
         mc:Ignorable="d"
-        Title="PointCloudConverter" Height="640" Width="907" Background="#FF252222" Closing="Window_Closing" Loaded="Window_Loaded">
+        Title="PointCloudConverter" Height="680" Width="907" Background="#FF252222" Closing="Window_Closing" Loaded="Window_Loaded">
     <Grid Margin="0,0,2,0">
         <Button x:Name="btnBrowseInput" Content="..." HorizontalAlignment="Left" Margin="636,48,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseInput_Click" ToolTip="Browse for input file"/>
         <TextBox x:Name="txtInputFile" HorizontalAlignment="Left" AllowDrop="True" Height="23" Margin="20,48,0,0" VerticalAlignment="Top" Width="611" PreviewDrop="txtInputFile_Drop" PreviewDragOver="txtInputFile_DragEnter"/>
         <Label x:Name="label" Content="Input file or folder:&#xD;&#xA;" HorizontalAlignment="Left" Margin="20,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
-        <Button x:Name="btnConvert" Content="Convert" HorizontalAlignment="Left" Margin="516,441,0,0" VerticalAlignment="Top" Width="371" Height="58" Click="btnConvert_Click"/>
+        <Button x:Name="btnConvert" Content="Convert" HorizontalAlignment="Left" Margin="516,463,0,0" VerticalAlignment="Top" Width="371" Height="58" Click="btnConvert_Click"/>
         <Button x:Name="btnBrowseOutput" Content="..." HorizontalAlignment="Left" Margin="636,114,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseOutput_Click" ToolTip="Browse for output file"/>
         <TextBox x:Name="txtOutput" HorizontalAlignment="Left" Height="23" Margin="20,114,0,0" VerticalAlignment="Top" Width="611"/>
         <Label x:Name="label_Copy" Content="Output:" HorizontalAlignment="Left" Margin="20,88,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
@@ -19,12 +19,23 @@
         <ComboBox x:Name="cmbImportFormat" HorizontalAlignment="Left" Margin="719,48,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True"/>
         <Label x:Name="label_Copy2" Content="Import format:&#xA;" HorizontalAlignment="Left" Margin="719,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
 
-        <StackPanel HorizontalAlignment="Left" Height="238" Margin="20,198,0,0" VerticalAlignment="Top" Width="277">
+        <StackPanel HorizontalAlignment="Left" Height="250" Margin="20,174,0,0" VerticalAlignment="Top" Width="277">
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="chkImportRGB" Content="Read RGB" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads RGB color values" Checked="chkImportRGB_Checked" Unchecked="chkImportRGB_Unchecked"/>
                 <CheckBox x:Name="chkImportIntensity" Content="Read Intensity" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportIntensity_Checked" Unchecked="chkImportIntensity_Unchecked"/>
             </StackPanel>
-            <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using the first point as offset value"/>
+            <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using bounds min. as offset" Checked="chkAutoOffset_Checked"/>
+            <StackPanel Orientation="Vertical">
+                <CheckBox x:Name="chkManualOffset" Content="Manual Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Add offset to all points (After Auto-Offset and Flip, if those are enabled)" Checked="chkManualOffset_Checked"/>
+                <StackPanel Orientation="Horizontal" Margin="18,0,0,0">
+                    <Label x:Name="label_CopyX" Content="X:" HorizontalAlignment="Left" Margin="0,0,0,0" Foreground="{DynamicResource MainText}" Height="22" VerticalAlignment="Top" Padding="2,0,0,0"/>
+                    <TextBox x:Name="txtOffsetX" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="75" Text="0" MaxLines="1" />
+                    <Label x:Name="label_CopyY" Content="Y:" HorizontalAlignment="Left" Margin="0,0,0,0" Foreground="{DynamicResource MainText}" Height="22" VerticalAlignment="Top" Padding="3,0,0,0"/>
+                    <TextBox x:Name="txtOffsetY" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="75" Text="0" MaxLines="1" />
+                    <Label x:Name="label_CopyZ" Content="Z:" HorizontalAlignment="Left" Margin="0,0,0,0" Foreground="{DynamicResource MainText}" Height="22" VerticalAlignment="Top" Padding="3,0,0,0"/>
+                    <TextBox x:Name="txtOffsetZ" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="73" Text="0" MaxLines="1" />
+                </StackPanel>
+            </StackPanel>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
@@ -54,25 +65,15 @@
                 <TextBox x:Name="txtMaxFileCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="92"/>
             </StackPanel>
             <CheckBox x:Name="chkRandomize" Content="Randomize" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Randomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)"/>
-            <!--<CheckBox x:Name="chkOpenOutput" Content="Open output folder" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Open Explorer to Output folder after finished processing"/>-->
+            <CheckBox x:Name="chkOpenOutputFolder" Content="Open output folder" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Open Explorer to Output folder after finished processing"/>
             <!--<CheckBox x:Name="chkReadMetaData" Content="Import metadata" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads LAs/LAZ metadata and saves into file"/>-->
         </StackPanel>
-        <Label x:Name="label_Copy6" Content="Global Options" HorizontalAlignment="Left" Margin="20,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
-        <StatusBar Margin="0" VerticalAlignment="Bottom" Background="{x:Null}">
-            <StatusBarItem>
-                <ProgressBar x:Name="progressBarFiles" Height="10" Width="190" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Files to process"/>
-            </StatusBarItem>
-            <StatusBarItem>
-                <ProgressBar x:Name="progressBarPoints" Height="10" Width="490" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Points to process (in current file)"/>
-            </StatusBarItem>
-            <StatusBarItem>
-                <Label x:Name="lblStatus" Foreground="{DynamicResource MainText}">Status</Label>
-            </StatusBarItem>
-        </StatusBar>
-        <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,526,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="877" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
-        <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="5,503,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
-        <Button x:Name="btnGetParams" Content="Get Commandline params" HorizontalAlignment="Left" Margin="10,440,0,0" VerticalAlignment="Top" Width="214" Height="58" Click="btnGetParams_Click"/>
-        <StackPanel HorizontalAlignment="Left" Height="149" Margin="320,198,0,0" VerticalAlignment="Top" Width="234">
+        <Label x:Name="label_Copy6" Content="Global Options" HorizontalAlignment="Left" Margin="20,143,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
+
+        <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,552,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="877" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
+        <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="10,526,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
+        <Button x:Name="btnGetParams" Content="Get Commandline params" HorizontalAlignment="Left" Margin="12,463,0,0" VerticalAlignment="Top" Width="214" Height="58" Click="btnGetParams_Click"/>
+        <StackPanel HorizontalAlignment="Left" Height="149" Margin="320,174,0,0" VerticalAlignment="Top" Width="234">
             <CheckBox x:Name="chkPackColors" Content="Pack Colors" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Packs color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&amp;shader in viewer"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                 <CheckBox x:Name="chkUsePackMagic" Content="PackMagic:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Optional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision or color issues with packed data"/>
@@ -80,9 +81,11 @@
             </StackPanel>
             <CheckBox x:Name="chkCustomIntensityRange" Content="Custom intensity range (0-65535)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Expected default range is 0-255, but often it can be 0-65535"/>
         </StackPanel>
-        <Label x:Name="label_Copy9" Content="V2 (.ucpc) &amp; V3 (.pcroot) Options" HorizontalAlignment="Left" Margin="318,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
-        <Label x:Name="label_Copy10" Content="V3 (.pcroot) Options" HorizontalAlignment="Left" Margin="623,167,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
-        <StackPanel HorizontalAlignment="Left" Height="238" Margin="624,198,-111,0" VerticalAlignment="Top" Width="277">
+        <Label x:Name="label_Copy9" Content="V2 (.ucpc) &amp; V3 (.pcroot) Options" HorizontalAlignment="Left" Margin="318,143,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
+        <Label x:Name="label_Copy10" Content="V3 (.pcroot) Options" HorizontalAlignment="Left" Margin="623,143,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
+
+        <!--v3 options-->
+        <StackPanel HorizontalAlignment="Left" Height="238" Margin="624,174,0,0" VerticalAlignment="Top" Width="277">
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                 <Label x:Name="label_Copy11" Content="Grid size:" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
                 <TextBox x:Name="txtGridSize" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="10" ToolTip="Gridsize in meters, splits cloud into tiles with this size. v3 only!"/>
@@ -96,6 +99,18 @@
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
         </StackPanel>
+
+        <StatusBar Margin="8,0,0,0" VerticalAlignment="Bottom" Background="{x:Null}">
+            <StatusBarItem>
+                <ProgressBar x:Name="progressBarFiles" Height="10" Width="190" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Files to process"/>
+            </StatusBarItem>
+            <StatusBarItem>
+                <ProgressBar x:Name="progressBarPoints" Height="10" Width="490" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Points to process (in current file)"/>
+            </StatusBarItem>
+            <StatusBarItem>
+                <Label x:Name="lblStatus" Foreground="{DynamicResource MainText}">Status</Label>
+            </StatusBarItem>
+        </StatusBar>
 
         <!--progress panel-->
         <Grid x:Name="gridProcessingPanel" Background="#A3000000" Visibility="Hidden">

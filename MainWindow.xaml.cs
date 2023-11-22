@@ -18,7 +18,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static string appname = "PointCloud Converter - 22.11.2023";
+        static string appname = "PointCloud Converter - 23.11.2023";
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
         // allow console output from WPF application https://stackoverflow.com/a/7559336/5452781
@@ -309,6 +309,17 @@ namespace PointCloudConverter
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Finished!");
                 Console.ForegroundColor = ConsoleColor.White;
+                mainWindowStatic.Dispatcher.Invoke(() =>
+                {
+                    if ((bool)mainWindowStatic.chkOpenOutputFolder.IsChecked)
+                    {
+                        var dir = Path.GetDirectoryName(importSettings.outputFile);
+                        if (Directory.Exists(dir))
+                        {
+                            Process.Start(dir);
+                        }
+                    }
+                });
             }
         } // ParseFile
 
@@ -354,6 +365,7 @@ namespace PointCloudConverter
             if ((bool)chkUseSkip.IsChecked) args.Add("-skip=" + txtSkipEvery.Text);
             if ((bool)chkUseKeep.IsChecked) args.Add("-keep=" + txtKeepEvery.Text);
             if ((bool)chkUseMaxFileCount.IsChecked) args.Add("-maxfiles=" + txtMaxFileCount.Text);
+            if ((bool)chkManualOffset.IsChecked) args.Add("-offset=" + txtOffsetX.Text + "," + txtOffsetY.Text + "," + txtOffsetZ.Text);
             args.Add("-randomize=" + (bool)chkRandomize.IsChecked);
 
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
@@ -539,6 +551,11 @@ namespace PointCloudConverter
             txtMaxFileCount.Text = Properties.Settings.Default.maxFileCount.ToString();
             chkRandomize.IsChecked = Properties.Settings.Default.randomize;
             chkCustomIntensityRange.IsChecked = Properties.Settings.Default.customintensityrange;
+            chkOpenOutputFolder.IsChecked = Properties.Settings.Default.openOutputFolder;
+            chkManualOffset.IsChecked = Properties.Settings.Default.useManualOffset;
+            txtOffsetX.Text = Properties.Settings.Default.manualOffsetX.ToString();
+            txtOffsetY.Text = Properties.Settings.Default.manualOffsetY.ToString();
+            txtOffsetZ.Text = Properties.Settings.Default.manualOffsetZ.ToString();
 
             isInitialiazing = false;
         }
@@ -571,7 +588,14 @@ namespace PointCloudConverter
             Properties.Settings.Default.maxFileCount = Tools.ParseInt(txtMaxFileCount.Text);
             Properties.Settings.Default.randomize = (bool)chkRandomize.IsChecked;
             Properties.Settings.Default.customintensityrange = (bool)chkCustomIntensityRange.IsChecked;
-            Properties.Settings.Default.Save();
+            Properties.Settings.Default.openOutputFolder = (bool)chkOpenOutputFolder.IsChecked;
+            Properties.Settings.Default.useManualOffset = (bool)chkManualOffset.IsChecked;
+            float.TryParse(txtOffsetX.Text, out float offsetX);
+            Properties.Settings.Default.manualOffsetX = offsetX;
+            float.TryParse(txtOffsetY.Text, out float offsetY);
+            Properties.Settings.Default.manualOffsetY = offsetY;
+            float.TryParse(txtOffsetZ.Text, out float offsetZ);
+            Properties.Settings.Default.manualOffsetZ = offsetZ; Properties.Settings.Default.Save();
         }
 
         private void btnGetParams_Click(object sender, RoutedEventArgs e)
@@ -666,6 +690,26 @@ namespace PointCloudConverter
         private void btnHelp_Click(object sender, RoutedEventArgs e)
         {
             Process.Start("https://github.com/unitycoder/PointCloudConverter/wiki");
+        }
+
+        private void chkAutoOffset_Checked(object sender, RoutedEventArgs e)
+        {
+            if (isInitialiazing == true) return;
+
+            if (chkAutoOffset.IsChecked == true && chkManualOffset.IsChecked == true)
+            {
+                chkManualOffset.IsChecked = false;
+            }
+        }
+
+        private void chkManualOffset_Checked(object sender, RoutedEventArgs e)
+        {
+            if (isInitialiazing == true) return;
+
+            if (chkManualOffset.IsChecked == true && chkAutoOffset.IsChecked == true)
+            {
+                chkAutoOffset.IsChecked = false;
+            }
         }
     } // class
 } // namespace
