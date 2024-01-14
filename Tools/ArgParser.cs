@@ -435,7 +435,19 @@ namespace PointCloudConverter
                                 {
                                     // ok
                                 }
-                                break;
+                                break;                            
+                            
+                            //case "-metadata":
+                            //    Console.WriteLine("metadata = " + param);
+                            //    if (param != "true" && param != "false")
+                            //    {
+                            //        errors.Add("Invalid metadata parameter: " + param);
+                            //    }
+                            //    else
+                            //    {
+                            //        importSettings.importMetaData = param == "true";
+                            //    }
+                            //    break;
 
                             case "-offset":
                                 Console.WriteLine("offset = " + param);

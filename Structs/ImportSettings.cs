@@ -56,6 +56,7 @@ namespace PointCloudConverter
         public float manualOffsetY = 0;
         public float manualOffsetZ = 0;
         public bool useCustomIntensityRange = false; // if false, 0-255 range is used, if ture: 0-65535
+        //public bool importMetaData = false;
 
         public override string ToString()
         {
@@ -69,6 +70,7 @@ namespace PointCloudConverter
             t += "\n invertZ=" + invertZ;
             t += "\n readRGB=" + importRGB;
             t += "\n readIntensity=" + importIntensity;
+            //t += "\n metaData=" + importIntensity;
             t += "\n useAutoOffset=" + useAutoOffset;
             t += "\n offsetX=" + offsetX;
             t += "\n offsetY=" + offsetY;

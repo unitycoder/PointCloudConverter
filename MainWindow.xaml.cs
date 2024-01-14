@@ -10,15 +10,24 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Forms;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Application = System.Windows.Application;
 using Color = PointCloudConverter.Structs.Color;
+using DataFormats = System.Windows.DataFormats;
+using DragDropEffects = System.Windows.DragDropEffects;
+using DragEventArgs = System.Windows.DragEventArgs;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
+
+
 
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static string appname = "PointCloud Converter - 23.11.2023";
+        static string appname = "PointCloud Converter - 14.01.2024";
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
         // allow console output from WPF application https://stackoverflow.com/a/7559336/5452781
@@ -34,7 +43,6 @@ namespace PointCloudConverter
         static bool abort = false;
         public static MainWindow mainWindowStatic;
         bool isInitialiazing = true;
-
 
         public MainWindow()
         {
@@ -71,7 +79,8 @@ namespace PointCloudConverter
 
                 // end output
                 Console.WriteLine("Exit");
-
+                // hack for console exit https://stackoverflow.com/a/67940480/5452781
+                SendKeys.SendWait("{ENTER}");
                 FreeConsole();
                 Environment.Exit(0);
             }

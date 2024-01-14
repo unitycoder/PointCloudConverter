@@ -19,7 +19,7 @@
         <ComboBox x:Name="cmbImportFormat" HorizontalAlignment="Left" Margin="719,48,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True"/>
         <Label x:Name="label_Copy2" Content="Import format:&#xA;" HorizontalAlignment="Left" Margin="719,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
 
-        <StackPanel HorizontalAlignment="Left" Height="250" Margin="20,174,0,0" VerticalAlignment="Top" Width="277">
+        <StackPanel HorizontalAlignment="Left" Height="270" Margin="20,174,0,0" VerticalAlignment="Top" Width="277">
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="chkImportRGB" Content="Read RGB" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads RGB color values" Checked="chkImportRGB_Checked" Unchecked="chkImportRGB_Unchecked"/>
                 <CheckBox x:Name="chkImportIntensity" Content="Read Intensity" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportIntensity_Checked" Unchecked="chkImportIntensity_Unchecked"/>
