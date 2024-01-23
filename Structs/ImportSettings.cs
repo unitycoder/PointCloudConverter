@@ -15,7 +15,7 @@ namespace PointCloudConverter
         public string version { get; set; } = "0.0.0";
         
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public Logger.LogEvent logEvent { get; set; }
+        public Logger.LogEvent @event { get; set; }
 
         public IReader reader = new LAZ();
         public IWriter writer = new UCPC();

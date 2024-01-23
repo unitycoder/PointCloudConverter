@@ -113,7 +113,7 @@ namespace PointCloudConverter
                 Log.WriteLine("Exited.\nElapsed: " + elapsedString);
                 if (importSettings.useJSONLog)
                 {
-                    Log.WriteLine("{\"logEvent\": " + LogEvent.End + ", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + "\"}", LogEvent.End);
+                    Log.WriteLine("{\"event\": " + LogEvent.End + ", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + "\"}", LogEvent.End);
                 }
                 // hack for console exit https://stackoverflow.com/a/67940480/5452781
                 SendKeys.SendWait("{ENTER}");

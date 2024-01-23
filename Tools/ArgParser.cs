@@ -737,7 +737,7 @@ namespace PointCloudConverter
             {
                 // TODO workaround to get logevent in this json data (not used later)
                 importSettings.version = Log.version;
-                importSettings.logEvent = Logger.LogEvent.Settings;
+                importSettings.@event = Logger.LogEvent.Settings;
                 Log.WriteLine(importSettings.ToJSON(), Logger.LogEvent.Settings);
             }
 
