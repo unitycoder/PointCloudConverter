@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -296,7 +298,7 @@ namespace PointCloudConverter
 
             string jsonString = "{" +
             "\"event\": \"" + LogEvent.File + "\"," +
-            "\"path\": \"" + importSettings.inputFiles[fileIndex] + "\"," +
+            "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
             "\"size\": \"" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[fileIndex]).Length) + "\"," +
             "\"points\": " + pointCount + "," +
             "\"status\": \"" + LogStatus.Processing + "\"" +

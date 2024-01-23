@@ -5,6 +5,7 @@ using PointCloudConverter.Structs;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 
 namespace PointCloudConverter.Writers
 {
@@ -151,9 +152,9 @@ namespace PointCloudConverter.Writers
             string jsonString = "{" +
             "\"event\": \"" + LogEvent.File + "\"," +
             "\"status\": \""+LogStatus.Complete+"\"," +
-            "\"path\": \"" + importSettings.inputFiles[fileIndex] + "\"," +
+            "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
             "\"tiles\": " + nodeX.Count + "," +
-            "\"folder\": \"" + baseFolder + "\"}";
+            "\"folder\": " + JsonSerializer.Serialize(baseFolder) + "}";
 
             // TODO combine 2 outputs.. only otherone shows up now
             Log.WriteLine("Saving " + nodeX.Count + " tiles to folder: " + baseFolder);
@@ -432,8 +433,8 @@ namespace PointCloudConverter.Writers
 
                 jsonString = "{" +
                 "\"event\": \"" + LogEvent.File + "\"," +
-                "\"path\": \"" + outputFileRoot + "\"," +
-                "\"totalpoints\": " + Tools.HumanReadableCount(totalPointCount) + "," +
+                "\"path\": " + JsonSerializer.Serialize(outputFileRoot) + "," +
+                "\"totalpoints\": \"" + Tools.HumanReadableCount(totalPointCount) + "\"," +
                 "\"skippedNodes\": " + skippedNodesCounter + "," +
                 "\"skippedPoints\": " + skippedPointsCounter + "" +
                 "}";
