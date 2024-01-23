@@ -1,6 +1,5 @@
 ﻿// Standalone Point Cloud Converter https://github.com/unitycoder/PointCloudConverter
 
-using Microsoft.Win32;
 using PointCloudConverter.Logger;
 using PointCloudConverter.Structs;
 using System;
@@ -8,7 +7,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -296,12 +294,12 @@ namespace PointCloudConverter
 
             lastStatusMessage = "Processing points..";
 
-            string jsonString = "{\n" +
-            "  \"event\": "+LogEvent.File+",\n" +
-            "  \"path\": \""+ importSettings.inputFiles[fileIndex] + "\",\n" +
-            "  \"size\": \""+ Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[fileIndex]).Length) + "\",\n" +
-            "  \"points\": "+ pointCount + ",\n" +
-            "  \"status\": \"processing\"\n" +
+            string jsonString = "{" +
+            "\"event\": "+LogEvent.File+"," +
+            "\"path\": \""+ importSettings.inputFiles[fileIndex] + "\"," +
+            "\"size\": \""+ Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[fileIndex]).Length) + "\"," +
+            "\"points\": "+ pointCount + "," +
+            "\"status\": \"processing\"" +
             "}";
 
             Log.WriteLine(jsonString, LogEvent.File);

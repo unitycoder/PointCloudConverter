@@ -1,5 +1,6 @@
 ﻿// PCROOT (v3) Exporter https://github.com/unitycoder/UnityPointCloudViewer/wiki/Binary-File-Format-Structure#custom-v3-tiles-pcroot-and-pct-rgb
 
+using PointCloudConverter.Logger;
 using PointCloudConverter.Structs;
 using System;
 using System.Collections.Generic;
@@ -144,7 +145,20 @@ namespace PointCloudConverter.Writers
             string fileOnly = Path.GetFileNameWithoutExtension(importSettings.outputFile);
             string baseFolder = Path.GetDirectoryName(importSettings.outputFile);
             Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine("Saving " + nodeX.Count + " tiles to folder: " + baseFolder);
+
+            // TODO add enum for status
+
+            string jsonString = "{" +
+            "\"event\": " + LogEvent.File + "," +
+            "\"status\": \"complete\"," +
+            "\"path\": \"" + importSettings.inputFiles[fileIndex] + "\"," +
+            "\"tiles\": " + nodeX.Count + "," +
+            "\"folder\": \"" + baseFolder + "\"}";
+
+            // TODO combine 2 outputs.. only otherone shows up now
+            Log.WriteLine("Saving " + nodeX.Count + " tiles to folder: " + baseFolder);
+            Log.WriteLine(jsonString, LogEvent.End);
+
             Console.ForegroundColor = ConsoleColor.White;
 
             List<float> nodeTempX;
@@ -288,7 +302,7 @@ namespace PointCloudConverter.Writers
 
                         var reservedTileLocalCellIndex = packx + cellsInTile * (packy + cellsInTile * packz);
 
-                        if (i < 10) Console.WriteLine("cellX:" + cellX + " cellY:" + cellY + " cellZ:" + cellZ + "  px: " + px + " py: " + py + " pz: " + pz + " localIndex: " + reservedTileLocalCellIndex + " packx: " + packx + " packy: " + packy + " packz: " + packz);
+                        //if (i < 10) Log.WriteLine("cellX:" + cellX + " cellY:" + cellY + " cellZ:" + cellZ + "  px: " + px + " py: " + py + " pz: " + pz + " localIndex: " + reservedTileLocalCellIndex + " packx: " + packx + " packy: " + packy + " packz: " + packz);
 
 
                         // TODO could decide which point is more important or stronger color?
@@ -416,7 +430,16 @@ namespace PointCloudConverter.Writers
                     totalPointCount += nodeBounds[i].totalPoints;
                 }
 
-                Console.WriteLine("\nSaving rootfile: " + outputFileRoot + "\n*Total points= " + Tools.HumanReadableCount(totalPointCount));
+                jsonString = "{" +
+                "\"event\": " + LogEvent.File + "," +
+                "\"path\": \"" + outputFileRoot + "\"," +
+                "\"totalpoints\": " + Tools.HumanReadableCount(totalPointCount) + "," +
+                "\"skippedNodes\": " + skippedNodesCounter + "," +
+                "\"skippedPoints\": " + skippedPointsCounter + "" +
+                "}";
+
+                Log.WriteLine(jsonString, LogEvent.End);
+                Log.WriteLine("\nSaving rootfile: " + outputFileRoot + "\n*Total points= " + Tools.HumanReadableCount(totalPointCount));
 
                 int versionID = importSettings.packColors ? 2 : 1; // (1 = original, 2 = packed v3 format)
                 if (importSettings.packColors == true) versionID = 2;
@@ -433,15 +456,25 @@ namespace PointCloudConverter.Writers
                 File.WriteAllLines(outputFileRoot, tilerootdata.ToArray());
 
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Done saving v3 : " + outputFileRoot);
+                Log.WriteLine("Done saving v3 : " + outputFileRoot);
                 Console.ForegroundColor = ConsoleColor.White;
-                if (skippedNodesCounter > 0) Console.WriteLine("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
-                if (useLossyFiltering == true && skippedPointsCounter > 0) Console.WriteLine("*Skipped " + skippedPointsCounter + " points due to bytepacked grid filtering");
+                if (skippedNodesCounter > 0)
+                {
+                    Log.WriteLine("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
+                }
+
+                if (useLossyFiltering == true && skippedPointsCounter > 0)
+                {
+                    Log.WriteLine("*Skipped " + skippedPointsCounter + " points due to bytepacked grid filtering");
+                }
+
+
 
                 if ((tilerootdata.Count - 1) <= 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("Error> No tiles found! Try enable -scale (to make your cloud to smaller) Or make -gridsize bigger, or set -limit point count to smaller value");
+                    // TODO add json error log
+                    Log.WriteLine("Error> No tiles found! Try enable -scale (to make your cloud to smaller) Or make -gridsize bigger, or set -limit point count to smaller value");
                     Console.ForegroundColor = ConsoleColor.White;
                 }
 
