@@ -5,12 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PointCloudConverter"
         mc:Ignorable="d"
-        Title="PointCloudConverter" Height="680" Width="907" Background="#FF252222" Closing="Window_Closing" Loaded="Window_Loaded">
+        Title="PointCloudConverter" Height="720" Width="907" Background="#FF252222" Closing="Window_Closing" Loaded="Window_Loaded">
     <Grid Margin="0,0,2,0">
         <Button x:Name="btnBrowseInput" Content="..." HorizontalAlignment="Left" Margin="636,48,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseInput_Click" ToolTip="Browse for input file"/>
         <TextBox x:Name="txtInputFile" HorizontalAlignment="Left" AllowDrop="True" Height="23" Margin="20,48,0,0" VerticalAlignment="Top" Width="611" PreviewDrop="txtInputFile_Drop" PreviewDragOver="txtInputFile_DragEnter"/>
         <Label x:Name="label" Content="Input file or folder:&#xD;&#xA;" HorizontalAlignment="Left" Margin="20,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
-        <Button x:Name="btnConvert" Content="Convert" HorizontalAlignment="Left" Margin="516,463,0,0" VerticalAlignment="Top" Width="371" Height="58" Click="btnConvert_Click"/>
+        <Button x:Name="btnConvert" Content="Convert" HorizontalAlignment="Left" Margin="516,514,0,0" VerticalAlignment="Top" Width="371" Height="58" Click="btnConvert_Click"/>
         <Button x:Name="btnBrowseOutput" Content="..." HorizontalAlignment="Left" Margin="636,114,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseOutput_Click" ToolTip="Browse for output file"/>
         <TextBox x:Name="txtOutput" HorizontalAlignment="Left" Height="23" Margin="20,114,0,0" VerticalAlignment="Top" Width="611"/>
         <Label x:Name="label_Copy" Content="Output:" HorizontalAlignment="Left" Margin="20,88,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
@@ -19,7 +19,7 @@
         <ComboBox x:Name="cmbImportFormat" HorizontalAlignment="Left" Margin="719,48,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True"/>
         <Label x:Name="label_Copy2" Content="Import format:&#xA;" HorizontalAlignment="Left" Margin="719,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
 
-        <StackPanel HorizontalAlignment="Left" Height="270" Margin="20,174,0,0" VerticalAlignment="Top" Width="277">
+        <StackPanel HorizontalAlignment="Left" Height="323" Margin="20,174,0,0" VerticalAlignment="Top" Width="277">
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="chkImportRGB" Content="Read RGB" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads RGB color values" Checked="chkImportRGB_Checked" Unchecked="chkImportRGB_Unchecked"/>
                 <CheckBox x:Name="chkImportIntensity" Content="Read Intensity" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportIntensity_Checked" Unchecked="chkImportIntensity_Unchecked"/>
@@ -67,12 +67,17 @@
             <CheckBox x:Name="chkRandomize" Content="Randomize" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Randomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)"/>
             <CheckBox x:Name="chkOpenOutputFolder" Content="Open output folder" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Open Explorer to Output folder after finished processing"/>
             <!--<CheckBox x:Name="chkReadMetaData" Content="Import metadata" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads LAs/LAZ metadata and saves into file"/>-->
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                <CheckBox x:Name="chkSetRandomSeed" Content="Use random seed:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="To use same random seed when converting same cloud with different import settings"/>
+                <TextBox x:Name="txtRandomSeed" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="42"/>
+            </StackPanel>
+            <CheckBox x:Name="chkUseJSONLog" Content="Use JSON log" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Log messages are written in JSON format"/>
         </StackPanel>
         <Label x:Name="label_Copy6" Content="Global Options" HorizontalAlignment="Left" Margin="20,143,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
 
-        <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,552,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="877" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
-        <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="10,526,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
-        <Button x:Name="btnGetParams" Content="Get Commandline params" HorizontalAlignment="Left" Margin="12,463,0,0" VerticalAlignment="Top" Width="214" Height="58" Click="btnGetParams_Click"/>
+        <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,603,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="877" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
+        <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="10,577,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
+        <Button x:Name="btnGetParams" Content="Get Commandline params" HorizontalAlignment="Left" Margin="12,514,0,0" VerticalAlignment="Top" Width="214" Height="58" Click="btnGetParams_Click"/>
         <StackPanel HorizontalAlignment="Left" Height="149" Margin="320,174,0,0" VerticalAlignment="Top" Width="234">
             <CheckBox x:Name="chkPackColors" Content="Pack Colors" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Packs color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&amp;shader in viewer"/>
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">

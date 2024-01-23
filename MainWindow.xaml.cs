@@ -1,12 +1,14 @@
-﻿// standalone point cloud converter https://github.com/unitycoder/PointCloudConverter
+﻿// Standalone Point Cloud Converter https://github.com/unitycoder/PointCloudConverter
 
 using Microsoft.Win32;
+using PointCloudConverter.Logger;
 using PointCloudConverter.Structs;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,13 +23,12 @@ using DragEventArgs = System.Windows.DragEventArgs;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 
-
-
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static string appname = "PointCloud Converter - 14.01.2024";
+        static readonly string version = "23.01.2024";
+        static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
         // allow console output from WPF application https://stackoverflow.com/a/7559336/5452781
@@ -51,6 +52,8 @@ namespace PointCloudConverter
             Main();
         }
 
+        private readonly ILogger logger;
+
         private void Main()
         {
             // check cmdline args
@@ -59,16 +62,42 @@ namespace PointCloudConverter
             Tools.FixDLLFoldersAndConfig(rootFolder);
             Tools.ForceDotCultureSeparator();
 
+            // default logger
+            Log.CreateLogger(isJSON: false, version: version);
+
             if (args.Length > 1)
             {
                 AttachConsole(ATTACH_PARENT_PROCESS);
 
+                // check if have -jsonlog=true
+                foreach (var arg in args)
+                {
+                    if (arg.ToLower().Contains("-json=true"))
+                    {
+                        Log.CreateLogger(isJSON: true, version: version);
+                    }
+                }
+
+
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("\n::: " + appname + " :::\n");
+                Log.WriteLine("\n::: " + appname + " :::\n");
+                //Console.WriteLine("\n::: " + appname + " :::\n");
                 Console.ForegroundColor = ConsoleColor.White;
 
                 // check args, null here because we get the args later
                 var importSettings = ArgParser.Parse(null, rootFolder);
+
+                if (importSettings.useJSONLog)
+                {
+                    importSettings.version = version;
+                    Log.SetSettings(importSettings);
+                }
+
+                //if (importSettings.useJSONLog) log.Init(importSettings, version);
+
+                // get elapsed time using time
+                var startTime = DateTime.Now;
+
 
                 // if have files, process them
                 if (importSettings.errors.Count == 0)
@@ -77,8 +106,17 @@ namespace PointCloudConverter
                     ProcessAllFiles(importSettings);
                 }
 
+                // print time
+                var endTime = DateTime.Now;
+                var elapsed = endTime - startTime;
+                string elapsedString = elapsed.ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s");
+
                 // end output
-                Console.WriteLine("Exit");
+                Log.WriteLine("Exited.\nElapsed: " + elapsedString);
+                if (importSettings.useJSONLog)
+                {
+                    Log.WriteLine("{\"logEvent\": " + LogEvent.End + ", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + "\"}", LogEvent.End);
+                }
                 // hack for console exit https://stackoverflow.com/a/67940480/5452781
                 SendKeys.SendWait("{ENTER}");
                 FreeConsole();
@@ -117,8 +155,8 @@ namespace PointCloudConverter
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
                 progressFile = i;
-                Console.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
-                Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
+                Log.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
+                //Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
 
                 //if (abort==true) 
 
@@ -127,7 +165,7 @@ namespace PointCloudConverter
             }
 
             stopwatch.Stop();
-            Console.WriteLine("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
+            Log.WriteLine("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
             stopwatch.Reset();
 
             Application.Current.Dispatcher.Invoke(new Action(() =>
@@ -186,7 +224,7 @@ namespace PointCloudConverter
             var res = importSettings.reader.InitReader(importSettings, fileIndex);
             if (res == false)
             {
-                Console.WriteLine("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
+                Log.WriteLine("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
                 return;
             }
 
@@ -198,24 +236,24 @@ namespace PointCloudConverter
             if (importSettings.skipPoints == true)
             {
                 var afterSkip = (int)Math.Floor(pointCount - (pointCount / (float)importSettings.skipEveryN));
-                Console.WriteLine("Skip every X points is enabled, original points: " + fullPointCount + ", After skipping:" + afterSkip);
+                Log.WriteLine("Skip every X points is enabled, original points: " + fullPointCount + ", After skipping:" + afterSkip);
                 pointCount = afterSkip;
             }
 
             if (importSettings.keepPoints == true)
             {
-                Console.WriteLine("Keep every x points is enabled, original points: " + fullPointCount + ", After keeping:" + (pointCount / importSettings.keepEveryN));
+                Log.WriteLine("Keep every x points is enabled, original points: " + fullPointCount + ", After keeping:" + (pointCount / importSettings.keepEveryN));
                 pointCount = pointCount / importSettings.keepEveryN;
             }
 
             if (importSettings.useLimit == true)
             {
-                Console.WriteLine("Original points: " + pointCount + " Limited points: " + importSettings.limit);
+                Log.WriteLine("Original points: " + pointCount + " Limited points: " + importSettings.limit);
                 pointCount = importSettings.limit > pointCount ? pointCount : importSettings.limit;
             }
             else
             {
-                Console.WriteLine("Points: " + pointCount);
+                Log.WriteLine("Points: " + pointCount);
             }
 
             // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds
@@ -249,7 +287,7 @@ namespace PointCloudConverter
             var writerRes = importSettings.writer.InitWriter(importSettings, pointCount);
             if (writerRes == false)
             {
-                Console.WriteLine("Error> Failed to initialize Writer");
+                Log.WriteLine("Error> Failed to initialize Writer");
                 return;
             }
 
@@ -257,6 +295,16 @@ namespace PointCloudConverter
             progressTotalPoints = importSettings.useLimit ? pointCount : fullPointCount;
 
             lastStatusMessage = "Processing points..";
+
+            string jsonString = "{\n" +
+            "  \"event\": "+LogEvent.File+",\n" +
+            "  \"path\": \""+ importSettings.inputFiles[fileIndex] + "\",\n" +
+            "  \"size\": \""+ Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[fileIndex]).Length) + "\",\n" +
+            "  \"points\": "+ pointCount + ",\n" +
+            "  \"status\": \"processing\"\n" +
+            "}";
+
+            Log.WriteLine(jsonString, LogEvent.File);
 
             // Loop all points
             for (int i = 0; i < fullPointCount; i++)
@@ -316,7 +364,7 @@ namespace PointCloudConverter
             {
                 lastStatusMessage = "Done!";
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Finished!");
+                Log.WriteLine("Finished!");
                 Console.ForegroundColor = ConsoleColor.White;
                 mainWindowStatic.Dispatcher.Invoke(() =>
                 {
@@ -376,6 +424,8 @@ namespace PointCloudConverter
             if ((bool)chkUseMaxFileCount.IsChecked) args.Add("-maxfiles=" + txtMaxFileCount.Text);
             if ((bool)chkManualOffset.IsChecked) args.Add("-offset=" + txtOffsetX.Text + "," + txtOffsetY.Text + "," + txtOffsetZ.Text);
             args.Add("-randomize=" + (bool)chkRandomize.IsChecked);
+            if ((bool)chkSetRandomSeed.IsChecked) args.Add("-seed=" + txtRandomSeed.Text);
+            if ((bool)chkUseJSONLog.IsChecked) args.Add("-jsonlog=true");
 
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
 

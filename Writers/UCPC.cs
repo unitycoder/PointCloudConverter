@@ -40,6 +40,8 @@ namespace PointCloudConverter.Writers
             colorsTempFile = importSettings.outputFile + "_ColorsTemp";
             headerTempFile = importSettings.outputFile + "_Header";
 
+            if (importSettings.seed != -1) Tools.SetRandomSeed(importSettings.seed);
+
             cloudMinX = float.PositiveInfinity;
             cloudMinY = float.PositiveInfinity;
             cloudMinZ = float.PositiveInfinity;
@@ -153,7 +155,7 @@ namespace PointCloudConverter.Writers
             writerPoints.Close();
             bsPoints.Dispose();
 
-            Console.WriteLine("Randomizing " + pointCount + " points...");
+            Log.WriteLine("Randomizing " + pointCount + " points...");
             // randomize points and colors
             byte[] tempBytes = null;
             using (FileStream fs = File.Open(pointsTempFile, FileMode.Open, FileAccess.Read, FileShare.None))
@@ -197,7 +199,7 @@ namespace PointCloudConverter.Writers
                 writerColorsV2.Close();
                 bsColorsV2.Dispose();
 
-                Console.WriteLine("Randomizing " + pointCount + " colors...");
+                Log.WriteLine("Randomizing " + pointCount + " colors...");
 
                 tempBytes = null;
                 using (FileStream fs = File.Open(colorsTempFile, FileMode.Open, FileAccess.Read, FileShare.None))
@@ -263,14 +265,14 @@ namespace PointCloudConverter.Writers
         {
             if (importSettings.packColors == true)
             {
-                Console.WriteLine("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile));
+                Log.WriteLine("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile));
             }
             else
             {
-                Console.WriteLine("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
+                Log.WriteLine("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
             }
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Output: " + importSettings.outputFile);
+            Log.WriteLine("Output: " + importSettings.outputFile);
             Console.ForegroundColor = ConsoleColor.White;
 
             var sep = '"';
@@ -315,7 +317,7 @@ namespace PointCloudConverter.Writers
             proc.Start();
             proc.WaitForExit();
 
-            Console.WriteLine("Deleting temporary files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
+            Log.WriteLine("Deleting temporary files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
             if (File.Exists(headerTempFile)) File.Delete(headerTempFile);
             if (File.Exists(pointsTempFile)) File.Delete(pointsTempFile);
             if (File.Exists(colorsTempFile)) File.Delete(colorsTempFile);

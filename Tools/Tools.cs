@@ -9,11 +9,18 @@ namespace PointCloudConverter
 {
     public static class Tools
     {
-        public static readonly int seed = Guid.NewGuid().GetHashCode();
         public static Random rnd = new Random(seed);
+        static int seed = Guid.NewGuid().GetHashCode();
+
         public static void ResetRandom()
         {
             rnd = new Random(seed);
+            //Log.WriteLine("new random seed: "+seed);
+        }
+
+        public static void SetRandomSeed(int newSeed)
+        {
+            seed = newSeed;
         }
 
         // force comma as decimal separator
@@ -190,6 +197,8 @@ namespace PointCloudConverter
             // TODO Console.WriteLine("-decimate" + separator + "50\t\t\tRemoves 50% of the points (by skipping every x point)\tDefault is off");
             //Console.WriteLine("-version" + argSeparator + "2\t\t2=v2 .ucpc, 3=v3 .pcroot tiles\tDefault is 2");
             Console.WriteLine("-randomize" + argSeparator + "true\t\tRandomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)");
+            Console.WriteLine("-seed" + argSeparator + "42\t\tSet random seed\tDefault is random value");
+            Console.WriteLine("-json" + argSeparator + "false\t\tOutput console log in JSON format\tDefault is false");
             Console.WriteLine("");
             Console.WriteLine("? /? -? help -help /help");
             Console.ForegroundColor = ConsoleColor.White;

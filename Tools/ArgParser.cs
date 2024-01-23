@@ -2,7 +2,6 @@
 using PointCloudConverter.Structs;
 using PointCloudConverter.Writers;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -12,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace PointCloudConverter
 {
-    public class ArgParser
+    public static class ArgParser
     {
         const char argValueSeparator = '=';
 
@@ -89,7 +88,7 @@ namespace PointCloudConverter
             ImportSettings importSettings = new ImportSettings();
 
             // if there are any errors, they are added to this list, then importing is aborted after parsing arguments
-            List<string> errors = new List<string>();
+            //List<string> errors = new List<string>();
 
             // handle manual args (null is default args, not used)
             if (args == null) args = SplitArgs(GetEscapedCommandLine()).Skip(1).ToArray();
@@ -117,18 +116,22 @@ namespace PointCloudConverter
 
                         //Console.WriteLine("cmd= " + cmd);
 
+                        // to handle cs0206
+                        int tempInt = -1;
+                        float tempFloat = -1;
+
                         // check params
                         switch (cmd)
                         {
                             case "-importformat":
-                                Console.WriteLine("importformat = " + param);
+                                Log.WriteLine("importformat = " + param);
 
                                 string importFormatParsed = param.ToUpper();
 
                                 // TODO check what reader interfaces are available
                                 if (string.IsNullOrEmpty(importFormatParsed) == true || (importFormatParsed != "LAS" && importFormatParsed != "LAZ"))
                                 {
-                                    errors.Add("Unsupported import format: " + param);
+                                    importSettings.errors.Add("Unsupported import format: " + param);
                                     importSettings.importFormat = ImportFormat.Unknown;
                                 }
                                 else
@@ -138,14 +141,14 @@ namespace PointCloudConverter
                                 }
                                 break;
                             case "-exportformat":
-                                Console.WriteLine("exportformat = " + param);
+                                Log.WriteLine("exportformat = " + param);
 
                                 string exportFormatParsed = param.ToUpper();
 
                                 // TODO check what writer interfaces are available
                                 if (string.IsNullOrEmpty(exportFormatParsed) == true || (exportFormatParsed != "UCPC" && exportFormatParsed != "PCROOT"))
                                 {
-                                    errors.Add("Unsupported export format: " + param);
+                                    importSettings.errors.Add("Unsupported export format: " + param);
                                     importSettings.exportFormat = ExportFormat.Unknown;
                                 }
                                 else
@@ -168,7 +171,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-input":
-                                Console.WriteLine("input = " + param);
+                                Log.WriteLine("input = " + param);
 
                                 // if relative folder, FIXME this fails on -input="C:\asdf\etryj\folder\" -importformat=las because backslash in \", apparently this https://stackoverflow.com/a/9288040/5452781
                                 if (Path.IsPathRooted(param) == false)
@@ -180,7 +183,7 @@ namespace PointCloudConverter
                                 if (Directory.Exists(param) == true)
                                 {
                                     Console.ForegroundColor = ConsoleColor.Gray;
-                                    Console.WriteLine("Batch mode enabled (import whole folder)");
+                                    Log.WriteLine("Batch mode enabled (import whole folder)");
                                     Console.ForegroundColor = ConsoleColor.White;
 
                                     // TODO get file extension from commandline param? but then need to set -format before input.. for now only LAS/LAZ
@@ -191,7 +194,7 @@ namespace PointCloudConverter
                                     for (int j = 0; j < filePaths.Length; j++)
                                     {
                                         Console.ForegroundColor = ConsoleColor.Gray;
-                                        Console.WriteLine("Found file: " + filePaths[j]);
+                                        Log.WriteLine("Found file: " + filePaths[j]);
                                         Console.ForegroundColor = ConsoleColor.White;
                                         importSettings.inputFiles.Add(filePaths[j]);
                                     }
@@ -202,7 +205,7 @@ namespace PointCloudConverter
                                 {
                                     if (File.Exists(param) == false)
                                     {
-                                        errors.Add("(A) Input file not found: " + param);
+                                        importSettings.errors.Add("(A) Input file not found: " + param);
                                     }
                                     else
                                     {
@@ -211,14 +214,14 @@ namespace PointCloudConverter
 
                                         // TODO find better way to check all readers
                                         //if (ext == "las" ||ext == "laz")
-                                        Console.WriteLine("added " + param);
+                                        Log.WriteLine("added " + param);
                                         importSettings.inputFiles.Add(param);
                                     }
                                 }
                                 break;
 
                             case "-output":
-                                Console.WriteLine("output = " + param);
+                                Log.WriteLine("output = " + param);
 
                                 // check if relative or not
                                 if (Path.IsPathRooted(param) == false)
@@ -281,7 +284,7 @@ namespace PointCloudConverter
                                             }
                                             else
                                             {
-                                                errors.Add("Invalid output file extension (must use .ucpc): " + extension);
+                                                importSettings.errors.Add("Invalid output file extension (must use .ucpc): " + extension);
                                             }
                                         }
                                     }
@@ -291,7 +294,7 @@ namespace PointCloudConverter
                                 var outputFolder = Path.GetDirectoryName(param);
                                 if (Directory.Exists(outputFolder) == false)
                                 {
-                                    errors.Add("Output directory not found: " + outputFolder);
+                                    importSettings.errors.Add("Output directory not found: " + outputFolder);
                                 }
                                 else // we have output folder
                                 {
@@ -300,32 +303,33 @@ namespace PointCloudConverter
                                 break;
 
                             case "-scale":
-                                Console.WriteLine("scale = " + param);
+                                Log.WriteLine("scale = " + param);
 
-                                bool parsedScale = float.TryParse(param, out importSettings.scale);
+                                bool parsedScale = float.TryParse(param, out tempFloat);
                                 if (parsedScale == false)
                                 {
-                                    errors.Add("Invalid scale parameter: " + param);
+                                    importSettings.errors.Add("Invalid scale parameter: " + param);
                                 }
                                 else // got value
                                 {
                                     if (importSettings.scale <= 0)
                                     {
-                                        errors.Add("Scale must be bigger than 0 : " + param);
+                                        importSettings.errors.Add("Scale must be bigger than 0 : " + param);
                                     }
                                     else
                                     {
                                         importSettings.useScale = true;
+                                        importSettings.scale = tempFloat;
                                     }
                                 }
                                 break;
 
                             case "-swap":
-                                Console.WriteLine("swap = " + param);
+                                Log.WriteLine("swap = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
-                                    errors.Add("Invalid swap parameter: " + param);
+                                    importSettings.errors.Add("Invalid swap parameter: " + param);
                                 }
                                 else
                                 {
@@ -334,11 +338,11 @@ namespace PointCloudConverter
                                 break;
 
                             case "-customintensityrange":
-                                Console.WriteLine("customintensityrange = " + param);
+                                Log.WriteLine("customintensityrange = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
-                                    errors.Add("Invalid useCustomIntensityRange parameter: " + param);
+                                    importSettings.errors.Add("Invalid useCustomIntensityRange parameter: " + param);
                                 }
                                 else
                                 {
@@ -347,11 +351,11 @@ namespace PointCloudConverter
                                 break;
 
                             case "-invertx":
-                                Console.WriteLine("invertx = " + param);
+                                Log.WriteLine("invertx = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
-                                    errors.Add("Invalid invertx parameter: " + param);
+                                    importSettings.errors.Add("Invalid invertx parameter: " + param);
                                 }
                                 else
                                 {
@@ -360,11 +364,11 @@ namespace PointCloudConverter
                                 break;
 
                             case "-invertz":
-                                Console.WriteLine("invertz = " + param);
+                                Log.WriteLine("invertz = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
-                                    errors.Add("Invalid invertz parameter: " + param);
+                                    importSettings.errors.Add("Invalid invertz parameter: " + param);
                                 }
                                 else
                                 {
@@ -373,11 +377,11 @@ namespace PointCloudConverter
                                 break;
 
                             case "-pack":
-                                Console.WriteLine("pack = " + param);
+                                Log.WriteLine("pack = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
-                                    errors.Add("Invalid pack parameter: " + param);
+                                    importSettings.errors.Add("Invalid pack parameter: " + param);
                                 }
                                 else
                                 {
@@ -386,62 +390,65 @@ namespace PointCloudConverter
                                 break;
 
                             case "-packmagic":
-                                Console.WriteLine("packmagic = " + param);
-                                bool packMagicParsed = int.TryParse(param, out importSettings.packMagicValue);
-                                if (packMagicParsed == false || importSettings.packMagicValue < 1)
+                                Log.WriteLine("packmagic = " + param);
+                                bool packMagicParsed = int.TryParse(param, out tempInt);
+                                if (packMagicParsed == false || tempInt < 1)
                                 {
-                                    errors.Add("Invalid packmagic parameter: " + param);
+                                    importSettings.errors.Add("Invalid packmagic parameter: " + param);
                                 }
                                 else // got value
                                 {
+                                    importSettings.packMagicValue = tempInt;
                                     // ok
                                 }
                                 break;
 
                             case "-skip":
-                                Console.WriteLine("skip = " + param);
-                                bool skipParsed = int.TryParse(param, out importSettings.skipEveryN);
-                                if (skipParsed == false || importSettings.skipEveryN < 2)
+                                Log.WriteLine("skip = " + param);
+                                bool skipParsed = int.TryParse(param, out tempInt);
+                                if (skipParsed == false || tempInt < 2)
                                 {
-                                    errors.Add("Invalid skip parameter: " + param);
+                                    importSettings.errors.Add("Invalid skip parameter: " + param);
                                 }
                                 else // got value
                                 {
+                                    importSettings.skipEveryN = tempInt;
                                     importSettings.skipPoints = true;
                                 }
                                 break;
 
                             case "-keep":
-                                Console.WriteLine("keep = " + param);
-                                bool keepParsed = int.TryParse(param, out importSettings.keepEveryN);
-                                if (keepParsed == false || importSettings.keepEveryN < 2)
+                                Log.WriteLine("keep = " + param);
+                                bool keepParsed = int.TryParse(param, out tempInt);
+                                if (keepParsed == false || tempInt < 2)
                                 {
-                                    errors.Add("Invalid keep parameter: " + param);
+                                    importSettings.errors.Add("Invalid keep parameter: " + param);
                                 }
                                 else // got value
                                 {
                                     importSettings.keepPoints = true;
+                                    importSettings.keepEveryN = tempInt;
                                 }
                                 break;
 
                             case "-maxfiles":
-                                Console.WriteLine("maxfiles = " + param);
-                                bool maxFilesParsed = int.TryParse(param, out importSettings.maxFiles);
+                                Log.WriteLine("maxfiles = " + param);
+                                bool maxFilesParsed = int.TryParse(param, out tempInt);
                                 if (maxFilesParsed == false)
                                 {
-                                    errors.Add("Invalid maxfiles parameter: " + param);
+                                    importSettings.errors.Add("Invalid maxfiles parameter: " + param);
                                 }
                                 else // got value
                                 {
-                                    // ok
+                                    importSettings.maxFiles = tempInt;
                                 }
-                                break;                            
-                            
+                                break;
+
                             //case "-metadata":
-                            //    Console.WriteLine("metadata = " + param);
+                            //    Log.WriteLine("metadata = " + param);
                             //    if (param != "true" && param != "false")
                             //    {
-                            //        errors.Add("Invalid metadata parameter: " + param);
+                            //        importSettings.errors.Add("Invalid metadata parameter: " + param);
                             //    }
                             //    else
                             //    {
@@ -449,8 +456,34 @@ namespace PointCloudConverter
                             //    }
                             //    break;
 
+                            case "-json":
+                                Log.WriteLine("json = " + param);
+
+                                if (param != "true" && param != "false")
+                                {
+                                    importSettings.errors.Add("Invalid json parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.useJSONLog = param == "true";
+                                }
+                                break;
+
+                            case "-seed":
+                                Log.WriteLine("seed = " + param);
+                                bool seedParsed = int.TryParse(param, out tempInt);
+                                if (seedParsed == false)
+                                {
+                                    importSettings.errors.Add("Invalid seed parameter: " + param);
+                                }
+                                else // got value
+                                {
+                                    importSettings.seed = tempInt;
+                                }
+                                break;
+
                             case "-offset":
-                                Console.WriteLine("offset = " + param);
+                                Log.WriteLine("offset = " + param);
 
                                 // check if its true or false
                                 if (param != "false" && param != "true")
@@ -473,17 +506,17 @@ namespace PointCloudConverter
                                             }
                                             else
                                             {
-                                                errors.Add("Invalid manual offset parameters for x,y,z: " + param);
+                                                importSettings.errors.Add("Invalid manual offset parameters for x,y,z: " + param);
                                             }
                                         }
                                         else
                                         {
-                                            errors.Add("Wrong amount of manual offset parameters for x,y,z: " + param);
+                                            importSettings.errors.Add("Wrong amount of manual offset parameters for x,y,z: " + param);
                                         }
                                     }
                                     else
                                     {
-                                        errors.Add("Invalid offset parameter: " + param);
+                                        importSettings.errors.Add("Invalid offset parameter: " + param);
                                     }
                                 }
                                 else // autooffset
@@ -494,52 +527,52 @@ namespace PointCloudConverter
                                 break;
 
                             case "-limit":
-                                Console.WriteLine("limit = " + param);
+                                Log.WriteLine("limit = " + param);
                                 // TODO add option to use percentage
-                                bool limitParsed = int.TryParse(param, out importSettings.limit);
-                                if (limitParsed == false || importSettings.limit <= 0)
+                                bool limitParsed = int.TryParse(param, out tempInt);
+                                if (limitParsed == false || tempInt <= 0)
                                 {
-                                    errors.Add("Invalid limit parameter: " + param);
+                                    importSettings.errors.Add("Invalid limit parameter: " + param);
                                 }
                                 else // got value
                                 {
                                     importSettings.useLimit = true;
+                                    importSettings.limit = tempInt;
                                 }
                                 break;
 
                             case "-gridsize":
-                                Console.WriteLine("gridsize = " + param);
-
-                                bool gridSizeParsed = float.TryParse(param, out importSettings.gridSize);
-                                if (gridSizeParsed == false || importSettings.gridSize < 0.01f)
+                                Log.WriteLine("gridsize = " + param);
+                                bool gridSizeParsed = float.TryParse(param, out tempFloat);
+                                if (gridSizeParsed == false || tempFloat < 0.01f)
                                 {
-                                    errors.Add("Invalid gridsize parameter: " + param);
+                                    importSettings.errors.Add("Invalid gridsize parameter: " + param);
                                 }
                                 else // got value
                                 {
-                                    // ok
+                                    importSettings.gridSize = tempFloat;
                                 }
                                 break;
 
                             case "-minpoints":
-                                Console.WriteLine("minPoints = " + param);
-                                bool minpointsParsed = int.TryParse(param, out importSettings.minimumPointCount);
-                                if (minpointsParsed == false || importSettings.minimumPointCount < 1)
+                                Log.WriteLine("minPoints = " + param);
+                                bool minpointsParsed = int.TryParse(param, out tempInt);
+                                if (minpointsParsed == false || tempInt < 1)
                                 {
-                                    errors.Add("Invalid minpoints parameter: " + param + " (should be >0)");
+                                    importSettings.errors.Add("Invalid minpoints parameter: " + param + " (should be >0)");
                                 }
                                 else // got value
                                 {
-                                    // ok
+                                    importSettings.minimumPointCount = tempInt;
                                 }
                                 break;
 
                             case "-randomize":
-                                Console.WriteLine("randomize = " + param);
+                                Log.WriteLine("randomize = " + param);
 
                                 if (param != "false" && param != "true")
                                 {
-                                    errors.Add("Invalid randomize parameter: " + param);
+                                    importSettings.errors.Add("Invalid randomize parameter: " + param);
                                 }
                                 else
                                 {
@@ -548,11 +581,11 @@ namespace PointCloudConverter
                                 break;
 
                             case "-rgb":
-                                Console.WriteLine("rgb = " + param);
+                                Log.WriteLine("rgb = " + param);
 
                                 if (param != "false" && param != "true")
                                 {
-                                    errors.Add("Invalid rgb parameter: " + param);
+                                    importSettings.errors.Add("Invalid rgb parameter: " + param);
                                 }
                                 else
                                 {
@@ -561,11 +594,11 @@ namespace PointCloudConverter
                                 break;
 
                             case "-intensity":
-                                Console.WriteLine("intensity = " + param);
+                                Log.WriteLine("intensity = " + param);
 
                                 if (param != "false" && param != "true")
                                 {
-                                    errors.Add("Invalid intensity parameter: " + param);
+                                    importSettings.errors.Add("Invalid intensity parameter: " + param);
                                 }
                                 else
                                 {
@@ -583,13 +616,13 @@ namespace PointCloudConverter
                                 break;
 
                             default:
-                                errors.Add("Unrecognized argument: " + cmd + argValueSeparator + param);
+                                importSettings.errors.Add("Unrecognized argument: " + cmd + argValueSeparator + param);
                                 break;
                         } // switch
                     }
                     else // bad arg (often due to missing "" around path with spaces)
                     {
-                        errors.Add("Unknown argument: " + cmds[0]);
+                        importSettings.errors.Add("Unknown argument: " + cmds[0]);
                     }
                 } // for args
             }
@@ -601,13 +634,13 @@ namespace PointCloudConverter
             // check that we had input
             if (importSettings.inputFiles.Count == 0 || string.IsNullOrEmpty(importSettings.inputFiles[0]) == true)
             {
-                errors.Add("No input file(s) defined (use -input" + argValueSeparator + "yourfile.las)");
+                importSettings.errors.Add("No input file(s) defined (use -input" + argValueSeparator + "yourfile.las)");
             }
             else // have input
             {
                 if (importSettings.batch == true)
                 {
-                    Console.WriteLine("Found " + importSettings.inputFiles.Count + " files..");
+                    Log.WriteLine("Found " + importSettings.inputFiles.Count + " files..");
 
                     // if no output folder given
                     if (string.IsNullOrEmpty(importSettings.outputFile) == true)
@@ -618,17 +651,17 @@ namespace PointCloudConverter
                             if (importSettings.inputFiles != null && importSettings.inputFiles.Count > 1)
                             {
                                 importSettings.outputFile = Path.GetDirectoryName(importSettings.inputFiles[0]) + Path.DirectorySeparatorChar;
-                                Console.WriteLine("importSettings.outputFile=" + importSettings.outputFile);
+                                Log.WriteLine("importSettings.outputFile=" + importSettings.outputFile);
                             }
                             else
                             {
-                                errors.Add("(D) No input files found, so cannot determine output folder either..");
+                                importSettings.errors.Add("(D) No input files found, so cannot determine output folder either..");
                             }
                         }
                         else if (importSettings.exportFormat == ExportFormat.PCROOT)
                         {
                             // we should ask for export folder, otherwise source folder is filled with files
-                            errors.Add("(C) -output file or folder not defined (its required for V3 PCROOT format)");
+                            importSettings.errors.Add("(C) -output file or folder not defined (its required for V3 PCROOT format)");
                         }
                     }
 
@@ -637,7 +670,7 @@ namespace PointCloudConverter
                 {
                     if (File.Exists(importSettings.inputFiles[0]) == false)
                     {
-                        errors.Add("(B) Input file not found: " + importSettings.inputFiles[0]);
+                        importSettings.errors.Add("(B) Input file not found: " + importSettings.inputFiles[0]);
                     }
 
                     // if no output file defined, put in same folder as source
@@ -655,13 +688,13 @@ namespace PointCloudConverter
             // check required settings
             if (importSettings.exportFormat == ExportFormat.Unknown)
             {
-                errors.Add("No export format defined (Example: -exportformat" + argValueSeparator + "UCPC)");
+                importSettings.errors.Add("No export format defined (Example: -exportformat" + argValueSeparator + "UCPC)");
             }
 
             // cannot have both rgb & intensity
             if (importSettings.importRGB == true && importSettings.importIntensity == true)
             {
-                errors.Add("Cannot have both -rgb and -intensity enabled");
+                importSettings.errors.Add("Cannot have both -rgb and -intensity enabled");
             }
 
             //// check mismatching settings for v2 vs v3
@@ -672,43 +705,60 @@ namespace PointCloudConverter
 
             //if (importSettings.batch == true && importSettings.exportFormat != ExportFormat.PCROOT)
             //{
-            //    errors.Add("Folder batch is only supported for PCROOT (v3) version: -exportformat=pcroot");
+            //    importSettings.errors.Add("Folder batch is only supported for PCROOT (v3) version: -exportformat=pcroot");
             //}
 
             if (importSettings.skipPoints == true && importSettings.keepPoints == true)
             {
-                errors.Add("Cannot have both -keep and -skip enabled");
+                importSettings.errors.Add("Cannot have both -keep and -skip enabled");
             }
 
             if (importSettings.importFormat == ImportFormat.Unknown)
             {
                 importSettings.importFormat = ImportFormat.LAS;
                 importSettings.reader = new LAZ();
-                Console.WriteLine("No import format defined, using Default: " + importSettings.importFormat.ToString());
+                Log.WriteLine("No import format defined, using Default: " + importSettings.importFormat.ToString());
             }
 
             if (importSettings.randomize == false && importSettings.exportFormat == ExportFormat.PCROOT)
             {
-                errors.Add("V3 pcroot export format requires -randomize=true to randomize points");
+                importSettings.errors.Add("V3 pcroot export format requires -randomize=true to randomize points");
             }
 
             //if (decimatePoints == true && (skipPoints == true || keepPoints == true))
             //{
-            //    errors.Add("Cannot use -keep or -skip when using -decimate");
+            //    importSettings.errors.Add("Cannot use -keep or -skip when using -decimate");
             //}
 
+            if (importSettings.errors.Count > 0) importSettings.haveError = true;
+
+            // if using jsonlog, print import settings
+            if (importSettings.useJSONLog == true)
+            {
+                // TODO workaround to get logevent in this json data (not used later)
+                importSettings.version = Log.version;
+                importSettings.logEvent = Logger.LogEvent.Settings;
+                Log.WriteLine(importSettings.ToJSON(), Logger.LogEvent.Settings);
+            }
+
             // show errors
-            if (errors.Count > 0)
+            if (importSettings.errors.Count > 0)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("\nErrors found:");
+                Log.WriteLine("\nErrors found:");
                 Console.ForegroundColor = ConsoleColor.Red;
-                for (int i = 0; i < errors.Count; i++)
+                for (int i = 0; i < importSettings.errors.Count; i++)
                 {
-                    Console.WriteLine(i + "> " + errors[i]);
+                    Log.WriteLine(i + "> " + importSettings.errors[i]);
                 }
                 Console.ForegroundColor = ConsoleColor.White;
-                importSettings.errors = errors;
+
+                //if (importSettings.useJSONLog == true)
+                //{
+                //    // convert errors list to json
+                //    importSettings.logEvent = Logger.LogEvent.Error;
+                //    var json = JsonSerializer.Serialize(importSettings.errors);
+                //}
             }
 
             // return always, but note that we might have errors

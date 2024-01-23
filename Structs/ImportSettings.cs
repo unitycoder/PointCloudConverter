@@ -4,58 +4,70 @@ using PointCloudConverter.Readers;
 using PointCloudConverter.Structs;
 using PointCloudConverter.Writers;
 using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PointCloudConverter
 {
     public class ImportSettings
     {
+        // filled in by program (so that json serializer is easier)
+        public string version { get; set; } = "0.0.0";
+        
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public Logger.LogEvent logEvent { get; set; }
+
         public IReader reader = new LAZ();
         public IWriter writer = new UCPC();
 
-        public bool haveError = false; // if errors during parsing args
+        public bool haveError { get; set; } = false; // if errors during parsing args
         //public string[] errorMessages = null; // last error message(s)
 
-        public bool useScale = false;
-        public float scale = 1f;
+        public bool useScale { get; set; } = false;
+        public float scale { get; set; } = 1f;
 
-        public ImportFormat importFormat = ImportFormat.LAS; //default to las for now
-        public ExportFormat exportFormat = ExportFormat.UCPC; // defaults to UCPC (v2)
+        [JsonConverter(typeof(JsonStringEnumConverter))] 
+        public ImportFormat importFormat { get; set; } = ImportFormat.LAS; //default to las for now
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public ExportFormat exportFormat { get; set; } = ExportFormat.UCPC; // defaults to UCPC (v2)
 
-        public List<string> inputFiles = new List<string>();
-        public string outputFile = null;
+        public List<string> inputFiles { get; set; } = new List<string>();
+        public string outputFile { get; set; } = null;
 
-        public List<string> errors = new List<string>(); // return errors to UI
+        public List<string> errors { get; set; } = new List<string>(); // return errors to UI
 
         // FIXME default values will be used unless otherwise specified.. randomize = true 
         // TODO these should be export settings..
 
-        public bool importRGB = true; // this or intensity must be on
-        public bool importIntensity = false;
-        public bool useAutoOffset = true;
-        public bool swapYZ = true;
-        public bool invertX = false;
-        public bool invertZ = false;
-        public float offsetX = 0;
-        public float offsetY = 0;
-        public float offsetZ = 0;
-        public bool useLimit = false;
-        public int limit = 0;
-        public bool randomize = false;
-        public float gridSize = 25;
-        public int minimumPointCount = 0;
-        public bool packColors = false;
-        public int packMagicValue = 64; // use lower value if your gridsize is very large, if gridsize=500 then try value 2
-        public bool skipPoints = false;
-        public int skipEveryN = 0;
-        public bool keepPoints = false; // TODO rename to useKeepPoints?
-        public int keepEveryN = 0;
-        public int maxFiles = 0;
-        public bool batch = false;
-        public bool useManualOffset = false;
-        public float manualOffsetX = 0;
-        public float manualOffsetY = 0;
-        public float manualOffsetZ = 0;
-        public bool useCustomIntensityRange = false; // if false, 0-255 range is used, if ture: 0-65535
+        public bool importRGB { get; set; } = true; // this or intensity must be on
+        public bool importIntensity { get; set; } = false;
+        public bool useAutoOffset { get; set; } = true;
+        public bool swapYZ { get; set; } = true;
+        public bool invertX { get; set; } = false;
+        public bool invertZ { get; set; } = false;
+        public float offsetX { get; set; } = 0;
+        public float offsetY { get; set; } = 0;
+        public float offsetZ { get; set; } = 0;
+        public bool useLimit { get; set; }  = false;
+        public int limit { get; set; } = 0;
+        public bool randomize { get; set; } = false;
+        public float gridSize { get; set; } = 25;
+        public int minimumPointCount { get; set; } = 0;
+        public bool packColors { get; set; } = false;
+        public int packMagicValue { get; set; } = 64; // use lower value if your gridsize is very large, if gridsize=500 then try value 2
+        public bool skipPoints { get; set; } = false;
+        public int skipEveryN { get; set; } = 0;
+        public bool keepPoints { get; set; } = false; // TODO rename to useKeepPoints?
+        public int keepEveryN { get; set; } = 0;
+        public int maxFiles { get; set; } = 0;
+        public bool batch { get; set; } = false;
+        public bool useManualOffset { get; set; } = false;
+        public float manualOffsetX { get; set; } = 0;
+        public float manualOffsetY { get; set; } = 0;
+        public float manualOffsetZ { get; set; } = 0;
+        public bool useCustomIntensityRange { get; set; } = false; // if false, 0-255 range is used, if ture: 0-65535
+        public int seed { get; set; } = -1; // random seed for shuffling
+        public bool useJSONLog = false;
         //public bool importMetaData = false;
 
         public override string ToString()
@@ -93,7 +105,14 @@ namespace PointCloudConverter
             t += "\n manualOffsetX=" + manualOffsetX;
             t += "\n manualOffsetX=" + manualOffsetX;
             t += "\n useCustomIntensityRange=" + useCustomIntensityRange;
+            t += "\n seed=" + seed;
+            t += "\n useJSONLog=" + useJSONLog;
             return t;
+        }
+
+        internal string ToJSON()
+        {
+            return JsonSerializer.Serialize(this);
         }
     }
 }
