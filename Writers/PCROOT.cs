@@ -149,8 +149,8 @@ namespace PointCloudConverter.Writers
             // TODO add enum for status
 
             string jsonString = "{" +
-            "\"event\": " + LogEvent.File + "," +
-            "\"status\": \"complete\"," +
+            "\"event\": \"" + LogEvent.File + "\"," +
+            "\"status\": \""+LogStatus.Complete+"\"," +
             "\"path\": \"" + importSettings.inputFiles[fileIndex] + "\"," +
             "\"tiles\": " + nodeX.Count + "," +
             "\"folder\": \"" + baseFolder + "\"}";
@@ -431,7 +431,7 @@ namespace PointCloudConverter.Writers
                 }
 
                 jsonString = "{" +
-                "\"event\": " + LogEvent.File + "," +
+                "\"event\": \"" + LogEvent.File + "\"," +
                 "\"path\": \"" + outputFileRoot + "\"," +
                 "\"totalpoints\": " + Tools.HumanReadableCount(totalPointCount) + "," +
                 "\"skippedNodes\": " + skippedNodesCounter + "," +

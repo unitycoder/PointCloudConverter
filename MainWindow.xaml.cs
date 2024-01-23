@@ -113,7 +113,7 @@ namespace PointCloudConverter
                 Log.WriteLine("Exited.\nElapsed: " + elapsedString);
                 if (importSettings.useJSONLog)
                 {
-                    Log.WriteLine("{\"event\": " + LogEvent.End + ", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + "\"}", LogEvent.End);
+                    Log.WriteLine("{\"event\": \"" + LogEvent.End + "\", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + "\"}", LogEvent.End);
                 }
                 // hack for console exit https://stackoverflow.com/a/67940480/5452781
                 SendKeys.SendWait("{ENTER}");
@@ -295,11 +295,11 @@ namespace PointCloudConverter
             lastStatusMessage = "Processing points..";
 
             string jsonString = "{" +
-            "\"event\": "+LogEvent.File+"," +
-            "\"path\": \""+ importSettings.inputFiles[fileIndex] + "\"," +
-            "\"size\": \""+ Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[fileIndex]).Length) + "\"," +
-            "\"points\": "+ pointCount + "," +
-            "\"status\": \"processing\"" +
+            "\"event\": \"" + LogEvent.File + "\"," +
+            "\"path\": \"" + importSettings.inputFiles[fileIndex] + "\"," +
+            "\"size\": \"" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[fileIndex]).Length) + "\"," +
+            "\"points\": " + pointCount + "," +
+            "\"status\": \"" + LogStatus.Processing + "\"" +
             "}";
 
             Log.WriteLine(jsonString, LogEvent.File);

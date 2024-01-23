@@ -16,6 +16,12 @@ namespace PointCloudConverter.Logger
         Debug
     }
 
+    public enum LogStatus
+    {
+        Processing,
+        Complete
+    }
+
     public interface ILogger
     {
         void Write(string msg);
