@@ -71,12 +71,15 @@
                 <CheckBox x:Name="chkSetRandomSeed" Content="Use random seed:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="To use same random seed when converting same cloud with different import settings"/>
                 <TextBox x:Name="txtRandomSeed" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="42"/>
             </StackPanel>
-            <CheckBox x:Name="chkUseJSONLog" Content="Use JSON log" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Log messages are written in JSON format"/>
+            <CheckBox x:Name="chkUseJSONLog" Content="Use JSON log *Used in commandline only" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Log messages are written in JSON format. Experimental, V3 format is better supported."/>
         </StackPanel>
         <Label x:Name="label_Copy6" Content="Global Options" HorizontalAlignment="Left" Margin="20,143,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
 
         <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,603,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="877" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
+
         <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="10,577,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
+        <Button x:Name="btnCopyToClipboard" Content="Copy" HorizontalAlignment="Left" VerticalAlignment="Top" Width="40" Height="20" ToolTip="Browse for output file" Margin="234,580,0,0" Click="btnCopyToClipboard_Click"/>
+
         <Button x:Name="btnGetParams" Content="Get Commandline params" HorizontalAlignment="Left" Margin="12,514,0,0" VerticalAlignment="Top" Width="214" Height="58" Click="btnGetParams_Click"/>
         <StackPanel HorizontalAlignment="Left" Height="149" Margin="320,174,0,0" VerticalAlignment="Top" Width="234">
             <CheckBox x:Name="chkPackColors" Content="Pack Colors" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Packs color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&amp;shader in viewer"/>

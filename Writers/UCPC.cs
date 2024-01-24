@@ -1,10 +1,13 @@
 ﻿// UCPC (v2) Exporter https://github.com/unitycoder/UnityPointCloudViewer/wiki/Binary-File-Format-Structure#custom-v2-ucpc-binary-format
 
+using PointCloudConverter.Logger;
 using PointCloudConverter.Structs;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Xml.Linq;
 
 namespace PointCloudConverter.Writers
 {
@@ -273,6 +276,14 @@ namespace PointCloudConverter.Writers
             }
             Console.ForegroundColor = ConsoleColor.Green;
             Log.WriteLine("Output: " + importSettings.outputFile);
+
+            string jsonString = "{" +
+            "\"event\": \"" + LogEvent.File + "\"," +
+            "\"status\": \"" + LogStatus.Complete + "\"," +
+            "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+            "\"output\": " + JsonSerializer.Serialize(importSettings.outputFile) + "}";
+
+            Log.WriteLine(jsonString, LogEvent.File);
             Console.ForegroundColor = ConsoleColor.White;
 
             var sep = '"';

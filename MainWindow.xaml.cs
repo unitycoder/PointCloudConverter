@@ -8,7 +8,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -27,7 +26,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "23.01.2024";
+        static readonly string version = "24.01.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -146,7 +145,6 @@ namespace PointCloudConverter
             importSettings.maxFiles = Math.Min(importSettings.maxFiles, importSettings.inputFiles.Count);
 
             StartProgressTimer();
-
 
             // loop input files
             progressFile = 0;
@@ -299,7 +297,7 @@ namespace PointCloudConverter
             string jsonString = "{" +
             "\"event\": \"" + LogEvent.File + "\"," +
             "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
-            "\"size\": \"" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[fileIndex]).Length) + "\"," +
+            "\"size\": " + new FileInfo(importSettings.inputFiles[fileIndex]).Length + "," +
             "\"points\": " + pointCount + "," +
             "\"status\": \"" + LogStatus.Processing + "\"" +
             "}";
@@ -425,7 +423,7 @@ namespace PointCloudConverter
             if ((bool)chkManualOffset.IsChecked) args.Add("-offset=" + txtOffsetX.Text + "," + txtOffsetY.Text + "," + txtOffsetZ.Text);
             args.Add("-randomize=" + (bool)chkRandomize.IsChecked);
             if ((bool)chkSetRandomSeed.IsChecked) args.Add("-seed=" + txtRandomSeed.Text);
-            if ((bool)chkUseJSONLog.IsChecked) args.Add("-jsonlog=true");
+            if ((bool)chkUseJSONLog.IsChecked) args.Add("-json=true");
 
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
 
@@ -615,7 +613,9 @@ namespace PointCloudConverter
             txtOffsetX.Text = Properties.Settings.Default.manualOffsetX.ToString();
             txtOffsetY.Text = Properties.Settings.Default.manualOffsetY.ToString();
             txtOffsetZ.Text = Properties.Settings.Default.manualOffsetZ.ToString();
-
+            chkSetRandomSeed.IsChecked = Properties.Settings.Default.useRandomSeed;
+            txtRandomSeed.Text = Properties.Settings.Default.seed.ToString();
+            chkUseJSONLog.IsChecked = Properties.Settings.Default.useJSON;
             isInitialiazing = false;
         }
 
@@ -654,6 +654,11 @@ namespace PointCloudConverter
             float.TryParse(txtOffsetY.Text, out float offsetY);
             Properties.Settings.Default.manualOffsetY = offsetY;
             float.TryParse(txtOffsetZ.Text, out float offsetZ);
+            int tempSeed = 42;
+            int.TryParse(txtRandomSeed.Text, out tempSeed);
+            Properties.Settings.Default.seed = tempSeed;
+            Properties.Settings.Default.useJSON = (bool)chkUseJSONLog.IsChecked;
+            Properties.Settings.Default.useRandomSeed = (bool)chkSetRandomSeed.IsChecked;
             Properties.Settings.Default.manualOffsetZ = offsetZ; Properties.Settings.Default.Save();
         }
 
@@ -769,6 +774,17 @@ namespace PointCloudConverter
             {
                 chkAutoOffset.IsChecked = false;
             }
+        }
+
+        private void btnCopyToClipboard_Click(object sender, RoutedEventArgs e)
+        {
+            // copy console to clipboard
+            System.Windows.Clipboard.SetText(txtConsole.Text);
+            // focus
+            txtConsole.Focus();
+            // select all text
+            txtConsole.SelectAll();
+            e.Handled = true;
         }
     } // class
 } // namespace

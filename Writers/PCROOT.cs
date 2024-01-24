@@ -145,6 +145,7 @@ namespace PointCloudConverter.Writers
 
             string fileOnly = Path.GetFileNameWithoutExtension(importSettings.outputFile);
             string baseFolder = Path.GetDirectoryName(importSettings.outputFile);
+            // TODO no need colors for json.. could move this inside custom logger, so that it doesnt do anything, if json
             Console.ForegroundColor = ConsoleColor.Blue;
 
             // TODO add enum for status
@@ -434,7 +435,7 @@ namespace PointCloudConverter.Writers
                 jsonString = "{" +
                 "\"event\": \"" + LogEvent.File + "\"," +
                 "\"path\": " + JsonSerializer.Serialize(outputFileRoot) + "," +
-                "\"totalpoints\": \"" + Tools.HumanReadableCount(totalPointCount) + "\"," +
+                "\"totalpoints\": " + totalPointCount + "," +
                 "\"skippedNodes\": " + skippedNodesCounter + "," +
                 "\"skippedPoints\": " + skippedPointsCounter + "" +
                 "}";

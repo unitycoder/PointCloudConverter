@@ -38,24 +38,22 @@ namespace PointCloudConverter.Logger
         public void Write(string msg, LogEvent eventType)
         {
             // TODO not supported yet (later could have different colors for different events)
-            Console.WriteLine("NOTIMPLEMENTED: "+msg);
-            throw new NotImplementedException();
+            //Console.WriteLine("NOTIMPLEMENTED: "+msg);
+            //throw new NotImplementedException();
         }
     }
 
     public class LogJSON : ILogger
     {
-        public void Write(string msg, LogEvent eventType)
-        {
-            //var json = $"{{\"event\": \"{eventType}\", \"message\": \"{msg}\", \"version\": \"{Log.version}\"}}";
-            var json = msg;
-            Console.WriteLine(json);
-        }
-
         public void Write(string msg)
         {
-            // no output, since its not json
-            //Console.WriteLine("(no output for json) *** "+msg+" ***");
+            // no output, since its not json message
+        }
+
+        public void Write(string msg, LogEvent eventType)
+        {
+            var json = msg;
+            Console.WriteLine(json);
         }
     }
 
