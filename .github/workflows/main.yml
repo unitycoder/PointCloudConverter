@@ -35,6 +35,9 @@ jobs:
           Install-Module 7Zip4PowerShell -Force -Verbose 
       - uses: actions/checkout@v2
       
+      - name: Restore NuGet packages
+        run: nuget restore PointCloudConverter.sln
+      
       - name: Build Binary
         shell: cmd
         run: call .\Build.cmd      
