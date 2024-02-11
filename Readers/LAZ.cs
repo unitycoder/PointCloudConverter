@@ -18,6 +18,7 @@ namespace PointCloudConverter.Readers
         laszip_dll lazReader = new laszip_dll();
         bool compressed = false;
         bool importRGB = true;
+        bool importIntensity = false;
         bool customIntensityRange = false;
 
         bool IReader.InitReader(ImportSettings importSettings, int fileIndex)
@@ -25,7 +26,7 @@ namespace PointCloudConverter.Readers
             // TODO check errors
             var file = importSettings.inputFiles[fileIndex];
             importRGB = importSettings.importRGB;
-            //importIntensity = importSettings.readIntensity;
+            importIntensity = importSettings.importIntensity;
             customIntensityRange = importSettings.useCustomIntensityRange;
             lazReader.laszip_open_reader(file, ref compressed);
             return true;
@@ -59,38 +60,42 @@ namespace PointCloudConverter.Readers
             // get point reference
             var p = lazReader.point;
 
-            if (importRGB == true)
+            // try to detect if colors are outside 0-255 range? TODO just check value?
+            if (p.rgb[0].ToString("X").Length > 2)
             {
-                // try to detect if colors are outside 0-255 range? TODO just check value?
-                if (p.rgb[0].ToString("X").Length > 2)
-                {
-                    c.r = Tools.LUT255[(byte)(p.rgb[0] / 256f)];
-                    c.g = Tools.LUT255[(byte)(p.rgb[1] / 256f)];
-                    c.b = Tools.LUT255[(byte)(p.rgb[2] / 256f)];
-                }
-                else // its 0-255
-                {
-                    c.r = Tools.LUT255[(byte)(p.rgb[0])];
-                    c.g = Tools.LUT255[(byte)(p.rgb[1])];
-                    c.b = Tools.LUT255[(byte)(p.rgb[2])];
-                }
+                c.r = Tools.LUT255[(byte)(p.rgb[0] / 256f)];
+                c.g = Tools.LUT255[(byte)(p.rgb[1] / 256f)];
+                c.b = Tools.LUT255[(byte)(p.rgb[2] / 256f)];
             }
-            else // use intensity
+            else // its 0-255
             {
-                float i = 0;
-                if (customIntensityRange) // NOTE now only supports 65535 as custom range
-                {
-                    i = Tools.LUT255[(byte)(p.intensity / 255f)];
-                }
-                else
-                {
-                    i = Tools.LUT255[(byte)(p.intensity)];
-                }
-                c.r = i;
-                c.g = i;
-                c.b = i;
+                c.r = Tools.LUT255[(byte)(p.rgb[0])];
+                c.g = Tools.LUT255[(byte)(p.rgb[1])];
+                c.b = Tools.LUT255[(byte)(p.rgb[2])];
             }
 
+            return c;
+        }
+
+        Color IReader.GetIntensity()
+        {
+            var c = new Color();
+
+            // get point reference
+            var p = lazReader.point;
+
+            float i = 0;
+            if (customIntensityRange) // NOTE now only supports 65535 as custom range
+            {
+                i = Tools.LUT255[(byte)(p.intensity / 255f)];
+            }
+            else
+            {
+                i = Tools.LUT255[(byte)(p.intensity)];
+            }
+            c.r = i;
+            c.g = i;
+            c.b = i;
             return c;
         }
 

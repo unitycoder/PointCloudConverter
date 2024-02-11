@@ -692,9 +692,15 @@ namespace PointCloudConverter
             }
 
             // cannot have both rgb & intensity
-            if (importSettings.importRGB == true && importSettings.importIntensity == true)
+            //if (importSettings.importRGB == true && importSettings.importIntensity == true)
+            //{
+            //    importSettings.errors.Add("Cannot have both -rgb and -intensity enabled");
+            //}            
+            
+            // must have at least one
+            if (importSettings.importRGB == false && importSettings.importIntensity == false)
             {
-                importSettings.errors.Add("Cannot have both -rgb and -intensity enabled");
+                importSettings.errors.Add("Must have -rgb OR -intensity enabled");
             }
 
             //// check mismatching settings for v2 vs v3
@@ -720,10 +726,11 @@ namespace PointCloudConverter
                 Log.WriteLine("No import format defined, using Default: " + importSettings.importFormat.ToString());
             }
 
-            if (importSettings.randomize == false && importSettings.exportFormat == ExportFormat.PCROOT)
-            {
-                importSettings.errors.Add("V3 pcroot export format requires -randomize=true to randomize points");
-            }
+            // disable this error, if user really wants to use it
+            //if (importSettings.randomize == false && importSettings.exportFormat == ExportFormat.PCROOT)
+            //{
+            //    importSettings.errors.Add("V3 pcroot export format requires -randomize=true to randomize points");
+            //}
 
             //if (decimatePoints == true && (skipPoints == true || keepPoints == true))
             //{

@@ -16,5 +16,6 @@ namespace PointCloudConverter.Readers
         Color GetRGB();
         // close filestream
         void Close();
+        Color GetIntensity();
     }
 }

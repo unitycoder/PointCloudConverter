@@ -1,9 +1,12 @@
-﻿using System;
+﻿using PointCloudConverter.Structs;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Numerics;
 using System.Reflection;
 using System.Threading;
+using System.Windows.Documents;
 
 namespace PointCloudConverter
 {
@@ -83,11 +86,57 @@ namespace PointCloudConverter
             return (Math.Sign(byteCount) * num).ToString() + suf[place];
         }
 
-        public static float SuperPacker(float coord, float color, float range)
+        public static float SuperPacker(float color, float coord, float range)
         {
-            float truncated = (float)Math.Truncate(color * range);
-            return truncated + coord;
+            float truncated = (float)Math.Truncate(coord * range);
+            return truncated + color;
         }
+
+        public static Vector2 SuperUnpacker(float f, float GridSizeAndPackMagic)
+        {
+            return new Vector2((float)(f - Math.Floor(f)), (float)(Math.Floor(f) / GridSizeAndPackMagic));
+        }
+
+        //public static int PackInt2Int(int a, int b)
+        //{
+        //    int a2 = a << 8;
+        //    int b2 = b & 0x000000FF;
+        //    return a2 | b2;
+        //}
+
+        //public static void Unpack2Ints(int packed, out int a, out int b)
+        //{
+        //    a = packed >> 8;
+        //    b = packed & 0x000000FF;
+        //}
+
+        //public static Vector3 SuperUnpacker2(float f, float GridSizeAndPackMagic)
+        //{
+        //    //float i = f / 16581375f;
+        //    float i = f / 64000f;
+        //    return new Vector3((float)(i - Math.Floor(i)), (float)(Math.Floor(i) / GridSizeAndPackMagic), i);
+        //}
+
+        //// https://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/
+        //public static float SuperPacker4(float a, float b, float c, float d)
+        //{
+        //    return Dot(a, b, c, d, 1.0f, 1 / 255.0f, 1 / 65025.0f, 1 / 16581375.0f);
+        //}
+
+        //public static float SuperPacker3(float a, float b, float c)
+        //{
+        //    return Dot(a, b, c, 1.0f, 1 / 255.0f, 1 / 65025.0f);
+        //}
+
+        //static float Dot(float ax, float ay, float az, float aw, float bx, float by, float bz, float bw)
+        //{
+        //    return (ax * bx + ay * by + az * bz + aw * bw);
+        //}
+
+        //static float Dot(float ax, float ay, float az, float bx, float by, float bz)
+        //{
+        //    return (ax * bx + ay * by + az * bz);
+        //}
 
         public static void Shuffle<T>(Random rng, ref List<T> array1, ref List<T> array2, ref List<T> array3, ref List<T> arrayR, ref List<T> arrayG, ref List<T> arrayB)
         {
@@ -119,6 +168,43 @@ namespace PointCloudConverter
                 T tempB = arrayB[index];
                 arrayB[index] = arrayB[rnd];
                 arrayB[rnd] = tempB;
+            }
+        }
+
+        public static void Shuffle<T>(Random rng, ref List<T> array1, ref List<T> array2, ref List<T> array3, ref List<T> arrayR, ref List<T> arrayG, ref List<T> arrayB, ref List<T> arrayIntensity)
+        {
+            int index = array1.Count;
+            while (index > 1)
+            {
+                int rnd = rng.Next(index--);
+
+                T temp = array1[index];
+                array1[index] = array1[rnd];
+                array1[rnd] = temp;
+
+                T temp2 = array2[index];
+                array2[index] = array2[rnd];
+                array2[rnd] = temp2;
+
+                T temp3 = array3[index];
+                array3[index] = array3[rnd];
+                array3[rnd] = temp3;
+
+                T tempR = arrayR[index];
+                arrayR[index] = arrayR[rnd];
+                arrayR[rnd] = tempR;
+
+                T tempG = arrayG[index];
+                arrayG[index] = arrayG[rnd];
+                arrayG[rnd] = tempG;
+
+                T tempB = arrayB[index];
+                arrayB[index] = arrayB[rnd];
+                arrayB[rnd] = tempB;
+
+                T tempI = arrayIntensity[index];
+                arrayIntensity[index] = arrayIntensity[rnd];
+                arrayIntensity[rnd] = tempI;
             }
         }
 

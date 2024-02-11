@@ -26,7 +26,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "25.01.2024";
+        static readonly string version = "11.02.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -214,6 +214,12 @@ namespace PointCloudConverter
                 mainWindowStatic.progressBarPoints.Value = progressPoint / (float)progressTotalPoints;
                 mainWindowStatic.lblStatus.Content = lastStatusMessage;
             }
+            else
+            {
+                mainWindowStatic.progressBarFiles.Value = 0;
+                mainWindowStatic.progressBarPoints.Value = 0;
+                mainWindowStatic.lblStatus.Content = "";
+            }
         }
 
         // process single file
@@ -345,10 +351,31 @@ namespace PointCloudConverter
                 }
 
                 // get point color
-                Color rgb = importSettings.reader.GetRGB();
+                Color rgb = (default);
+                Color intensity = (default);
 
-                // collect this point XYZ and RGB into node
-                importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b);
+                if (importSettings.importRGB == true)
+                {
+                    rgb = importSettings.reader.GetRGB();
+                }
+
+                // TODO get intensity as separate value, TODO is this float or rgb?
+                if (importSettings.importIntensity == true)
+                {
+                    intensity = importSettings.reader.GetIntensity();
+                    //if (i < 100) Console.WriteLine(intensity.r);
+
+                    // if no rgb, then replace RGB with intensity
+                    if (importSettings.importRGB == false)
+                    {
+                        rgb.r = intensity.r;
+                        rgb.g = intensity.r;
+                        rgb.b = intensity.r;
+                    }
+                }
+
+                // collect this point XYZ and RGB into node, optionally intensity also
+                importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r);
                 progressPoint = i;
             }
 
@@ -380,6 +407,11 @@ namespace PointCloudConverter
 
         private void btnConvert_Click(object sender, RoutedEventArgs e)
         {
+            // reset progress
+            progressTotalFiles = 0;
+            progressTotalPoints = 0;
+            ProgressTick(null, null);
+
             gridProcessingPanel.Visibility = Visibility.Visible;
             SaveSettings();
             StartProcess();
@@ -692,7 +724,7 @@ namespace PointCloudConverter
             // not available at init
             if (isInitialiazing == true) return;
 
-            chkImportIntensity.IsChecked = false;
+            //chkImportIntensity.IsChecked = false;
             Properties.Settings.Default.importRGB = true;
             Properties.Settings.Default.Save();
         }
@@ -701,7 +733,7 @@ namespace PointCloudConverter
         {
             if (isInitialiazing == true) return;
 
-            chkImportRGB.IsChecked = false;
+            //chkImportRGB.IsChecked = false;
             Properties.Settings.Default.importIntensity = true;
             Properties.Settings.Default.Save();
         }
