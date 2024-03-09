@@ -8,34 +8,35 @@
 // (c) of C# port 2014-2017 by Shinta shintadono@googlemail.com
 
 using PointCloudConverter.Structs;
-using laszip.net;
 using System;
+using LASzip.Net;
 
 namespace PointCloudConverter.Readers
 {
     public class LAZ : IReader
     {
-        laszip_dll lazReader = new laszip_dll();
-        bool compressed = false;
-        bool importRGB = true;
-        bool importIntensity = false;
+        //laszip_dll lazReader = new laszip_dll();
+        laszip lazReader = new laszip();
+
+        bool compressedLAZ = false;
+        //bool importRGB = true;
+        //bool importIntensity = false;
         bool customIntensityRange = false;
 
         bool IReader.InitReader(ImportSettings importSettings, int fileIndex)
         {
             // TODO check errors
             var file = importSettings.inputFiles[fileIndex];
-            importRGB = importSettings.importRGB;
-            importIntensity = importSettings.importIntensity;
+            //importRGB = importSettings.importRGB;
+            //importIntensity = importSettings.importIntensity;
             customIntensityRange = importSettings.useCustomIntensityRange;
-            lazReader.laszip_open_reader(file, ref compressed);
+            lazReader.open_reader(file, out compressedLAZ);
             return true;
         }
 
         Bounds IReader.GetBounds()
         {
             var b = new Bounds();
-
             // get original bounds from file
             b.minX = (float)lazReader.header.min_x;
             b.maxX = (float)lazReader.header.max_x;
@@ -43,15 +44,18 @@ namespace PointCloudConverter.Readers
             b.maxY = (float)lazReader.header.max_y;
             b.minZ = (float)lazReader.header.min_z;
             b.maxZ = (float)lazReader.header.max_z;
-
             return b;
         }
 
         int IReader.GetPointCount()
         {
-            return (int)lazReader.header.number_of_point_records;
+            long count = 0;
+            lazReader.get_point_count(out count);
+            // check alternative point counts
+            if (count == 0) count = (int)lazReader.header.extended_number_of_point_records;
+            if (count == 0) count = lazReader.header.number_of_point_records;
+            return (int)count;
         }
-
 
         Color IReader.GetRGB()
         {
@@ -105,14 +109,14 @@ namespace PointCloudConverter.Readers
             f.hasError = false;
 
             // Read point
-            lazReader.laszip_read_point();
+            lazReader.read_point();
 
             // check for received errors
-            var err = lazReader.laszip_get_error();
-            if (err != null)
+            var err = lazReader.get_error();
+            if (err == null)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Failed to read until end of file, partial data is kept.");
+                Console.WriteLine("Failed to read until end of file?");
                 Console.WriteLine("ErrorCode: " + err);
                 Console.ForegroundColor = ConsoleColor.White;
                 f.hasError = true;
@@ -120,7 +124,7 @@ namespace PointCloudConverter.Readers
 
             // Get precision coordinates
             var coordArray = new double[3];
-            lazReader.laszip_get_coordinates(coordArray);
+            lazReader.get_coordinates(coordArray);
             f.x = coordArray[0];
             f.y = coordArray[1];
             f.z = coordArray[2];
@@ -130,7 +134,7 @@ namespace PointCloudConverter.Readers
 
         void IReader.Close()
         {
-            lazReader.laszip_close_reader();
+            lazReader.close_reader();
         }
     } // class
 } // namespace

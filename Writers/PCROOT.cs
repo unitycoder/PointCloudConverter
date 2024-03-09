@@ -48,6 +48,7 @@ namespace PointCloudConverter.Writers
             nodeR.Clear();
             nodeG.Clear();
             nodeB.Clear();
+            nodeIntensity.Clear();
 
             bsPoints = null;
             writerPoints = null;

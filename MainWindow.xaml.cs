@@ -26,7 +26,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "11.02.2024";
+        static readonly string version = "24.02.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -271,6 +271,10 @@ namespace PointCloudConverter
                     // offset cloud to be near 0,0,0
                     importSettings.offsetX = bounds.minX;
                     importSettings.offsetY = bounds.minY;
+                }
+                // NOW smallest Y offset and largest X,Z is used (to fix INT packing negative value issue)
+                if (bounds.minZ < importSettings.offsetZ)
+                {
                     importSettings.offsetZ = bounds.minZ;
                 }
             }
@@ -280,13 +284,12 @@ namespace PointCloudConverter
                 importSettings.offsetY = importSettings.manualOffsetY;
                 importSettings.offsetZ = importSettings.manualOffsetZ;
             }
-            else
+            else // neither
             {
                 importSettings.offsetX = 0;
                 importSettings.offsetY = 0;
                 importSettings.offsetZ = 0;
             }
-
 
             var writerRes = importSettings.writer.InitWriter(importSettings, pointCount);
             if (writerRes == false)
