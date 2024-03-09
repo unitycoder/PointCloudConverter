@@ -26,7 +26,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "24.02.2024";
+        static readonly string version = "09.03.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -271,8 +271,9 @@ namespace PointCloudConverter
                     // offset cloud to be near 0,0,0
                     importSettings.offsetX = bounds.minX;
                     importSettings.offsetY = bounds.minY;
+                    //importSettings.offsetZ = bounds.minZ;
                 }
-                // NOW smallest Y offset and largest X,Z is used (to fix INT packing negative value issue)
+                // NOW smallest Y offset and largest X,Z is used (to fix INT packing negative value issue) TODO this can create more tile than old, so need to check if this is ok
                 if (bounds.minZ < importSettings.offsetZ)
                 {
                     importSettings.offsetZ = bounds.minZ;
