@@ -139,7 +139,6 @@ namespace PointCloudConverter
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
-
             // if user has set maxFiles param, loop only that many files
             importSettings.maxFiles = importSettings.maxFiles > 0 ? importSettings.maxFiles : importSettings.inputFiles.Count;
             importSettings.maxFiles = Math.Min(importSettings.maxFiles, importSettings.inputFiles.Count);
@@ -150,14 +149,50 @@ namespace PointCloudConverter
             progressFile = 0;
             progressTotalFiles = importSettings.maxFiles - 1;
             if (progressTotalFiles < 0) progressTotalFiles = 0;
+
+            List<Float3> boundsListTemp = new List<Float3>();
+
+            // get all file bounds, if in batch mode and RGB+INT+PACK
+            // TODO: check what happens if its too high? over 128/256?
+            if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true)
+            {
+                for (int i = 0, len = importSettings.maxFiles; i < len; i++)
+                {
+                    progressFile = i;
+                    Log.WriteLine("\nReading bounds from file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
+                    var res = GetBounds(importSettings, i);
+
+                    if (res.Item1 == true)
+                    {
+                        boundsListTemp.Add(new Float3(res.Item2, res.Item3, res.Item4));
+                    }
+                }
+
+                // print lowest bounds from boundsListTemp
+                float lowestX = float.MaxValue;
+                float lowestY = float.MaxValue;
+                float lowestZ = float.MaxValue;
+                for (int iii = 0; iii < boundsListTemp.Count; iii++)
+                {
+                    if (boundsListTemp[iii].x < lowestX) lowestX = (float)boundsListTemp[iii].x;
+                    if (boundsListTemp[iii].y < lowestY) lowestY = (float)boundsListTemp[iii].y;
+                    if (boundsListTemp[iii].z < lowestZ) lowestZ = (float)boundsListTemp[iii].z;
+                }
+
+                //Console.WriteLine("Lowest bounds: " + lowestX + " " + lowestY + " " + lowestZ);
+                // TODO could take center for XZ, and lowest for Y
+                importSettings.offsetX = lowestX + 0.1f;
+                importSettings.offsetY = lowestY + 0.1f;
+                importSettings.offsetZ = lowestZ + 0.1f;
+            }
+
+            progressFile = 0;
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
                 progressFile = i;
                 Log.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
                 //Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
-
                 //if (abort==true) 
-
                 // do actual point cloud parsing for this file
                 ParseFile(importSettings, i);
             }
@@ -222,6 +257,22 @@ namespace PointCloudConverter
             }
         }
 
+        static (bool, float, float, float) GetBounds(ImportSettings importSettings, int fileIndex)
+        {
+            var res = importSettings.reader.InitReader(importSettings, fileIndex);
+            if (res == false)
+            {
+                Log.WriteLine("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
+                return (false, 0, 0, 0);
+            }
+            var bounds = importSettings.reader.GetBounds();
+            //Console.WriteLine(bounds.minX + " " + bounds.minY + " " + bounds.minZ);
+
+            importSettings.reader.Close();
+
+            return (true, bounds.minX, bounds.minY, bounds.minZ);
+        }
+
         // process single file
         static void ParseFile(ImportSettings importSettings, int fileIndex)
         {
@@ -260,24 +311,12 @@ namespace PointCloudConverter
                 Log.WriteLine("Points: " + pointCount);
             }
 
-            // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds
-            var bounds = importSettings.reader.GetBounds();
+            // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds?
 
-            if (importSettings.useAutoOffset == true)
+            // dont use these bounds, in this case
+            if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true)
             {
-                // get offset only from the first file, other files use same offset
-                if (fileIndex == 0)
-                {
-                    // offset cloud to be near 0,0,0
-                    importSettings.offsetX = bounds.minX;
-                    importSettings.offsetY = bounds.minY;
-                    //importSettings.offsetZ = bounds.minZ;
-                }
-                // NOW smallest Y offset and largest X,Z is used (to fix INT packing negative value issue) TODO this can create more tile than old, so need to check if this is ok
-                if (bounds.minZ < importSettings.offsetZ)
-                {
-                    importSettings.offsetZ = bounds.minZ;
-                }
+                // we use global bounds or Y offset to fix negative Y
             }
             else if (importSettings.useManualOffset == true)
             {
