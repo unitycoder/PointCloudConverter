@@ -180,10 +180,10 @@ namespace PointCloudConverter
                 }
 
                 //Console.WriteLine("Lowest bounds: " + lowestX + " " + lowestY + " " + lowestZ);
-                // TODO could take center for XZ, and lowest for Y
-                importSettings.offsetX = lowestX + 0.1f;
-                importSettings.offsetY = lowestY + 0.1f;
-                importSettings.offsetZ = lowestZ + 0.1f;
+                // TODO could take center for XZ, and lowest for Y?
+                importSettings.offsetX = lowestX;
+                importSettings.offsetY = lowestY;
+                importSettings.offsetZ = lowestZ;
             }
 
             progressFile = 0;
