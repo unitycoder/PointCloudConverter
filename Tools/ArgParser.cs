@@ -444,17 +444,29 @@ namespace PointCloudConverter
                                 }
                                 break;
 
-                            //case "-metadata":
-                            //    Log.WriteLine("metadata = " + param);
-                            //    if (param != "true" && param != "false")
-                            //    {
-                            //        importSettings.errors.Add("Invalid metadata parameter: " + param);
-                            //    }
-                            //    else
-                            //    {
-                            //        importSettings.importMetaData = param == "true";
-                            //    }
-                            //    break;
+                            case "-metadata":
+                                Log.WriteLine("metadata = " + param);
+                                if (param != "true" && param != "false")
+                                {
+                                    importSettings.errors.Add("Invalid metadata parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.importMetadata = param == "true";
+                                }
+                                break;
+
+                            case "-metadataonly":
+                                Log.WriteLine("metadataonly = " + param);
+                                if (param != "true" && param != "false")
+                                {
+                                    importSettings.errors.Add("Invalid metadataonly parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.importMetadataOnly = param == "true";
+                                }
+                                break;
 
                             case "-json":
                                 Log.WriteLine("json = " + param);

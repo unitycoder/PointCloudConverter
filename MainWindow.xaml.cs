@@ -131,6 +131,8 @@ namespace PointCloudConverter
             LoadSettings();
         }
 
+        static List<LasHeader> lasHeaders = new List<LasHeader>();
+
         // main processing loop
         private static void ProcessAllFiles(System.Object importSettingsObject)
         {
@@ -186,6 +188,7 @@ namespace PointCloudConverter
                 importSettings.offsetZ = lowestZ;
             }
 
+            lasHeaders.Clear();
             progressFile = 0;
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
@@ -273,6 +276,7 @@ namespace PointCloudConverter
             return (true, bounds.minX, bounds.minY, bounds.minZ);
         }
 
+
         // process single file
         static void ParseFile(ImportSettings importSettings, int fileIndex)
         {
@@ -283,153 +287,169 @@ namespace PointCloudConverter
                 return;
             }
 
-            // NOTE pointcount not available in all formats
-            int fullPointCount = importSettings.reader.GetPointCount();
-            int pointCount = fullPointCount;
-
-            // show stats for decimations
-            if (importSettings.skipPoints == true)
+            if (importSettings.importMetadata == true)
             {
-                var afterSkip = (int)Math.Floor(pointCount - (pointCount / (float)importSettings.skipEveryN));
-                Log.WriteLine("Skip every X points is enabled, original points: " + fullPointCount + ", After skipping:" + afterSkip);
-                pointCount = afterSkip;
+                var metaData = importSettings.reader.GetMetaData(importSettings, fileIndex);
+                lasHeaders.Add(metaData);
             }
 
-            if (importSettings.keepPoints == true)
+            if (importSettings.importMetadataOnly == false)
             {
-                Log.WriteLine("Keep every x points is enabled, original points: " + fullPointCount + ", After keeping:" + (pointCount / importSettings.keepEveryN));
-                pointCount = pointCount / importSettings.keepEveryN;
-            }
+                int fullPointCount = importSettings.reader.GetPointCount();
+                int pointCount = fullPointCount;
 
-            if (importSettings.useLimit == true)
-            {
-                Log.WriteLine("Original points: " + pointCount + " Limited points: " + importSettings.limit);
-                pointCount = importSettings.limit > pointCount ? pointCount : importSettings.limit;
-            }
-            else
-            {
-                Log.WriteLine("Points: " + pointCount);
-            }
-
-            // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds?
-
-            // dont use these bounds, in this case
-            if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true)
-            {
-                // we use global bounds or Y offset to fix negative Y
-            }
-            else if (importSettings.useManualOffset == true)
-            {
-                importSettings.offsetX = importSettings.manualOffsetX;
-                importSettings.offsetY = importSettings.manualOffsetY;
-                importSettings.offsetZ = importSettings.manualOffsetZ;
-            }
-            else // neither
-            {
-                importSettings.offsetX = 0;
-                importSettings.offsetY = 0;
-                importSettings.offsetZ = 0;
-            }
-
-            var writerRes = importSettings.writer.InitWriter(importSettings, pointCount);
-            if (writerRes == false)
-            {
-                Log.WriteLine("Error> Failed to initialize Writer");
-                return;
-            }
-
-            progressPoint = 0;
-            progressTotalPoints = importSettings.useLimit ? pointCount : fullPointCount;
-
-            lastStatusMessage = "Processing points..";
-
-            string jsonString = "{" +
-            "\"event\": \"" + LogEvent.File + "\"," +
-            "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
-            "\"size\": " + new FileInfo(importSettings.inputFiles[fileIndex]).Length + "," +
-            "\"points\": " + pointCount + "," +
-            "\"status\": \"" + LogStatus.Processing + "\"" +
-            "}";
-
-            Log.WriteLine(jsonString, LogEvent.File);
-
-            // Loop all points
-            for (int i = 0; i < fullPointCount; i++)
-            {
-                // stop at limit count
-                if (importSettings.useLimit == true && i > pointCount) break;
-
-                // get point XYZ
-                Float3 point = importSettings.reader.GetXYZ();
-                if (point.hasError == true) break;
-
-                // add offsets (its 0 if not used)
-                point.x -= importSettings.offsetX;
-                point.y -= importSettings.offsetY;
-                point.z -= importSettings.offsetZ;
-
-                // scale if enabled
-                point.x = importSettings.useScale ? point.x * importSettings.scale : point.x;
-                point.y = importSettings.useScale ? point.y * importSettings.scale : point.y;
-                point.z = importSettings.useScale ? point.z * importSettings.scale : point.z;
-
-                // flip if enabled
-                if (importSettings.swapYZ == true)
+                // show stats for decimations
+                if (importSettings.skipPoints == true)
                 {
-                    var temp = point.z;
-                    point.z = point.y;
-                    point.y = temp;
+                    var afterSkip = (int)Math.Floor(pointCount - (pointCount / (float)importSettings.skipEveryN));
+                    Log.WriteLine("Skip every X points is enabled, original points: " + fullPointCount + ", After skipping:" + afterSkip);
+                    pointCount = afterSkip;
                 }
 
-                // flip Z if enabled
-                if (importSettings.invertZ == true)
+                if (importSettings.keepPoints == true)
                 {
-                    point.z = -point.z;
+                    Log.WriteLine("Keep every x points is enabled, original points: " + fullPointCount + ", After keeping:" + (pointCount / importSettings.keepEveryN));
+                    pointCount = pointCount / importSettings.keepEveryN;
                 }
 
-                // flip X if enabled
-                if (importSettings.invertX == true)
+                if (importSettings.useLimit == true)
                 {
-                    point.x = -point.x;
+                    Log.WriteLine("Original points: " + pointCount + " Limited points: " + importSettings.limit);
+                    pointCount = importSettings.limit > pointCount ? pointCount : importSettings.limit;
+                }
+                else
+                {
+                    Log.WriteLine("Points: " + pointCount);
                 }
 
-                // get point color
-                Color rgb = (default);
-                Color intensity = (default);
+                // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds?
 
-                if (importSettings.importRGB == true)
+                // dont use these bounds, in this case
+                if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true)
                 {
-                    rgb = importSettings.reader.GetRGB();
+                    // we use global bounds or Y offset to fix negative Y
+                }
+                else if (importSettings.useManualOffset == true)
+                {
+                    importSettings.offsetX = importSettings.manualOffsetX;
+                    importSettings.offsetY = importSettings.manualOffsetY;
+                    importSettings.offsetZ = importSettings.manualOffsetZ;
+                }
+                else // neither
+                {
+                    importSettings.offsetX = 0;
+                    importSettings.offsetY = 0;
+                    importSettings.offsetZ = 0;
                 }
 
-                // TODO get intensity as separate value, TODO is this float or rgb?
-                if (importSettings.importIntensity == true)
+                var writerRes = importSettings.writer.InitWriter(importSettings, pointCount);
+                if (writerRes == false)
                 {
-                    intensity = importSettings.reader.GetIntensity();
-                    //if (i < 100) Console.WriteLine(intensity.r);
+                    Log.WriteLine("Error> Failed to initialize Writer");
+                    return;
+                }
 
-                    // if no rgb, then replace RGB with intensity
-                    if (importSettings.importRGB == false)
+                progressPoint = 0;
+                progressTotalPoints = importSettings.useLimit ? pointCount : fullPointCount;
+
+                lastStatusMessage = "Processing points..";
+
+                string jsonString = "{" +
+                "\"event\": \"" + LogEvent.File + "\"," +
+                "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+                "\"size\": " + new FileInfo(importSettings.inputFiles[fileIndex]).Length + "," +
+                "\"points\": " + pointCount + "," +
+                "\"status\": \"" + LogStatus.Processing + "\"" +
+                "}";
+
+                Log.WriteLine(jsonString, LogEvent.File);
+
+                // Loop all points
+                for (int i = 0; i < fullPointCount; i++)
+                {
+                    // stop at limit count
+                    if (importSettings.useLimit == true && i > pointCount) break;
+
+                    // get point XYZ
+                    Float3 point = importSettings.reader.GetXYZ();
+                    if (point.hasError == true) break;
+
+                    // add offsets (its 0 if not used)
+                    point.x -= importSettings.offsetX;
+                    point.y -= importSettings.offsetY;
+                    point.z -= importSettings.offsetZ;
+
+                    // scale if enabled
+                    point.x = importSettings.useScale ? point.x * importSettings.scale : point.x;
+                    point.y = importSettings.useScale ? point.y * importSettings.scale : point.y;
+                    point.z = importSettings.useScale ? point.z * importSettings.scale : point.z;
+
+                    // flip if enabled
+                    if (importSettings.swapYZ == true)
                     {
-                        rgb.r = intensity.r;
-                        rgb.g = intensity.r;
-                        rgb.b = intensity.r;
+                        var temp = point.z;
+                        point.z = point.y;
+                        point.y = temp;
                     }
+
+                    // flip Z if enabled
+                    if (importSettings.invertZ == true)
+                    {
+                        point.z = -point.z;
+                    }
+
+                    // flip X if enabled
+                    if (importSettings.invertX == true)
+                    {
+                        point.x = -point.x;
+                    }
+
+                    // get point color
+                    Color rgb = (default);
+                    Color intensity = (default);
+
+                    if (importSettings.importRGB == true)
+                    {
+                        rgb = importSettings.reader.GetRGB();
+                    }
+
+                    // TODO get intensity as separate value, TODO is this float or rgb?
+                    if (importSettings.importIntensity == true)
+                    {
+                        intensity = importSettings.reader.GetIntensity();
+                        //if (i < 100) Console.WriteLine(intensity.r);
+
+                        // if no rgb, then replace RGB with intensity
+                        if (importSettings.importRGB == false)
+                        {
+                            rgb.r = intensity.r;
+                            rgb.g = intensity.r;
+                            rgb.b = intensity.r;
+                        }
+                    }
+
+                    // collect this point XYZ and RGB into node, optionally intensity also
+                    importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r);
+                    progressPoint = i;
                 }
 
-                // collect this point XYZ and RGB into node, optionally intensity also
-                importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r);
-                progressPoint = i;
-            }
+                lastStatusMessage = "Saving files..";
+                importSettings.writer.Save(fileIndex);
+                lastStatusMessage = "Finished saving..";
+                importSettings.reader.Close();
 
-            lastStatusMessage = "Saving files..";
-            importSettings.writer.Save(fileIndex);
-            lastStatusMessage = "Finished saving..";
-            importSettings.reader.Close();
+            }
 
             // if this was last file
             if (fileIndex == (importSettings.maxFiles - 1))
             {
+                var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
+                Log.WriteLine("MetaData: " + jsonMeta);
+                // write metadata to file
+                var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
+                Log.WriteLine("Writing metadata to file: " + jsonFile);
+                File.WriteAllText(jsonFile, jsonMeta);
+
                 lastStatusMessage = "Done!";
                 Console.ForegroundColor = ConsoleColor.Green;
                 Log.WriteLine("Finished!");
@@ -499,6 +519,8 @@ namespace PointCloudConverter
             args.Add("-randomize=" + (bool)chkRandomize.IsChecked);
             if ((bool)chkSetRandomSeed.IsChecked) args.Add("-seed=" + txtRandomSeed.Text);
             if ((bool)chkUseJSONLog.IsChecked) args.Add("-json=true");
+            if ((bool)chkReadMetaData.IsChecked) args.Add("-metadata=true");
+            if ((bool)chkMetaDataOnly.IsChecked) args.Add("-metadataonly=true");
 
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
 
@@ -691,6 +713,8 @@ namespace PointCloudConverter
             chkSetRandomSeed.IsChecked = Properties.Settings.Default.useRandomSeed;
             txtRandomSeed.Text = Properties.Settings.Default.seed.ToString();
             chkUseJSONLog.IsChecked = Properties.Settings.Default.useJSON;
+            chkReadMetaData.IsChecked = Properties.Settings.Default.importMetadata;
+            chkMetaDataOnly.IsChecked = Properties.Settings.Default.metadataOnly;
             isInitialiazing = false;
         }
 
@@ -733,8 +757,11 @@ namespace PointCloudConverter
             int.TryParse(txtRandomSeed.Text, out tempSeed);
             Properties.Settings.Default.seed = tempSeed;
             Properties.Settings.Default.useJSON = (bool)chkUseJSONLog.IsChecked;
+            Properties.Settings.Default.importMetadata = (bool)chkReadMetaData.IsChecked;
             Properties.Settings.Default.useRandomSeed = (bool)chkSetRandomSeed.IsChecked;
-            Properties.Settings.Default.manualOffsetZ = offsetZ; Properties.Settings.Default.Save();
+            Properties.Settings.Default.manualOffsetZ = offsetZ;
+            Properties.Settings.Default.metadataOnly = (bool)chkMetaDataOnly.IsChecked;
+            Properties.Settings.Default.Save();
         }
 
         private void btnGetParams_Click(object sender, RoutedEventArgs e)

@@ -19,94 +19,118 @@
         <ComboBox x:Name="cmbImportFormat" HorizontalAlignment="Left" Margin="719,48,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True"/>
         <Label x:Name="label_Copy2" Content="Import format:&#xA;" HorizontalAlignment="Left" Margin="719,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
 
-        <StackPanel HorizontalAlignment="Left" Height="323" Margin="20,174,0,0" VerticalAlignment="Top" Width="277">
-            <StackPanel Orientation="Horizontal">
-                <CheckBox x:Name="chkImportRGB" Content="Read RGB" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads RGB color values" Checked="chkImportRGB_Checked" Unchecked="chkImportRGB_Unchecked"/>
-                <CheckBox x:Name="chkImportIntensity" Content="Read Intensity" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportIntensity_Checked" Unchecked="chkImportIntensity_Unchecked"/>
-            </StackPanel>
-            <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using bounds min. as offset" Checked="chkAutoOffset_Checked"/>
-            <StackPanel Orientation="Vertical">
-                <CheckBox x:Name="chkManualOffset" Content="Manual Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Add offset to all points (After Auto-Offset and Flip, if those are enabled)" Checked="chkManualOffset_Checked"/>
-                <StackPanel Orientation="Horizontal" Margin="18,0,0,0">
-                    <Label x:Name="label_CopyX" Content="X:" HorizontalAlignment="Left" Margin="0,0,0,0" Foreground="{DynamicResource MainText}" Height="22" VerticalAlignment="Top" Padding="2,0,0,0"/>
-                    <TextBox x:Name="txtOffsetX" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="75" Text="0" MaxLines="1" />
-                    <Label x:Name="label_CopyY" Content="Y:" HorizontalAlignment="Left" Margin="0,0,0,0" Foreground="{DynamicResource MainText}" Height="22" VerticalAlignment="Top" Padding="3,0,0,0"/>
-                    <TextBox x:Name="txtOffsetY" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="75" Text="0" MaxLines="1" />
-                    <Label x:Name="label_CopyZ" Content="Z:" HorizontalAlignment="Left" Margin="0,0,0,0" Foreground="{DynamicResource MainText}" Height="22" VerticalAlignment="Top" Padding="3,0,0,0"/>
-                    <TextBox x:Name="txtOffsetZ" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="73" Text="0" MaxLines="1" />
-                </StackPanel>
-            </StackPanel>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <CheckBox x:Name="chkUseScale" Content="Scale:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Scale XYZ values (You need meters inside Unity)"/>
-                <TextBox x:Name="txtScale" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="0.1" />
-            </StackPanel>
-            <CheckBox x:Name="chkSwapYZ" Content="Swap Y and Z" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Swaps Z and Y values, since unity Y is up"/>
-            <CheckBox x:Name="chkInvertX" Content="Invert X" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Inverts X value (x=-x)"/>
-            <CheckBox x:Name="chkInvertZ" Content="Invert Z" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Inverts Z value (z=-z)"/>
-
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <CheckBox x:Name="chkUseMaxImportPointCount" Content="Maximum import point count:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Load only this many points (good for testing settings first). This is per cloud setting."/>
-                <TextBox x:Name="txtMaxImportPointCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="90"/>
-            </StackPanel>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <CheckBox x:Name="chkUseSkip" Content="Skip every:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Skip every Nth point (For reducing point count)"/>
-                <TextBox x:Name="txtSkipEvery" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="2"/>
-                <Label x:Name="label_Copyx4" Content="point" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
-            </StackPanel>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <CheckBox x:Name="chkUseKeep" Content="Keep every:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Keep only every Nth point (For reducing point count)"/>
-                <TextBox x:Name="txtKeepEvery" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="10"/>
-                <Label x:Name="label_Copyxx4" Content="point" HorizontalAlignment="Left" Margin="0" Foreground="{DynamicResource MainText}" VerticalAlignment="Top"/>
-            </StackPanel>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <CheckBox x:Name="chkUseMaxFileCount" Content="Maximum file count:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="For batch processing, parse only this many files (good for testing with few files first)"/>
-                <TextBox x:Name="txtMaxFileCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="92"/>
-            </StackPanel>
-            <CheckBox x:Name="chkRandomize" Content="Randomize" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Randomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)"/>
-            <CheckBox x:Name="chkOpenOutputFolder" Content="Open output folder" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Open Explorer to Output folder after finished processing"/>
-            <!--<CheckBox x:Name="chkReadMetaData" Content="Import metadata" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads LAs/LAZ metadata and saves into file"/>-->
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <CheckBox x:Name="chkSetRandomSeed" Content="Use random seed:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="To use same random seed when converting same cloud with different import settings"/>
-                <TextBox x:Name="txtRandomSeed" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="42"/>
-            </StackPanel>
-            <CheckBox x:Name="chkUseJSONLog" Content="Use JSON log *Used in commandline only" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Log messages are written in JSON format. Experimental, V3 format is better supported."/>
-        </StackPanel>
-        <Label x:Name="label_Copy6" Content="Global Options" HorizontalAlignment="Left" Margin="20,143,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
-
         <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,603,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="877" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
 
         <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="10,577,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
         <Button x:Name="btnCopyToClipboard" Content="Copy" HorizontalAlignment="Left" VerticalAlignment="Top" Width="40" Height="20" ToolTip="Browse for output file" Margin="234,580,0,0" Click="btnCopyToClipboard_Click"/>
 
         <Button x:Name="btnGetParams" Content="Get Commandline params" HorizontalAlignment="Left" Margin="12,514,0,0" VerticalAlignment="Top" Width="214" Height="58" Click="btnGetParams_Click"/>
-        <StackPanel HorizontalAlignment="Left" Height="149" Margin="320,174,0,0" VerticalAlignment="Top" Width="234">
-            <CheckBox x:Name="chkPackColors" Content="Pack Colors" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Packs color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&amp;shader in viewer"/>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <CheckBox x:Name="chkUsePackMagic" Content="PackMagic:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Optional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision or color issues with packed data"/>
-                <TextBox x:Name="txtPackMagic" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="64"/>
+        <!--global options-->
+        <GroupBox x:Name="groupBoxGlobal" HorizontalAlignment="Left" Header="Global Options" Margin="16,153,0,0" VerticalAlignment="Top" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,4,20,0">
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox x:Name="chkImportRGB" Content="Read RGB" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads RGB color values" Checked="chkImportRGB_Checked" Unchecked="chkImportRGB_Unchecked"/>
+                        <CheckBox x:Name="chkImportIntensity" Content="Read Intensity" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportIntensity_Checked" Unchecked="chkImportIntensity_Unchecked"/>
+                    </StackPanel>
+                    <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using bounds min. as offset" Checked="chkAutoOffset_Checked"/>
+                    <StackPanel Orientation="Vertical">
+                        <CheckBox x:Name="chkManualOffset" Content="Manual Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Add offset to all points (After Auto-Offset and Flip, if those are enabled)" Checked="chkManualOffset_Checked"/>
+                        <StackPanel Orientation="Horizontal" Margin="18,0,0,0">
+                            <Label x:Name="label_CopyX" Content="X:" HorizontalAlignment="Left" Margin="0,0,0,0" Foreground="{DynamicResource MainText}" Height="22" VerticalAlignment="Top" Padding="2,0,0,0"/>
+                            <TextBox x:Name="txtOffsetX" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="75" Text="0" MaxLines="1" />
+                            <Label x:Name="label_CopyY" Content="Y:" HorizontalAlignment="Left" Margin="0,0,0,0" Foreground="{DynamicResource MainText}" Height="22" VerticalAlignment="Top" Padding="3,0,0,0"/>
+                            <TextBox x:Name="txtOffsetY" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="75" Text="0" MaxLines="1" />
+                            <Label x:Name="label_CopyZ" Content="Z:" HorizontalAlignment="Left" Margin="0,0,0,0" Foreground="{DynamicResource MainText}" Height="22" VerticalAlignment="Top" Padding="3,0,0,0"/>
+                            <TextBox x:Name="txtOffsetZ" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="73" Text="0" MaxLines="1" />
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                        <CheckBox x:Name="chkUseScale" Content="Scale:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Scale XYZ values (You need meters inside Unity)"/>
+                        <TextBox x:Name="txtScale" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="0.1" />
+                    </StackPanel>
+                    <CheckBox x:Name="chkSwapYZ" Content="Swap Y and Z" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Swaps Z and Y values, since unity Y is up"/>
+                    <CheckBox x:Name="chkInvertX" Content="Invert X" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Inverts X value (x=-x)"/>
+                    <CheckBox x:Name="chkInvertZ" Content="Invert Z" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Inverts Z value (z=-z)"/>
+
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                        <CheckBox x:Name="chkUseMaxImportPointCount" Content="Maximum import point count:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Load only this many points (good for testing settings first). This is per cloud setting."/>
+                        <TextBox x:Name="txtMaxImportPointCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="90"/>
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                        <CheckBox x:Name="chkUseSkip" Content="Skip every:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Skip every Nth point (For reducing point count)"/>
+                        <TextBox x:Name="txtSkipEvery" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="2"/>
+                        <Label x:Name="label_Copyx4" Content="point" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                        <CheckBox x:Name="chkUseKeep" Content="Keep every:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Keep only every Nth point (For reducing point count)"/>
+                        <TextBox x:Name="txtKeepEvery" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="10"/>
+                        <Label x:Name="label_Copyxx4" Content="point" HorizontalAlignment="Left" Margin="0" Foreground="{DynamicResource MainText}" VerticalAlignment="Top"/>
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                        <CheckBox x:Name="chkUseMaxFileCount" Content="Maximum file count:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="For batch processing, parse only this many files (good for testing with few files first)"/>
+                        <TextBox x:Name="txtMaxFileCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="92"/>
+                    </StackPanel>
+                    <CheckBox x:Name="chkRandomize" Content="Randomize" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Randomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)"/>
+                    <CheckBox x:Name="chkOpenOutputFolder" Content="Open output folder" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Open Explorer to Output folder after finished processing"/>
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                        <CheckBox x:Name="chkReadMetaData" Content="Import metadata" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads LAs/LAZ metadata and saves into file"/>
+                        <CheckBox x:Name="chkMetaDataOnly" Content="Read metadata only" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Doesnt process clouds, only reads metadata if import metadata is enabled"/>
+                    </StackPanel>
+
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                        <CheckBox x:Name="chkSetRandomSeed" Content="Use random seed:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="To use same random seed when converting same cloud with different import settings"/>
+                        <TextBox x:Name="txtRandomSeed" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="42"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="0,4,0,0">
+                    <CheckBox x:Name="chkUseJSONLog" Content="Use JSON log *Used in commandline only" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Log messages are written in JSON format. Experimental, V3 format is better supported."/>
+                </StackPanel>
+
+            </Grid>
+
+
+        </GroupBox>
+
+        <!--v2/v3 options-->
+        <GroupBox x:Name="groupBoxV2" HorizontalAlignment="Right" Header="V2 (.ucpc) &amp; V3 (.pcroot) Options" Margin="0,153,10,0" VerticalAlignment="Top" Width="276" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">
+            <StackPanel Margin="0,4,0,0">
+                <CheckBox x:Name="chkPackColors" Content="Pack Colors" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Packs color values, improves performance in viewer (but can cause lower precision positions and colors). Requires using special packed material&amp;shader in viewer"/>
+                <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                    <CheckBox x:Name="chkUsePackMagic" Content="PackMagic:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Optional packing adjustment MagicInteger. Increase this value is you have large tiles and notice precision or color issues with packed data"/>
+                    <TextBox x:Name="txtPackMagic" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="64"/>
+                </StackPanel>
+                <CheckBox x:Name="chkCustomIntensityRange" Content="Custom intensity range (0-65535)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Expected default range is 0-255, but often it can be 0-65535"/>
             </StackPanel>
-            <CheckBox x:Name="chkCustomIntensityRange" Content="Custom intensity range (0-65535)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Expected default range is 0-255, but often it can be 0-65535"/>
-        </StackPanel>
-        <Label x:Name="label_Copy9" Content="V2 (.ucpc) &amp; V3 (.pcroot) Options" HorizontalAlignment="Left" Margin="318,143,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
-        <Label x:Name="label_Copy10" Content="V3 (.pcroot) Options" HorizontalAlignment="Left" Margin="623,143,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" FontWeight="Bold"/>
+        </GroupBox>
 
         <!--v3 options-->
-        <StackPanel HorizontalAlignment="Left" Height="238" Margin="624,174,0,0" VerticalAlignment="Top" Width="277">
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <Label x:Name="label_Copy11" Content="Grid size:" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
-                <TextBox x:Name="txtGridSize" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="10" ToolTip="Gridsize in meters, splits cloud into tiles with this size. v3 only!"/>
-                <Label x:Name="label_Copy12" Content="m" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+        <GroupBox x:Name="groupBoxV3" HorizontalAlignment="Right" Header="V3 (.pcroot) Options" Margin="0,235,10,0" VerticalAlignment="Top" Width="276" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">
+            <StackPanel Margin="0,4,0,0">
+                <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                    <Label x:Name="label_Copy11" Content="Grid size:" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+                    <TextBox x:Name="txtGridSize" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="10" ToolTip="Gridsize in meters, splits cloud into tiles with this size. v3 only!"/>
+                    <Label x:Name="label_Copy12" Content="m" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                    <CheckBox x:Name="chkUseMinPointCount" Content="Minimum point count per tile:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="If tile has less points than this value, its discarded. Good for removing straypoints. v3 only!"/>
+                    <TextBox x:Name="txtMinPointCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="1000"/>
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
+                <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
+                <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
             </StackPanel>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                <CheckBox x:Name="chkUseMinPointCount" Content="Minimum point count per tile:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="If tile has less points than this value, its discarded. Good for removing straypoints. v3 only!"/>
-                <TextBox x:Name="txtMinPointCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="1000"/>
-            </StackPanel>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
-        </StackPanel>
+        </GroupBox>
+
+
 
         <StatusBar Margin="8,0,0,0" VerticalAlignment="Bottom" Background="{x:Null}">
             <StatusBarItem>

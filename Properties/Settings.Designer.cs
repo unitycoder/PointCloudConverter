@@ -502,5 +502,29 @@ namespace PointCloudConverter.Properties {
                 this["useJSON"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool importMetadata {
+            get {
+                return ((bool)(this["importMetadata"]));
+            }
+            set {
+                this["importMetadata"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool metadataOnly {
+            get {
+                return ((bool)(this["metadataOnly"]));
+            }
+            set {
+                this["metadataOnly"] = value;
+            }
+        }
     }
 }

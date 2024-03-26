@@ -10,6 +10,9 @@
 using PointCloudConverter.Structs;
 using System;
 using LASzip.Net;
+using System.IO;
+using PointCloudConverter.Structs.VariableLengthRecords;
+using Free.Ports.LibGeoTiff;
 
 namespace PointCloudConverter.Readers
 {
@@ -32,6 +35,331 @@ namespace PointCloudConverter.Readers
             customIntensityRange = importSettings.useCustomIntensityRange;
             lazReader.open_reader(file, out compressedLAZ);
             return true;
+        }
+
+        LasHeader IReader.GetMetaData(ImportSettings importSettings, int fileIndex)
+        {
+            var h = new LasHeader();
+            h.FileName = importSettings.inputFiles[fileIndex];
+            h.FileSourceID = lazReader.header.file_source_ID;
+            h.GlobalEncoding = lazReader.header.global_encoding;
+            h.ProjectID_GUID_data1 = lazReader.header.project_ID_GUID_data_1;
+            h.ProjectID_GUID_data2 = lazReader.header.project_ID_GUID_data_2;
+            h.ProjectID_GUID_data3 = lazReader.header.project_ID_GUID_data_3;
+            h.ProjectID_GUID_data4 = lazReader.header.project_ID_GUID_data_4;
+            h.VersionMajor = lazReader.header.version_major;
+            h.VersionMinor = lazReader.header.version_minor;
+            h.SystemIdentifier = System.Text.Encoding.UTF8.GetString(lazReader.header.system_identifier);
+            h.SystemIdentifier = h.SystemIdentifier.Replace("\0", string.Empty);
+            h.GeneratingSoftware = System.Text.Encoding.UTF8.GetString(lazReader.header.generating_software);
+            h.GeneratingSoftware = h.GeneratingSoftware.Replace("\0", string.Empty);
+            h.FileCreationDayOfYear = lazReader.header.file_creation_day;
+            h.FileCreationYear = lazReader.header.file_creation_year;
+            h.HeaderSize = lazReader.header.header_size;
+            h.OffsetToPointData = lazReader.header.offset_to_point_data;
+            h.NumberOfVariableLengthRecords = lazReader.header.number_of_variable_length_records;
+            h.PointDataFormatID = lazReader.header.point_data_format;
+            h.PointDataRecordLength = lazReader.header.point_data_record_length;
+            h.NumberOfPointRecords = lazReader.header.number_of_point_records;
+            h.NumberOfPointsByReturn = lazReader.header.number_of_points_by_return;
+            h.XScaleFactor = lazReader.header.x_scale_factor;
+            h.YScaleFactor = lazReader.header.y_scale_factor;
+            h.ZScaleFactor = lazReader.header.z_scale_factor;
+            h.XOffset = lazReader.header.x_offset;
+            h.YOffset = lazReader.header.y_offset;
+            h.ZOffset = lazReader.header.z_offset;
+            h.MinX = lazReader.header.min_x;
+            h.MaxX = lazReader.header.max_x;
+            h.MinY = lazReader.header.min_y;
+            h.MaxY = lazReader.header.max_y;
+            h.MinZ = lazReader.header.min_z;
+            h.MaxZ = lazReader.header.max_z;
+
+            if (h.NumberOfVariableLengthRecords > 0)
+            {
+                h.VariableLengthRecords = new System.Collections.Generic.List<LasVariableLengthRecord>();
+                for (int i = 0; i < h.NumberOfVariableLengthRecords; i++)
+                {
+                    var vlr = new LasVariableLengthRecord();
+                    vlr.Reserved = lazReader.header.vlrs[i].reserved;
+                    vlr.UserID = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].user_id);
+                    vlr.UserID = vlr.UserID.Replace("\0", string.Empty);
+                    vlr.RecordID = lazReader.header.vlrs[i].record_id;
+                    vlr.RecordLengthAfterHeader = lazReader.header.vlrs[i].record_length_after_header;
+                    vlr.Description = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].description);
+                    vlr.Description = vlr.Description.Replace("\0", string.Empty);
+
+                    // get GeoKeyDirectoryTag
+                    if (vlr.RecordID == 34735)
+                    {
+                        vlr.GeoKeys = new System.Collections.Generic.List<sGeoKeys>();
+                        var g = ParseGeoKeysFromByteArray(lazReader.header.vlrs[i].data);
+                        var gk = new sGeoKeys
+                        {
+                            // TODO parse human readable values from geotiff list
+                            KeyDirectoryVersion = g.wKeyDirectoryVersion,
+                            KeyRevision = g.wKeyRevision,
+                            MinorRevision = g.wMinorRevision,
+                            NumberOfKeys = g.wNumberOfKeys,
+                            KeyEntries = new System.Collections.Generic.List<sKeyEntry>()
+                        };
+
+                        for (int k = 0; k < gk.NumberOfKeys; k++)
+                        {
+                            gk.KeyEntries.Add(new sKeyEntry
+                            {
+                                KeyID = g.pKey[k].wKeyID, // Defined key ID for each piece of GeoTIFF data. IDs contained in the GeoTIFF specification
+                                KeyIDString = Enum.GetName(typeof(GeoTiffKeys), g.pKey[k].wKeyID),
+                                TIFFTagLocation = g.pKey[k].wTIFFTagLocation, // 0 =wValue_Offset field as an unsigned short, 34736 means the data is located at index wValue_Offset of the GeoDoubleParamsTag record, 34767 means the data is located at index wValue_Offset of the GeoAsciiParamsTag record
+                                Count = g.pKey[k].wCount, // Number of characters in string for values of GeoAsciiParamsTag, otherwise is 1
+                                Value_Offset = g.pKey[k].wValue_Offset, // Contents vary depending on value for wTIFFTagLocation above
+                                Value_OffsetString = Enum.GetName(typeof(GeoTiffKeys), g.pKey[k].wValue_Offset)
+                            });
+                        }
+                        vlr.GeoKeys.Add(gk);
+                    }
+
+                    // get GeoAsciiParamsTag
+                    if (vlr.RecordID == 34737)
+                    {
+                        vlr.GeoAsciiParamsTag = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].data);
+                        vlr.GeoAsciiParamsTag = vlr.GeoAsciiParamsTag.Replace("\0", string.Empty);
+                    }
+
+                    h.VariableLengthRecords.Add(vlr);
+                }
+            }
+
+            //Console.WriteLine("user_data_after_header_size:" + lazReader.header.user_data_after_header_size);
+            //Console.WriteLine("vlrs:" + lazReader.header.vlrs.Count);
+            //for (int i = 0; i < lazReader.header.vlrs.Count; i++)
+            //{
+            //    Console.WriteLine("vlrs[" + i + "].reserved:" + lazReader.header.vlrs[i].reserved);
+            //    //var useridstr = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].user_id);
+            //    string useridstr = "";
+            //    for (int j = 0; j < lazReader.header.vlrs[i].user_id.Length; j++)
+            //    {
+            //        useridstr += (char)lazReader.header.vlrs[i].user_id[j];
+            //        //useridstr += lazReader.header.vlrs[i].user_id[j].ToString("X")+",";
+            //    }
+            //    Console.WriteLine("vlrs[" + i + "].user_id:" + useridstr);
+            //    Console.WriteLine("vlrs[" + i + "].record_id:" + lazReader.header.vlrs[i].record_id);
+            //    Console.WriteLine("vlrs[" + i + "].record_length_after_header:" + lazReader.header.vlrs[i].record_length_after_header);
+            //    Console.WriteLine("datalen: " + lazReader.header.vlrs[i].data.Length);
+
+            //    if (lazReader.header.vlrs[i].record_id == 34735) // GeoKeyDirectoryTag
+            //    {
+            //        var g = ParseGeoKeysFromByteArray(lazReader.header.vlrs[i].data);
+            //        PrintGeoKeys(g);
+            //    }
+
+            //    if (lazReader.header.vlrs[i].record_id == 34737) // GeoAsciiParamsTag 
+            //    {
+            //        var g = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].data);
+            //        Console.WriteLine("GeoAsciiParamsTag:" + g);
+            //    }
+
+            //    //var descstr = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].description);
+            //    string descstr = "";
+            //    for (int j = 0; j < lazReader.header.vlrs[i].description.Length; j++)
+            //    {
+            //        descstr += (char)lazReader.header.vlrs[i].description[j];
+            //        //descstr += lazReader.header.vlrs[i].description[j].ToString("X")+",";
+            //    }
+
+            //    Console.WriteLine("vlrs[" + i + "].description:" + descstr);
+            //}
+
+            // read data after header
+            //var h = lazReader.get_header_pointer();
+            //Console.WriteLine("header_size:" + h.header_size);
+            //Console.WriteLine("offset_to_point_data:" + h.offset_to_point_data);
+
+            // read binary data after header manually
+            //var data = new byte[h.header_size];
+            //var ev = lazReader.read_evlrs();
+            //Console.WriteLine("ev:"+ev);
+
+            //var file = importSettings.inputFiles[fileIndex];
+            //int offset = h.header_size+54;
+
+            //var g = ReadGeoKeys(file, offset);
+            //PrintGeoKeys(g);
+
+            //using (FileStream stream = new FileStream(file, FileMode.Open, FileAccess.Read))
+            //{
+            //    stream.Seek(offset, SeekOrigin.Begin);
+
+            //    using (BinaryReader reader = new BinaryReader(stream))
+            //    {
+            //        int data = reader.ReadInt32();
+            //        Console.WriteLine($"Read data: {data}");
+            //    }
+            //}
+
+            //h.header_size
+            //var ud = lazReader.header.user_data_after_header;
+            //var udstr = "";
+            //for (int i = 0; i < ud.Length; i++)
+            //{
+            //    udstr += (char)ud[i];
+            //    //udstr += ud[i].ToString("X") + ",";
+            //}
+
+            //Console.WriteLine(lazReader.header.point_data_format);
+            //Console.WriteLine(lazReader.header.x_scale_factor);
+            //Console.WriteLine(lazReader.header.y_scale_factor);
+            //Console.WriteLine(lazReader.header.z_scale_factor);
+            //Console.WriteLine(lazReader.header.x_offset);
+            //Console.WriteLine(lazReader.header.y_offset);
+            //Console.WriteLine(lazReader.header.z_offset);
+            //Console.WriteLine(lazReader.header.max_x);
+            //Console.WriteLine(lazReader.header.min_x);
+            //Console.WriteLine(lazReader.header.max_y);
+            //Console.WriteLine(lazReader.header.min_y);
+            //Console.WriteLine(lazReader.header.max_z);
+            //Console.WriteLine(lazReader.header.min_z);
+            //Console.WriteLine(lazReader.header.start_of_waveform_data_packet_record);
+
+            //Console.WriteLine(lazReader.header.version_major);
+            //Console.WriteLine(lazReader.header.version_minor);
+            //Console.WriteLine("----------");
+            //Console.WriteLine(lazReader.header.number_of_extended_variable_length_records);
+            //Console.WriteLine(lazReader.header.number_of_variable_length_records);
+            //Console.WriteLine(lazReader.header.start_of_first_extended_variable_length_record);
+
+            //var d = lazReader.header.number_of_extended_variable_length_records;
+            //d = lazReader.header.version_major;
+            //d = lazReader.header.version_minor;
+            //var d2 = lazReader.header.system_identifier;
+            //var d3 = lazReader.header.generating_software;
+            //d = lazReader.header.file_creation_day;
+            //d = lazReader.header.file_creation_year;
+            //d = lazReader.header.header_size;
+            //d = lazReader.header.;
+            //d = lazReader.header.offset_to_point_data;
+            //d = lazReader.header.number_of_variable_length_records;
+            //d = lazReader.header.point_data_format;
+            //d = lazReader.header.point_data_record_length;
+            //d = lazReader.header.number_of_point_records;
+            //d = lazReader.header.number_of_points_by_return;
+            //d = lazReader.header.x_scale_factor;
+            //d = lazReader.header.y_scale_factor;
+            //d = lazReader.header.z_scale_factor;
+            //d = lazReader.header.x_offset;
+            //d = lazReader.header.y_offset;
+            //d = lazReader.header.z_offset;
+            //d = lazReader.header.max_x;
+            //d = lazReader.header.min_x;
+            //d = lazReader.header.max_y;
+            //d = lazReader.header.min_y;
+            //d = lazReader.header.max_z;
+            //d = lazReader.header.min_z;
+            //d = lazReader.header.start_of_waveform_data_packet_record;
+            //d = lazReader.header.start_of_first_extended_variable_length_record;
+            //d = lazReader.header.number_of_extended_variable_length_records;
+            //d = lazReader.header.number_of_point_records;
+            //d = lazReader.header.number_of_points_by_return;
+
+            return h;
+        }
+
+        public GeoKeys ParseGeoKeysFromByteArray(byte[] byteArray)
+        {
+            GeoKeys geoKeys = new GeoKeys
+            {
+                wKeyDirectoryVersion = BitConverter.ToUInt16(byteArray, 0),
+                wKeyRevision = BitConverter.ToUInt16(byteArray, 2),
+                wMinorRevision = BitConverter.ToUInt16(byteArray, 4),
+                wNumberOfKeys = BitConverter.ToUInt16(byteArray, 6)
+            };
+
+            geoKeys.pKey = new KeyEntry[geoKeys.wNumberOfKeys];
+            int offset = 8;  // Initial offset after reading wNumberOfKeys.
+
+            for (int i = 0; i < geoKeys.wNumberOfKeys; i++)
+            {
+                geoKeys.pKey[i] = new KeyEntry
+                {
+                    wKeyID = BitConverter.ToUInt16(byteArray, offset),
+                    wTIFFTagLocation = BitConverter.ToUInt16(byteArray, offset + 2),
+                    wCount = BitConverter.ToUInt16(byteArray, offset + 4),
+                    wValue_Offset = BitConverter.ToUInt16(byteArray, offset + 6)
+                };
+                offset += 8;  // Move to the next KeyEntry.
+            }
+
+            return geoKeys;
+        }
+
+        public void PrintGeoKeys(GeoKeys geoKeys)
+        {
+            Console.WriteLine($"Key Directory Version: {geoKeys.wKeyDirectoryVersion}");
+            Console.WriteLine($"Key Revision: {geoKeys.wKeyRevision}");
+            Console.WriteLine($"Minor Revision: {geoKeys.wMinorRevision}");
+            Console.WriteLine($"Number of Keys: {geoKeys.wNumberOfKeys}");
+
+            for (int i = 0; i < geoKeys.wNumberOfKeys; i++)
+            {
+                Console.WriteLine($"Key {i + 1}:");
+                Console.WriteLine($"  Key ID: {geoKeys.pKey[i].wKeyID}");
+                Console.WriteLine($"  TIFF Tag Location: {geoKeys.pKey[i].wTIFFTagLocation}");
+                Console.WriteLine($"  Count: {geoKeys.pKey[i].wCount}");
+                Console.WriteLine($"  Value Offset: {geoKeys.pKey[i].wValue_Offset}");
+            }
+        }
+
+        public struct KeyEntry
+        {
+            public ushort wKeyID;
+            public ushort wTIFFTagLocation;
+            public ushort wCount;
+            public ushort wValue_Offset;
+        }
+
+        public struct GeoKeys
+        {
+            public ushort wKeyDirectoryVersion;
+            public ushort wKeyRevision;
+            public ushort wMinorRevision;
+            public ushort wNumberOfKeys;
+            public KeyEntry[] pKey;
+        }
+
+        public static GeoKeys ReadGeoKeys(string filePath, long offset)
+        {
+            using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            using (BinaryReader reader = new BinaryReader(fs))
+            {
+                // Seek to the specified offset in the file
+                fs.Seek(offset, SeekOrigin.Begin);
+
+                // Read the GeoKeys structure
+                GeoKeys geoKeys = new GeoKeys
+                {
+                    wKeyDirectoryVersion = reader.ReadUInt16(),
+                    wKeyRevision = reader.ReadUInt16(),
+                    wMinorRevision = reader.ReadUInt16(),
+                    wNumberOfKeys = reader.ReadUInt16()
+                };
+
+                // Initialize the array of key entries
+                geoKeys.pKey = new KeyEntry[geoKeys.wNumberOfKeys];
+
+                // Read each key entry
+                for (int i = 0; i < geoKeys.wNumberOfKeys; i++)
+                {
+                    geoKeys.pKey[i] = new KeyEntry
+                    {
+                        wKeyID = reader.ReadUInt16(),
+                        wTIFFTagLocation = reader.ReadUInt16(),
+                        wCount = reader.ReadUInt16(),
+                        wValue_Offset = reader.ReadUInt16()
+                    };
+                }
+
+                return geoKeys;
+            }
         }
 
         Bounds IReader.GetBounds()

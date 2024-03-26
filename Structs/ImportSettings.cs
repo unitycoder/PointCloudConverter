@@ -68,7 +68,8 @@ namespace PointCloudConverter
         public bool useCustomIntensityRange { get; set; } = false; // if false, 0-255 range is used, if ture: 0-65535
         public int seed { get; set; } = -1; // random seed for shuffling
         public bool useJSONLog = false;
-        //public bool importMetaData = false;
+        public bool importMetadata = false;
+        public bool importMetadataOnly = false;
 
         public override string ToString()
         {

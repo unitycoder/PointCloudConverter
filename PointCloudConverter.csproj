@@ -99,9 +99,13 @@
     <Compile Include="Structs\Color.cs" />
     <Compile Include="Structs\ExportFormat.cs" />
     <Compile Include="Structs\Float3.cs" />
+    <Compile Include="Structs\Metadata\GeoTiffKeys.cs" />
     <Compile Include="Structs\ImportFormat.cs" />
     <Compile Include="Structs\ImportSettings.cs" />
+    <Compile Include="Structs\Metadata\LasHeader.cs" />
+    <Compile Include="Structs\Metadata\LasVariableLengthRecord.cs" />
     <Compile Include="Structs\PointCloudTile.cs" />
+    <Compile Include="Structs\Metadata\sGeoKeys.cs" />
     <Compile Include="Tools\ArgParser.cs" />
     <Compile Include="Tools\LogText.cs" />
     <Compile Include="Tools\Tools.cs" />
