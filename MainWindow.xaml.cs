@@ -156,7 +156,7 @@ namespace PointCloudConverter
 
             // get all file bounds, if in batch mode and RGB+INT+PACK
             // TODO: check what happens if its too high? over 128/256?
-            if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true)
+            if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false)
             {
                 for (int i = 0, len = importSettings.maxFiles; i < len; i++)
                 {
@@ -444,7 +444,7 @@ namespace PointCloudConverter
             if (fileIndex == (importSettings.maxFiles - 1))
             {
                 var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
-                Log.WriteLine("MetaData: " + jsonMeta);
+                //Log.WriteLine("MetaData: " + jsonMeta);
                 // write metadata to file
                 var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
                 Log.WriteLine("Writing metadata to file: " + jsonFile);

@@ -8,6 +8,9 @@ namespace PointCloudConverter.Structs
     {
         public string FileName { get; set; }
         // v1.2
+        public ushort ProjectionID { get; set; } // these are duplicate data from the VLR (just for convenience)
+        public string Projection { get; set; } 
+
         public ushort FileSourceID { get; set; }
         public ushort GlobalEncoding { get; set; }
         public uint ProjectID_GUID_data1 { get; set; }

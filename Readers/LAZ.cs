@@ -106,15 +106,33 @@ namespace PointCloudConverter.Readers
 
                         for (int k = 0; k < gk.NumberOfKeys; k++)
                         {
-                            gk.KeyEntries.Add(new sKeyEntry
+                            var newEntry = new sKeyEntry
                             {
-                                KeyID = g.pKey[k].wKeyID, // Defined key ID for each piece of GeoTIFF data. IDs contained in the GeoTIFF specification
+                                KeyID = g.pKey[k].wKeyID,
                                 KeyIDString = Enum.GetName(typeof(GeoTiffKeys), g.pKey[k].wKeyID),
-                                TIFFTagLocation = g.pKey[k].wTIFFTagLocation, // 0 =wValue_Offset field as an unsigned short, 34736 means the data is located at index wValue_Offset of the GeoDoubleParamsTag record, 34767 means the data is located at index wValue_Offset of the GeoAsciiParamsTag record
-                                Count = g.pKey[k].wCount, // Number of characters in string for values of GeoAsciiParamsTag, otherwise is 1
-                                Value_Offset = g.pKey[k].wValue_Offset, // Contents vary depending on value for wTIFFTagLocation above
+                                TIFFTagLocation = g.pKey[k].wTIFFTagLocation,
+                                Count = g.pKey[k].wCount,
+                                Value_Offset = g.pKey[k].wValue_Offset,
                                 Value_OffsetString = Enum.GetName(typeof(GeoTiffKeys), g.pKey[k].wValue_Offset)
-                            });
+                            };
+
+                            if (newEntry.Value_Offset == 32618) // or id 3072?
+                            {
+                                h.ProjectionID = newEntry.Value_Offset;
+                                h.Projection = newEntry.Value_OffsetString;
+                            }
+
+                            gk.KeyEntries.Add(newEntry);
+
+                            //gk.KeyEntries.Add(new sKeyEntry
+                            //{
+                            //    KeyID = g.pKey[k].wKeyID, // Defined key ID for each piece of GeoTIFF data. IDs contained in the GeoTIFF specification
+                            //    KeyIDString = Enum.GetName(typeof(GeoTiffKeys), g.pKey[k].wKeyID),
+                            //    TIFFTagLocation = g.pKey[k].wTIFFTagLocation, // 0 =wValue_Offset field as an unsigned short, 34736 means the data is located at index wValue_Offset of the GeoDoubleParamsTag record, 34767 means the data is located at index wValue_Offset of the GeoAsciiParamsTag record
+                            //    Count = g.pKey[k].wCount, // Number of characters in string for values of GeoAsciiParamsTag, otherwise is 1
+                            //    Value_Offset = g.pKey[k].wValue_Offset, // Contents vary depending on value for wTIFFTagLocation above
+                            //    Value_OffsetString = Enum.GetName(typeof(GeoTiffKeys), g.pKey[k].wValue_Offset)
+                            //});
                         }
                         vlr.GeoKeys.Add(gk);
                     }
@@ -129,138 +147,6 @@ namespace PointCloudConverter.Readers
                     h.VariableLengthRecords.Add(vlr);
                 }
             }
-
-            //Console.WriteLine("user_data_after_header_size:" + lazReader.header.user_data_after_header_size);
-            //Console.WriteLine("vlrs:" + lazReader.header.vlrs.Count);
-            //for (int i = 0; i < lazReader.header.vlrs.Count; i++)
-            //{
-            //    Console.WriteLine("vlrs[" + i + "].reserved:" + lazReader.header.vlrs[i].reserved);
-            //    //var useridstr = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].user_id);
-            //    string useridstr = "";
-            //    for (int j = 0; j < lazReader.header.vlrs[i].user_id.Length; j++)
-            //    {
-            //        useridstr += (char)lazReader.header.vlrs[i].user_id[j];
-            //        //useridstr += lazReader.header.vlrs[i].user_id[j].ToString("X")+",";
-            //    }
-            //    Console.WriteLine("vlrs[" + i + "].user_id:" + useridstr);
-            //    Console.WriteLine("vlrs[" + i + "].record_id:" + lazReader.header.vlrs[i].record_id);
-            //    Console.WriteLine("vlrs[" + i + "].record_length_after_header:" + lazReader.header.vlrs[i].record_length_after_header);
-            //    Console.WriteLine("datalen: " + lazReader.header.vlrs[i].data.Length);
-
-            //    if (lazReader.header.vlrs[i].record_id == 34735) // GeoKeyDirectoryTag
-            //    {
-            //        var g = ParseGeoKeysFromByteArray(lazReader.header.vlrs[i].data);
-            //        PrintGeoKeys(g);
-            //    }
-
-            //    if (lazReader.header.vlrs[i].record_id == 34737) // GeoAsciiParamsTag 
-            //    {
-            //        var g = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].data);
-            //        Console.WriteLine("GeoAsciiParamsTag:" + g);
-            //    }
-
-            //    //var descstr = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].description);
-            //    string descstr = "";
-            //    for (int j = 0; j < lazReader.header.vlrs[i].description.Length; j++)
-            //    {
-            //        descstr += (char)lazReader.header.vlrs[i].description[j];
-            //        //descstr += lazReader.header.vlrs[i].description[j].ToString("X")+",";
-            //    }
-
-            //    Console.WriteLine("vlrs[" + i + "].description:" + descstr);
-            //}
-
-            // read data after header
-            //var h = lazReader.get_header_pointer();
-            //Console.WriteLine("header_size:" + h.header_size);
-            //Console.WriteLine("offset_to_point_data:" + h.offset_to_point_data);
-
-            // read binary data after header manually
-            //var data = new byte[h.header_size];
-            //var ev = lazReader.read_evlrs();
-            //Console.WriteLine("ev:"+ev);
-
-            //var file = importSettings.inputFiles[fileIndex];
-            //int offset = h.header_size+54;
-
-            //var g = ReadGeoKeys(file, offset);
-            //PrintGeoKeys(g);
-
-            //using (FileStream stream = new FileStream(file, FileMode.Open, FileAccess.Read))
-            //{
-            //    stream.Seek(offset, SeekOrigin.Begin);
-
-            //    using (BinaryReader reader = new BinaryReader(stream))
-            //    {
-            //        int data = reader.ReadInt32();
-            //        Console.WriteLine($"Read data: {data}");
-            //    }
-            //}
-
-            //h.header_size
-            //var ud = lazReader.header.user_data_after_header;
-            //var udstr = "";
-            //for (int i = 0; i < ud.Length; i++)
-            //{
-            //    udstr += (char)ud[i];
-            //    //udstr += ud[i].ToString("X") + ",";
-            //}
-
-            //Console.WriteLine(lazReader.header.point_data_format);
-            //Console.WriteLine(lazReader.header.x_scale_factor);
-            //Console.WriteLine(lazReader.header.y_scale_factor);
-            //Console.WriteLine(lazReader.header.z_scale_factor);
-            //Console.WriteLine(lazReader.header.x_offset);
-            //Console.WriteLine(lazReader.header.y_offset);
-            //Console.WriteLine(lazReader.header.z_offset);
-            //Console.WriteLine(lazReader.header.max_x);
-            //Console.WriteLine(lazReader.header.min_x);
-            //Console.WriteLine(lazReader.header.max_y);
-            //Console.WriteLine(lazReader.header.min_y);
-            //Console.WriteLine(lazReader.header.max_z);
-            //Console.WriteLine(lazReader.header.min_z);
-            //Console.WriteLine(lazReader.header.start_of_waveform_data_packet_record);
-
-            //Console.WriteLine(lazReader.header.version_major);
-            //Console.WriteLine(lazReader.header.version_minor);
-            //Console.WriteLine("----------");
-            //Console.WriteLine(lazReader.header.number_of_extended_variable_length_records);
-            //Console.WriteLine(lazReader.header.number_of_variable_length_records);
-            //Console.WriteLine(lazReader.header.start_of_first_extended_variable_length_record);
-
-            //var d = lazReader.header.number_of_extended_variable_length_records;
-            //d = lazReader.header.version_major;
-            //d = lazReader.header.version_minor;
-            //var d2 = lazReader.header.system_identifier;
-            //var d3 = lazReader.header.generating_software;
-            //d = lazReader.header.file_creation_day;
-            //d = lazReader.header.file_creation_year;
-            //d = lazReader.header.header_size;
-            //d = lazReader.header.;
-            //d = lazReader.header.offset_to_point_data;
-            //d = lazReader.header.number_of_variable_length_records;
-            //d = lazReader.header.point_data_format;
-            //d = lazReader.header.point_data_record_length;
-            //d = lazReader.header.number_of_point_records;
-            //d = lazReader.header.number_of_points_by_return;
-            //d = lazReader.header.x_scale_factor;
-            //d = lazReader.header.y_scale_factor;
-            //d = lazReader.header.z_scale_factor;
-            //d = lazReader.header.x_offset;
-            //d = lazReader.header.y_offset;
-            //d = lazReader.header.z_offset;
-            //d = lazReader.header.max_x;
-            //d = lazReader.header.min_x;
-            //d = lazReader.header.max_y;
-            //d = lazReader.header.min_y;
-            //d = lazReader.header.max_z;
-            //d = lazReader.header.min_z;
-            //d = lazReader.header.start_of_waveform_data_packet_record;
-            //d = lazReader.header.start_of_first_extended_variable_length_record;
-            //d = lazReader.header.number_of_extended_variable_length_records;
-            //d = lazReader.header.number_of_point_records;
-            //d = lazReader.header.number_of_points_by_return;
-
             return h;
         }
 
