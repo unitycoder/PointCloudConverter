@@ -116,7 +116,7 @@ namespace PointCloudConverter.Readers
                                 Value_OffsetString = Enum.GetName(typeof(GeoTiffKeys), g.pKey[k].wValue_Offset)
                             };
 
-                            if (newEntry.Value_Offset == 32618) // or id 3072?
+                            if (newEntry.KeyID == 3072)
                             {
                                 h.ProjectionID = newEntry.Value_Offset;
                                 h.Projection = newEntry.Value_OffsetString;
