@@ -54,6 +54,7 @@ namespace PointCloudConverter
         static int progressTotalFiles = 0;
         static DispatcherTimer progressTimerThread;
         public static string lastStatusMessage = "";
+        public static int errorCounter = 0; // how many errors when importing or reading files (single file could have multiple errors)
 
         public MainWindow()
         {
@@ -125,7 +126,7 @@ namespace PointCloudConverter
                 Log.WriteLine("Exited.\nElapsed: " + elapsedString);
                 if (importSettings.useJSONLog)
                 {
-                    Log.WriteLine("{\"event\": \"" + LogEvent.End + "\", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + "\"}", LogEvent.End);
+                    Log.WriteLine("{\"event\": \"" + LogEvent.End + "\", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + ",\"errors\":" + errorCounter + "}", LogEvent.End);
                 }
                 // hack for console exit https://stackoverflow.com/a/67940480/5452781
                 SendKeys.SendWait("{ENTER}");
@@ -148,6 +149,7 @@ namespace PointCloudConverter
         {
             var importSettings = (ImportSettings)importSettingsObject;
 
+
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
@@ -158,6 +160,7 @@ namespace PointCloudConverter
             StartProgressTimer();
 
             // loop input files
+            errorCounter = 0;
             progressFile = 0;
             progressTotalFiles = importSettings.maxFiles - 1;
             if (progressTotalFiles < 0) progressTotalFiles = 0;
@@ -180,7 +183,15 @@ namespace PointCloudConverter
                     }
                     else
                     {
-                        Log.WriteLine("Error> Failed to get bounds from file: " + importSettings.inputFiles[i], LogEvent.Error);
+                        errorCounter++;
+                        if (importSettings.useJSONLog)
+                        {
+                            Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                        }
+                        else
+                        {
+                            Log.WriteLine("Error> Failed to get bounds from file: " + importSettings.inputFiles[i], LogEvent.Error);
+                        }
                     }
                 }
 
@@ -214,7 +225,15 @@ namespace PointCloudConverter
                 var res = ParseFile(importSettings, i);
                 if (res == false)
                 {
-                    Log.WriteLine("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                    errorCounter++;
+                    if (importSettings.useJSONLog)
+                    {
+                        Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                    }
+                    else
+                    {
+                        Log.WriteLine("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                    }
                 }
             }
 

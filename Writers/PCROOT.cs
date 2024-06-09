@@ -168,7 +168,7 @@ namespace PointCloudConverter.Writers
             "\"tiles\": " + nodeX.Count + "," +
             "\"folder\": " + JsonSerializer.Serialize(baseFolder) + "}";
 
-            // TODO combine 2 outputs.. only otherone shows up now
+            // TODO combine 2 outputs.. only other one shows up now
             Log.WriteLine("Saving " + nodeX.Count + " tiles to folder: " + baseFolder);
             Log.WriteLine(jsonString, LogEvent.End);
 
