@@ -33,8 +33,8 @@ namespace PointCloudConverter.Readers
             //importRGB = importSettings.importRGB;
             //importIntensity = importSettings.importIntensity;
             customIntensityRange = importSettings.useCustomIntensityRange;
-            lazReader.open_reader(file, out compressedLAZ);
-            return true;
+            var res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
+            return (res == 0);
         }
 
         LasHeader IReader.GetMetaData(ImportSettings importSettings, int fileIndex)
@@ -277,6 +277,8 @@ namespace PointCloudConverter.Readers
 
             // get point reference
             var p = lazReader.point;
+            // TODO get timestamp
+            //var pointTime = lazReader.point.gps_time;
 
             // try to detect if colors are outside 0-255 range? TODO just check value?
             if (p.rgb[0].ToString("X").Length > 2)

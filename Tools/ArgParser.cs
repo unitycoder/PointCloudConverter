@@ -468,6 +468,18 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-averagetimestamp":
+                                Log.WriteLine("averagetimestamp = " + param);
+                                if (param != "true" && param != "false")
+                                {
+                                    importSettings.errors.Add("Invalid averagetimestamp parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.averageTimestamp = param == "true";
+                                }
+                                break;
+
                             case "-json":
                                 Log.WriteLine("json = " + param);
 
@@ -708,7 +720,7 @@ namespace PointCloudConverter
             //{
             //    importSettings.errors.Add("Cannot have both -rgb and -intensity enabled");
             //}            
-            
+
             // must have at least one
             if (importSettings.importRGB == false && importSettings.importIntensity == false)
             {
@@ -778,6 +790,7 @@ namespace PointCloudConverter
                 //    importSettings.logEvent = Logger.LogEvent.Error;
                 //    var json = JsonSerializer.Serialize(importSettings.errors);
                 //}
+                Environment.ExitCode = (int)ExitCode.Error;
             }
 
             // return always, but note that we might have errors

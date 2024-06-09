@@ -93,6 +93,7 @@
 
                 <StackPanel Grid.Column="1" Margin="0,4,0,0">
                     <CheckBox x:Name="chkUseJSONLog" Content="Use JSON log *Used in commandline only" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Log messages are written in JSON format. Experimental, V3 format is better supported."/>
+                    <!--<CheckBox x:Name="chkGetAvgTileTimestamp" Content="Get Average timestamp per Tile" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Expirimental: Calculate avg timestamp from tile points and save to pcroot"/>-->
                 </StackPanel>
 
             </Grid>

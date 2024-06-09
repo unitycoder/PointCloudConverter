@@ -26,7 +26,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "09.03.2024";
+        static readonly string version = "09.06.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -44,14 +44,23 @@ namespace PointCloudConverter
         public static MainWindow mainWindowStatic;
         bool isInitialiazing = true;
 
+        static List<LasHeader> lasHeaders = new List<LasHeader>();
+        private readonly ILogger logger;
+
+        // progress bar data
+        static int progressPoint = 0;
+        static int progressTotalPoints = 0;
+        static int progressFile = 0;
+        static int progressTotalFiles = 0;
+        static DispatcherTimer progressTimerThread;
+        public static string lastStatusMessage = "";
+
         public MainWindow()
         {
             InitializeComponent();
             mainWindowStatic = this;
             Main();
         }
-
-        private readonly ILogger logger;
 
         private void Main()
         {
@@ -63,6 +72,9 @@ namespace PointCloudConverter
 
             // default logger
             Log.CreateLogger(isJSON: false, version: version);
+
+            // default code
+            Environment.ExitCode = (int)ExitCode.Success;
 
             if (args.Length > 1)
             {
@@ -76,7 +88,6 @@ namespace PointCloudConverter
                         Log.CreateLogger(isJSON: true, version: version);
                     }
                 }
-
 
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Log.WriteLine("\n::: " + appname + " :::\n");
@@ -119,7 +130,7 @@ namespace PointCloudConverter
                 // hack for console exit https://stackoverflow.com/a/67940480/5452781
                 SendKeys.SendWait("{ENTER}");
                 FreeConsole();
-                Environment.Exit(0);
+                Environment.Exit(Environment.ExitCode);
             }
 
             // regular WPF starts from here
@@ -131,7 +142,6 @@ namespace PointCloudConverter
             LoadSettings();
         }
 
-        static List<LasHeader> lasHeaders = new List<LasHeader>();
 
         // main processing loop
         private static void ProcessAllFiles(System.Object importSettingsObject)
@@ -168,6 +178,10 @@ namespace PointCloudConverter
                     {
                         boundsListTemp.Add(new Float3(res.Item2, res.Item3, res.Item4));
                     }
+                    else
+                    {
+                        Log.WriteLine("Error> Failed to get bounds from file: " + importSettings.inputFiles[i], LogEvent.Error);
+                    }
                 }
 
                 // print lowest bounds from boundsListTemp
@@ -197,7 +211,11 @@ namespace PointCloudConverter
                 //Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
                 //if (abort==true) 
                 // do actual point cloud parsing for this file
-                ParseFile(importSettings, i);
+                var res = ParseFile(importSettings, i);
+                if (res == false)
+                {
+                    Log.WriteLine("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                }
             }
 
             stopwatch.Stop();
@@ -220,14 +238,6 @@ namespace PointCloudConverter
         {
             gridProcessingPanel.Visibility = Visibility.Hidden;
         }
-
-        // progress bar data
-        static int progressPoint = 0;
-        static int progressTotalPoints = 0;
-        static int progressFile = 0;
-        static int progressTotalFiles = 0;
-        static DispatcherTimer progressTimerThread;
-        public static string lastStatusMessage = "";
 
         static void StartProgressTimer()
         {
@@ -266,6 +276,7 @@ namespace PointCloudConverter
             if (res == false)
             {
                 Log.WriteLine("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
+                Environment.ExitCode = (int)ExitCode.Error;
                 return (false, 0, 0, 0);
             }
             var bounds = importSettings.reader.GetBounds();
@@ -278,13 +289,14 @@ namespace PointCloudConverter
 
 
         // process single file
-        static void ParseFile(ImportSettings importSettings, int fileIndex)
+        static bool ParseFile(ImportSettings importSettings, int fileIndex)
         {
             var res = importSettings.reader.InitReader(importSettings, fileIndex);
             if (res == false)
             {
                 Log.WriteLine("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
-                return;
+                Environment.ExitCode = (int)ExitCode.Error;
+                return false;
             }
 
             if (importSettings.importMetadata == true)
@@ -346,7 +358,7 @@ namespace PointCloudConverter
                 if (writerRes == false)
                 {
                     Log.WriteLine("Error> Failed to initialize Writer");
-                    return;
+                    return false;
                 }
 
                 progressPoint = 0;
@@ -466,6 +478,8 @@ namespace PointCloudConverter
                     }
                 });
             }
+
+            return true;
         } // ParseFile
 
         private void btnConvert_Click(object sender, RoutedEventArgs e)
@@ -535,7 +549,6 @@ namespace PointCloudConverter
                 txtConsole.Text = cl;
                 Console.WriteLine(cl);
 
-                // TODO lock UI, add cancel button, add progress bar
                 if (doProcess == true)
                 {
                     ParameterizedThreadStart start = new ParameterizedThreadStart(ProcessAllFiles);
@@ -548,6 +561,7 @@ namespace PointCloudConverter
             {
                 HideProcessingPanel();
                 txtConsole.Text = "Operation failed! " + string.Join(Environment.NewLine, importSettings.errors);
+                Environment.ExitCode = (int)ExitCode.Error;
             }
         }
 
@@ -560,7 +574,7 @@ namespace PointCloudConverter
             if (workerThread != null)
             {
                 workerThread.Abort();
-                Environment.Exit(Environment.ExitCode);
+                Environment.Exit((int)ExitCode.Cancelled);
             }
         }
 
@@ -779,7 +793,7 @@ namespace PointCloudConverter
             if (workerThread != null)
             {
                 workerThread.Abort();
-                Environment.Exit(Environment.ExitCode);
+                Environment.Exit((int)ExitCode.Cancelled);
             }
         }
 

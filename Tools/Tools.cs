@@ -289,7 +289,7 @@ namespace PointCloudConverter
             Console.WriteLine("? /? -? help -help /help");
             Console.ForegroundColor = ConsoleColor.White;
             if (waitEnter == true) Console.ReadLine();
-            Environment.Exit(0);
+            Environment.Exit((int)ExitCode.Cancelled);
         }
 
         // lookuptable: converts byte 0-255 into float 0-1f

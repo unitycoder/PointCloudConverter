@@ -97,6 +97,7 @@
     <Compile Include="Readers\LAZ.cs" />
     <Compile Include="Structs\Bounds.cs" />
     <Compile Include="Structs\Color.cs" />
+    <Compile Include="Structs\ExitCodes.cs" />
     <Compile Include="Structs\ExportFormat.cs" />
     <Compile Include="Structs\Float3.cs" />
     <Compile Include="Structs\Metadata\GeoTiffKeys.cs" />

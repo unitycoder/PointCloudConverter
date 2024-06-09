@@ -70,6 +70,7 @@ namespace PointCloudConverter
         public bool useJSONLog = false;
         public bool importMetadata = false;
         public bool importMetadataOnly = false;
+        public bool averageTimestamp = false; // calculate average timestamp for all points for this tile
 
         public override string ToString()
         {
