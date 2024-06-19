@@ -7,7 +7,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Unicode;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,6 +24,7 @@ using DragDropEffects = System.Windows.DragDropEffects;
 using DragEventArgs = System.Windows.DragEventArgs;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
+using Newtonsoft.Json;
 
 namespace PointCloudConverter
 {
@@ -186,7 +190,7 @@ namespace PointCloudConverter
                         errorCounter++;
                         if (importSettings.useJSONLog)
                         {
-                            Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                            Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
                         }
                         else
                         {
@@ -228,7 +232,7 @@ namespace PointCloudConverter
                     errorCounter++;
                     if (importSettings.useJSONLog)
                     {
-                        Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                        Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
                     }
                     else
                     {
@@ -387,7 +391,7 @@ namespace PointCloudConverter
 
                 string jsonString = "{" +
                 "\"event\": \"" + LogEvent.File + "\"," +
-                "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+                "\"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
                 "\"size\": " + new FileInfo(importSettings.inputFiles[fileIndex]).Length + "," +
                 "\"points\": " + pointCount + "," +
                 "\"status\": \"" + LogStatus.Processing + "\"" +
@@ -474,7 +478,14 @@ namespace PointCloudConverter
             // if this was last file
             if (fileIndex == (importSettings.maxFiles - 1))
             {
-                var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
+                JsonSerializerSettings settings = new JsonSerializerSettings
+                {
+                    StringEscapeHandling = StringEscapeHandling.Default // This prevents escaping of characters and write the WKT string properly
+                };
+
+                string jsonMeta = JsonConvert.SerializeObject(lasHeaders, settings);
+
+                // var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
                 //Log.WriteLine("MetaData: " + jsonMeta);
                 // write metadata to file
                 var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
