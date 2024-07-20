@@ -24,5 +24,9 @@
         public int cellY;
         public int cellZ;
 
+        // average timestamp from all points in this tile
+        public double averageTimeStamp;
+        public float overlapRatio; // 0-1, 0 means no overlap, 1 means full overlap
+
     }
 }

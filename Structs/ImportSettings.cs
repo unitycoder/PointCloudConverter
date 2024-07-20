@@ -1,4 +1,4 @@
-﻿// these values get filled from commandline arguments
+﻿// values from commandline arguments
 
 using PointCloudConverter.Readers;
 using PointCloudConverter.Structs;
@@ -67,10 +67,12 @@ namespace PointCloudConverter
         public float manualOffsetZ { get; set; } = 0;
         public bool useCustomIntensityRange { get; set; } = false; // if false, 0-255 range is used, if ture: 0-65535
         public int seed { get; set; } = -1; // random seed for shuffling
+
         public bool useJSONLog = false;
         public bool importMetadata = false;
         public bool importMetadataOnly = false;
         public bool averageTimestamp = false; // calculate average timestamp for all points for this tile
+        public bool checkoverlap = false; // check if tile overlaps with other tiles (save into pcroot)
 
         public override string ToString()
         {
@@ -109,6 +111,10 @@ namespace PointCloudConverter
             t += "\n useCustomIntensityRange=" + useCustomIntensityRange;
             t += "\n seed=" + seed;
             t += "\n useJSONLog=" + useJSONLog;
+            t += "\n importMetadata=" + importMetadata;
+            t += "\n importMetadataOnly=" + importMetadataOnly;
+            t += "\n averageTimestamp=" + averageTimestamp;
+            t += "\n checkoverlap=" + checkoverlap;
             return t;
         }
 

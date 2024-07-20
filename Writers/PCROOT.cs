@@ -29,6 +29,8 @@ namespace PointCloudConverter.Writers
         Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
 
         Dictionary<string, List<float>> nodeIntensity = new Dictionary<string, List<float>>();
+        Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
+
 
         static float cloudMinX = float.PositiveInfinity;
         static float cloudMinY = float.PositiveInfinity;
@@ -49,6 +51,7 @@ namespace PointCloudConverter.Writers
             nodeG.Clear();
             nodeB.Clear();
             nodeIntensity.Clear();
+            nodeTime.Clear();
 
             bsPoints = null;
             writerPoints = null;
@@ -87,7 +90,7 @@ namespace PointCloudConverter.Writers
 
         }
 
-        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i)
+        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i, bool hasTime, double time)
         {
             // get global all clouds bounds
             if (x < cloudMinX) cloudMinX = x;
@@ -117,6 +120,7 @@ namespace PointCloudConverter.Writers
                 nodeB[key].Add(b);
 
                 if (hasIntensity == true) nodeIntensity[key].Add(i);
+                if (hasTime == true) nodeTime[key].Add(time);
             }
             else // create new list for this key
             {
@@ -138,6 +142,12 @@ namespace PointCloudConverter.Writers
                 {
                     nodeIntensity[key] = new List<float>();
                     nodeIntensity[key].Add(i);
+                }
+
+                if (hasTime == true)
+                {
+                    nodeTime[key] = new List<double>();
+                    nodeTime[key].Add(time);
                 }
             }
         }
@@ -183,6 +193,7 @@ namespace PointCloudConverter.Writers
             List<float> nodeTempB;
 
             List<float> nodeTempIntensity = null;
+            List<double> nodeTempTime = null;
 
             // process all tiles
             foreach (KeyValuePair<string, List<float>> nodeData in nodeX)
@@ -210,16 +221,36 @@ namespace PointCloudConverter.Writers
                     nodeTempIntensity = nodeIntensity[key];
                 }
 
+                if (importSettings.averageTimestamp == true)
+                {
+                    nodeTempTime = nodeTime[key];
+                }
+
+
                 // randomize points in this node
                 if (importSettings.randomize == true)
                 {
                     if (importSettings.importRGB == true && importSettings.importIntensity == true)
                     {
-                        Tools.Shuffle(Tools.rnd, ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity);
+                        if (importSettings.averageTimestamp == true)
+                        {
+                            Tools.Shuffle(Tools.rnd, ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity, ref nodeTempTime);
+                        }
+                        else
+                        {
+                            Tools.Shuffle(Tools.rnd, ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity);
+                        }
                     }
                     else
                     {
-                        Tools.Shuffle(Tools.rnd, ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB);
+                        if (importSettings.averageTimestamp == true)
+                        {
+                            Tools.Shuffle(Tools.rnd, ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempTime);
+                        }
+                        else
+                        {
+                            Tools.Shuffle(Tools.rnd, ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB);
+                        }
                     }
                 }
 
@@ -265,7 +296,9 @@ namespace PointCloudConverter.Writers
 
                 //Console.WriteLine("nodeTempX.Count="+ nodeTempX.Count);
 
-                // output all points within that node tile
+                double totalTime = 0; // for average timestamp
+
+                // loop and output all points within that node/tile
                 for (int i = 0, len = nodeTempX.Count; i < len; i++)
                 {
                     // skip points
@@ -417,8 +450,16 @@ namespace PointCloudConverter.Writers
                         writerPoints.Write(pz);
                     }
 
+                    if (importSettings.averageTimestamp == true)
+                    {
+                        double ptime = nodeTempTime[i]; // time for this single point
+                        totalTime += ptime;
+                        //Console.WriteLine(ptime);
+                    }
+
                     totalPointsWritten++;
                 } // loop all points in tile (node)
+
 
                 // close tile file
                 writerPoints.Close();
@@ -501,21 +542,72 @@ namespace PointCloudConverter.Writers
                 cb.cellY = cellY;
                 cb.cellZ = cellZ;
 
+                if (importSettings.averageTimestamp == true && totalPointsWritten > 0)
+                {
+                    double averageTime = totalTime / totalPointsWritten;
+                    //Console.WriteLine("averageTime: " + averageTime);
+                    cb.averageTimeStamp = averageTime;
+                }
+
                 nodeBounds.Add(cb);
-            } // loop all nodes foreach
+            } // loop all nodes/tiles foreach
 
             // save rootfile
             // only save after last file, TODO should save this if process fails or user cancels, so no need to start from 0 again.. but then needs some merge or continue from index n feature
             if (fileIndex == (importSettings.maxFiles - 1))
             {
+                // check if any tile overlaps with other tiles
+                if (importSettings.checkoverlap == true)
+                {
+                    for (int i = 0, len = nodeBounds.Count; i < len; i++)
+                    {
+                        var cb = nodeBounds[i];
+                        // check if this tile overlaps with other tiles
+                        for (int j = 0, len2 = nodeBounds.Count; j < len2; j++)
+                        {
+                            if (i == j) continue; // skip self
+                            var cb2 = nodeBounds[j];
+                            // check if this tile overlaps with other tile
+                            float epsilon = 1e-6f;
+                            bool overlaps = cb.minX < cb2.maxX + epsilon && cb.maxX > cb2.minX - epsilon &&
+                                            cb.minY < cb2.maxY + epsilon && cb.maxY > cb2.minY - epsilon &&
+                                            cb.minZ < cb2.maxZ + epsilon && cb.maxZ > cb2.minZ - epsilon;
+
+                            if (overlaps)
+                            {
+                                // calculate overlap ratio
+                                float overlapX = Math.Min(cb.maxX, cb2.maxX) - Math.Max(cb.minX, cb2.minX);
+                                float overlapY = Math.Min(cb.maxY, cb2.maxY) - Math.Max(cb.minY, cb2.minY);
+                                float overlapZ = Math.Min(cb.maxZ, cb2.maxZ) - Math.Max(cb.minZ, cb2.minZ);
+                                float overlapVolume = overlapX * overlapY * overlapZ;
+                                float volume1 = (cb.maxX - cb.minX) * (cb.maxY - cb.minY) * (cb.maxZ - cb.minZ);
+                                float volume2 = (cb2.maxX - cb2.minX) * (cb2.maxY - cb2.minY) * (cb2.maxZ - cb2.minZ);
+
+                                // check if the volume of either tile is zero
+                                if (volume1 != 0 && volume2 != 0)
+                                {
+                                    float overlapRatio = overlapVolume / Math.Min(volume1, volume2);
+                                    cb.overlapRatio = overlapRatio;
+                                }
+                                else
+                                {
+                                    cb.overlapRatio = 0; // or any other appropriate value
+                                }
+
+                                nodeBounds[i] = cb;
+                            }
+                        }
+                    }
+                }
+
                 var tilerootdata = new List<string>();
                 var outputFileRoot = Path.Combine(baseFolder, fileOnly) + ".pcroot";
 
-                // add to tileroot listS
+                // add to tileroot list
                 long totalPointCount = 0;
                 for (int i = 0, len = nodeBounds.Count; i < len; i++)
                 {
-                    var tilerow = nodeBounds[i].fileName + sep + nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ;
+                    var tilerow = nodeBounds[i].fileName + sep + nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep + nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
                     tilerootdata.Add(tilerow);
                     totalPointCount += nodeBounds[i].totalPoints;
                 }
@@ -536,13 +628,23 @@ namespace PointCloudConverter.Writers
                 if (useLossyFiltering == true) versionID = 3;
                 if (importSettings.importIntensity == true && importSettings.importRGB && importSettings.packColors) versionID = 4; // new int packed format
 
+                // add comment to first row (version, gridsize, pointcount, boundsMinX, boundsMinY, boundsMinZ, boundsMaxX, boundsMaxY, boundsMaxZ)
+                string identifer = "# PCROOT - https://github.com/unitycoder/PointCloudConverter";
+                tilerootdata.Insert(0, identifer);
+
+                string commentRow = "# version" + sep + "gridsize" + sep + "pointcount" + sep + "boundsMinX" + sep + "boundsMinY" + sep + "boundsMinZ" + sep + "boundsMaxX" + sep + "boundsMaxY" + sep + "boundsMaxZ" + sep + "autoOffsetX" + sep + "autoOffsetY" + sep + "autoOffsetZ" + sep + "packMagicValue";
+                if (importSettings.importRGB == true && importSettings.importIntensity == true) commentRow += sep + "intensity";
+                tilerootdata.Insert(1, commentRow);
+
                 // add global header settings to first row
                 //               version,          gridsize,                   pointcount,             boundsMinX,       boundsMinY,       boundsMinZ,       boundsMaxX,       boundsMaxY,       boundsMaxZ
-                var globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep + cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep + cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
+                string globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep + cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep + cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
                 //                  autoOffsetX,             globalOffsetY,           globalOffsetZ,           packMagic 
                 globalData += sep + importSettings.offsetX + sep + importSettings.offsetY + sep + importSettings.offsetZ + sep + importSettings.packMagicValue;
+                tilerootdata.Insert(2, globalData);
 
-                tilerootdata.Insert(0, globalData);
+                // append comment for rows also
+                tilerootdata.Insert(3, "# filename" + sep + "pointcount" + sep + "minX" + sep + "minY" + sep + "minZ" + sep + "maxX" + sep + "maxY" + sep + "maxZ" + sep + "cellX" + sep + "cellY" + sep + "cellZ" + sep + "averageTimeStamp" + sep + "overlapRatio");
 
                 File.WriteAllLines(outputFileRoot, tilerootdata.ToArray());
 

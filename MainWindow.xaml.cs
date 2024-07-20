@@ -26,7 +26,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "09.06.2024";
+        static readonly string version = "21.07.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -169,7 +169,15 @@ namespace PointCloudConverter
 
             // get all file bounds, if in batch mode and RGB+INT+PACK
             // TODO: check what happens if its too high? over 128/256?
-            if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false)
+            //if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false)
+
+            //Log.WriteLine(importSettings.useAutoOffset + " && " + importSettings.importMetadataOnly + " || (" + importSettings.importIntensity + " && " + importSettings.importRGB + " && " + importSettings.packColors + " && " + importSettings.importMetadataOnly + ")");
+            //bool istrue1 = (importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false);
+            //bool istrue2 = (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false);
+            //Log.WriteLine(istrue1 ? "1" : "0");
+            //Log.WriteLine(istrue2 ? "1" : "0");
+
+            if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
             {
                 for (int i = 0, len = importSettings.maxFiles; i < len; i++)
                 {
@@ -195,7 +203,7 @@ namespace PointCloudConverter
                     }
                 }
 
-                // print lowest bounds from boundsListTemp
+                // find lowest bounds from boundsListTemp
                 float lowestX = float.MaxValue;
                 float lowestY = float.MaxValue;
                 float lowestZ = float.MaxValue;
@@ -211,7 +219,7 @@ namespace PointCloudConverter
                 importSettings.offsetX = lowestX;
                 importSettings.offsetY = lowestY;
                 importSettings.offsetZ = lowestZ;
-            }
+            } // if useAutoOffset
 
             lasHeaders.Clear();
             progressFile = 0;
@@ -236,6 +244,8 @@ namespace PointCloudConverter
                     }
                 }
             }
+            // hack to fix progress bar not updating on last file
+            progressFile++;
 
             stopwatch.Stop();
             Log.WriteLine("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
@@ -251,7 +261,7 @@ namespace PointCloudConverter
                 mainWindowStatic.progressBarFiles.Foreground = Brushes.Green;
                 mainWindowStatic.progressBarPoints.Foreground = Brushes.Green;
             }));
-        }
+        } // ProcessAllFiles
 
         void HideProcessingPanel()
         {
@@ -277,7 +287,9 @@ namespace PointCloudConverter
         {
             if (progressTotalPoints > 0)
             {
-                mainWindowStatic.progressBarFiles.Value = progressFile / (float)(progressTotalFiles + 1);
+                //mainWindowStatic.progressBarFiles.Value = ((float)((progressFile+1) / (float)(progressTotalFiles+1)));
+                mainWindowStatic.progressBarFiles.Value = progressFile;
+                mainWindowStatic.progressBarFiles.Maximum = progressTotalFiles + 1;
                 mainWindowStatic.progressBarPoints.Value = progressPoint / (float)progressTotalPoints;
                 mainWindowStatic.lblStatus.Content = lastStatusMessage;
             }
@@ -356,7 +368,7 @@ namespace PointCloudConverter
                 // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds?
 
                 // dont use these bounds, in this case
-                if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true)
+                if (importSettings.useAutoOffset == true || (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true))
                 {
                     // we use global bounds or Y offset to fix negative Y
                 }
@@ -438,6 +450,7 @@ namespace PointCloudConverter
                     // get point color
                     Color rgb = (default);
                     Color intensity = (default);
+                    double time = 0;
 
                     if (importSettings.importRGB == true)
                     {
@@ -459,8 +472,15 @@ namespace PointCloudConverter
                         }
                     }
 
+                    if (importSettings.averageTimestamp == true)
+                    {
+                        // get time
+                        time = importSettings.reader.GetTime();
+                        //Console.WriteLine("Time: " + time);
+                    }
+
                     // collect this point XYZ and RGB into node, optionally intensity also
-                    importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r);
+                    importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     progressPoint = i;
                 }
 
@@ -477,9 +497,12 @@ namespace PointCloudConverter
                 var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
                 //Log.WriteLine("MetaData: " + jsonMeta);
                 // write metadata to file
-                var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
-                Log.WriteLine("Writing metadata to file: " + jsonFile);
-                File.WriteAllText(jsonFile, jsonMeta);
+                if (importSettings.importMetadata == true)
+                {
+                    var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
+                    Log.WriteLine("Writing metadata to file: " + jsonFile);
+                    File.WriteAllText(jsonFile, jsonMeta);
+                }
 
                 lastStatusMessage = "Done!";
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -554,6 +577,9 @@ namespace PointCloudConverter
             if ((bool)chkUseJSONLog.IsChecked) args.Add("-json=true");
             if ((bool)chkReadMetaData.IsChecked) args.Add("-metadata=true");
             if ((bool)chkMetaDataOnly.IsChecked) args.Add("-metadataonly=true");
+            if ((bool)chkGetAvgTileTimestamp.IsChecked) args.Add("-averagetimestamp=true");
+            if ((bool)chkCalculateOverlappingTiles.IsChecked) args.Add("-checkoverlap=true");
+
 
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
 
@@ -748,6 +774,8 @@ namespace PointCloudConverter
             chkUseJSONLog.IsChecked = Properties.Settings.Default.useJSON;
             chkReadMetaData.IsChecked = Properties.Settings.Default.importMetadata;
             chkMetaDataOnly.IsChecked = Properties.Settings.Default.metadataOnly;
+            chkGetAvgTileTimestamp.IsChecked = Properties.Settings.Default.getAvgTileTimestamp;
+            chkCalculateOverlappingTiles.IsChecked = Properties.Settings.Default.calculateOverlappingTiles;
             isInitialiazing = false;
         }
 
@@ -794,6 +822,8 @@ namespace PointCloudConverter
             Properties.Settings.Default.useRandomSeed = (bool)chkSetRandomSeed.IsChecked;
             Properties.Settings.Default.manualOffsetZ = offsetZ;
             Properties.Settings.Default.metadataOnly = (bool)chkMetaDataOnly.IsChecked;
+            Properties.Settings.Default.getAvgTileTimestamp = (bool)chkGetAvgTileTimestamp.IsChecked;
+            Properties.Settings.Default.calculateOverlappingTiles = (bool)chkCalculateOverlappingTiles.IsChecked;
             Properties.Settings.Default.Save();
         }
 

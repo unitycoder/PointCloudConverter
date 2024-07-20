@@ -93,7 +93,6 @@
 
                 <StackPanel Grid.Column="1" Margin="0,4,0,0">
                     <CheckBox x:Name="chkUseJSONLog" Content="Use JSON log *Used in commandline only" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Log messages are written in JSON format. Experimental, V3 format is better supported."/>
-                    <!--<CheckBox x:Name="chkGetAvgTileTimestamp" Content="Get Average timestamp per Tile" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Expirimental: Calculate avg timestamp from tile points and save to pcroot"/>-->
                 </StackPanel>
 
             </Grid>
@@ -114,7 +113,7 @@
         </GroupBox>
 
         <!--v3 options-->
-        <GroupBox x:Name="groupBoxV3" HorizontalAlignment="Right" Header="V3 (.pcroot) Options" Margin="0,235,10,0" VerticalAlignment="Top" Width="276" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">
+        <GroupBox x:Name="groupBoxV3" HorizontalAlignment="Right" Header="V3 (.pcroot) Options" Margin="0,245,10,0" VerticalAlignment="Top" Width="276" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">
             <StackPanel Margin="0,4,0,0">
                 <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                     <Label x:Name="label_Copy11" Content="Grid size:" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
@@ -128,6 +127,8 @@
                 <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
                 <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
                 <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal"/>
+                <CheckBox x:Name="chkGetAvgTileTimestamp" Content="Get Average timestamp per Tile" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Experimental: Calculate average raw gps_time from tile points and save into pcroot"/>
+                <CheckBox x:Name="chkCalculateOverlappingTiles" Content="Calculate overlapping tiles" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Experimental: Save additional overlapped tile data into pcroot (if tile overlaps another tile)"/>
             </StackPanel>
         </GroupBox>
 

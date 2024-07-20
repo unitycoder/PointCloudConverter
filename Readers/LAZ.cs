@@ -263,6 +263,8 @@ namespace PointCloudConverter.Readers
 
         int IReader.GetPointCount()
         {
+            // get gps week offset from header
+
             long count = 0;
             lazReader.get_point_count(out count);
             // check alternative point counts
@@ -348,9 +350,16 @@ namespace PointCloudConverter.Readers
             return f;
         }
 
+        double IReader.GetTime()
+        {
+            // NOTE this is probably the "raw" time value, not adjusted/corrected based on GPS week data
+            return lazReader.point.gps_time;
+        }
+
         void IReader.Close()
         {
             lazReader.close_reader();
         }
+
     } // class
 } // namespace

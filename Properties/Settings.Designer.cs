@@ -526,5 +526,29 @@ namespace PointCloudConverter.Properties {
                 this["metadataOnly"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool getAvgTileTimestamp {
+            get {
+                return ((bool)(this["getAvgTileTimestamp"]));
+            }
+            set {
+                this["getAvgTileTimestamp"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool calculateOverlappingTiles {
+            get {
+                return ((bool)(this["calculateOverlappingTiles"]));
+            }
+            set {
+                this["calculateOverlappingTiles"] = value;
+            }
+        }
     }
 }

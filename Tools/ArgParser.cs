@@ -480,6 +480,18 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-checkoverlap":
+                                Log.WriteLine("checkoverlap = " + param);
+                                if (param != "true" && param != "false")
+                                {
+                                    importSettings.errors.Add("Invalid checkoverlap parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.checkoverlap = param == "true";
+                                }
+                                break;
+
                             case "-json":
                                 Log.WriteLine("json = " + param);
 

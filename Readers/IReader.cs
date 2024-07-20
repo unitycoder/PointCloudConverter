@@ -14,6 +14,9 @@ namespace PointCloudConverter.Readers
         Float3 GetXYZ();
         // retrieve single point R,G,B colors (byte 0-255)
         Color GetRGB();
+        // retrieve single point scan time
+        double GetTime();
+
         // close filestream
         void Close();
         Color GetIntensity();

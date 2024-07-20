@@ -208,6 +208,84 @@ namespace PointCloudConverter
             }
         }
 
+        public static void Shuffle<T>(Random rng, ref List<T> array1, ref List<T> array2, ref List<T> array3, ref List<T> arrayR, ref List<T> arrayG, ref List<T> arrayB, ref List<T> arrayIntensity, ref List<double> arrayTime)
+        {
+            int index = array1.Count;
+            while (index > 1)
+            {
+                int rnd = rng.Next(index--);
+
+                T temp = array1[index];
+                array1[index] = array1[rnd];
+                array1[rnd] = temp;
+
+                T temp2 = array2[index];
+                array2[index] = array2[rnd];
+                array2[rnd] = temp2;
+
+                T temp3 = array3[index];
+                array3[index] = array3[rnd];
+                array3[rnd] = temp3;
+
+                T tempR = arrayR[index];
+                arrayR[index] = arrayR[rnd];
+                arrayR[rnd] = tempR;
+
+                T tempG = arrayG[index];
+                arrayG[index] = arrayG[rnd];
+                arrayG[rnd] = tempG;
+
+                T tempB = arrayB[index];
+                arrayB[index] = arrayB[rnd];
+                arrayB[rnd] = tempB;
+
+                T tempI = arrayIntensity[index];
+                arrayIntensity[index] = arrayIntensity[rnd];
+                arrayIntensity[rnd] = tempI;
+
+                double tempT = arrayTime[index];
+                arrayTime[index] = arrayTime[rnd];
+                arrayTime[rnd] = tempT;
+            }
+        }
+
+        public static void Shuffle<T>(Random rng, ref List<T> array1, ref List<T> array2, ref List<T> array3, ref List<T> arrayR, ref List<T> arrayG, ref List<T> arrayB, ref List<double> arrayTime)
+        {
+            int index = array1.Count;
+            while (index > 1)
+            {
+                int rnd = rng.Next(index--);
+
+                T temp = array1[index];
+                array1[index] = array1[rnd];
+                array1[rnd] = temp;
+
+                T temp2 = array2[index];
+                array2[index] = array2[rnd];
+                array2[rnd] = temp2;
+
+                T temp3 = array3[index];
+                array3[index] = array3[rnd];
+                array3[rnd] = temp3;
+
+                T tempR = arrayR[index];
+                arrayR[index] = arrayR[rnd];
+                arrayR[rnd] = tempR;
+
+                T tempG = arrayG[index];
+                arrayG[index] = arrayG[rnd];
+                arrayG[rnd] = tempG;
+
+                T tempB = arrayB[index];
+                arrayB[index] = arrayB[rnd];
+                arrayB[rnd] = tempB;
+
+                double tempT = arrayTime[index];
+                arrayTime[index] = arrayTime[rnd];
+                arrayTime[rnd] = tempT;
+            }
+        }
+
         // https://stackoverflow.com/a/110570/5452781
         public static void ShuffleXYZ<T>(Random rng, ref T[] array1)
         {
