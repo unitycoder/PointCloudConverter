@@ -13,6 +13,7 @@ using LASzip.Net;
 using System.IO;
 using PointCloudConverter.Structs.VariableLengthRecords;
 using Free.Ports.LibGeoTiff;
+using System.Text;
 
 namespace PointCloudConverter.Readers
 {
@@ -88,6 +89,14 @@ namespace PointCloudConverter.Readers
                     vlr.RecordLengthAfterHeader = lazReader.header.vlrs[i].record_length_after_header;
                     vlr.Description = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].description);
                     vlr.Description = vlr.Description.Replace("\0", string.Empty);
+
+                    //Get WKT (Well Known Text String)
+                    if (vlr.RecordID == 2112)
+                    {
+                        string wkt = Encoding.ASCII.GetString(lazReader.header.vlrs[i].data);
+                        Console.WriteLine("WKT string = " + wkt);
+                        h.WKT = wkt;
+                    }
 
                     // get GeoKeyDirectoryTag
                     if (vlr.RecordID == 34735)
