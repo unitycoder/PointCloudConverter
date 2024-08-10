@@ -17,20 +17,19 @@ namespace PointCloudConverter.Writers
         BufferedStream bsPoints = null;
         BinaryWriter writerPoints = null;
 
-        static List<PointCloudTile> nodeBounds = new List<PointCloudTile>();
+        static List<PointCloudTile> nodeBounds = new List<PointCloudTile>(); // for all tiles
 
         // our nodes (=tiles, =grid cells), string is tileID and float are X,Y,Z,R,G,B values
-        Dictionary<string, List<float>> nodeX = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeY = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeZ = new Dictionary<string, List<float>>();
+        Dictionary<int, List<float>> nodeX = new Dictionary<int, List<float>>();
+        Dictionary<int, List<float>> nodeY = new Dictionary<int, List<float>>();
+        Dictionary<int, List<float>> nodeZ = new Dictionary<int, List<float>>();
 
-        Dictionary<string, List<float>> nodeR = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
+        Dictionary<int, List<float>> nodeR = new Dictionary<int, List<float>>();
+        Dictionary<int, List<float>> nodeG = new Dictionary<int, List<float>>();
+        Dictionary<int, List<float>> nodeB = new Dictionary<int, List<float>>();
 
-        Dictionary<string, List<float>> nodeIntensity = new Dictionary<string, List<float>>();
-        Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
-
+        Dictionary<int, List<float>> nodeIntensity = new Dictionary<int, List<float>>();
+        Dictionary<int, List<double>> nodeTime = new Dictionary<int, List<double>>();
 
         static float cloudMinX = float.PositiveInfinity;
         static float cloudMinY = float.PositiveInfinity;
@@ -90,24 +89,69 @@ namespace PointCloudConverter.Writers
 
         }
 
+        int Hash(int x, int y, int z)
+        {
+            unchecked
+            {
+                // Apply offset to ensure all values are positive
+                x += OFFSET;
+                y += OFFSET;
+                z += OFFSET;
+
+                // Combine the values into a single hash using a method that can handle larger ranges
+                long combined = ((long)x << 40) | ((long)y << 20) | (long)z;
+                return combined.GetHashCode();
+            }
+        }
+
+        const int OFFSET = 12345678;
+
+        (int x, int y, int z) Unhash(int hash)
+        {
+            // Restore the original x, y, z values
+            long combined = hash;
+
+            int z = (int)(combined & ((1L << 20) - 1));
+            combined >>= 20;
+            int y = (int)(combined & ((1L << 20) - 1));
+            combined >>= 20;
+            int x = (int)combined;
+
+            // Remove the offset to get original values
+            x -= OFFSET;
+            y -= OFFSET;
+            z -= OFFSET;
+
+            return (x, y, z);
+        }
+
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i, bool hasTime, double time)
         {
             // get global all clouds bounds
-            if (x < cloudMinX) cloudMinX = x;
-            if (x > cloudMaxX) cloudMaxX = x;
-            if (y < cloudMinY) cloudMinY = y;
-            if (y > cloudMaxY) cloudMaxY = y;
-            if (z < cloudMinZ) cloudMinZ = z;
-            if (z > cloudMaxZ) cloudMaxZ = z;
+            //if (x < cloudMinX) cloudMinX = x;
+            //if (x > cloudMaxX) cloudMaxX = x;
+            //if (y < cloudMinY) cloudMinY = y;
+            //if (y > cloudMaxY) cloudMaxY = y;
+            //if (z < cloudMinZ) cloudMinZ = z;
+            //if (z > cloudMaxZ) cloudMaxZ = z;
+            cloudMinX = Math.Min(cloudMinX, x);
+            cloudMaxX = Math.Max(cloudMaxX, x);
+            cloudMinY = Math.Min(cloudMinY, y);
+            cloudMaxY = Math.Max(cloudMaxY, y);
+            cloudMinZ = Math.Min(cloudMinZ, z);
+            cloudMaxZ = Math.Max(cloudMaxZ, z);
+
+            float gridSize = importSettings.gridSize;
 
             // add to correct cell, MOVE to writer
             // TODO handle bytepacked gridsize here
-            int cellX = (int)(x / importSettings.gridSize);
-            int cellY = (int)(y / importSettings.gridSize);
-            int cellZ = (int)(z / importSettings.gridSize);
+            int cellX = (int)(x / gridSize);
+            int cellY = (int)(y / gridSize);
+            int cellZ = (int)(z / gridSize);
 
-            // collect point to its cell node
-            string key = cellX + "_" + cellY + "_" + cellZ;
+            // collect point to its cell node, TODO optimize this is ~23% of total time?
+            //string key = cellX + "_" + cellY + "_" + cellZ;
+            int key = Hash(cellX, cellY, cellZ);
 
             if (nodeX.ContainsKey(key))
             {
@@ -125,29 +169,21 @@ namespace PointCloudConverter.Writers
             else // create new list for this key
             {
                 // NOTE if memory error here, use smaller gridsize (single array maxsize is ~2gb)
-                nodeX[key] = new List<float>();
-                nodeX[key].Add(x);
-                nodeY[key] = new List<float>();
-                nodeY[key].Add(y);
-                nodeZ[key] = new List<float>();
-                nodeZ[key].Add(z);
-                nodeR[key] = new List<float>();
-                nodeR[key].Add(r);
-                nodeG[key] = new List<float>();
-                nodeG[key].Add(g);
-                nodeB[key] = new List<float>();
-                nodeB[key].Add(b);
+                nodeX[key] = new List<float> { x };
+                nodeY[key] = new List<float> { y };
+                nodeZ[key] = new List<float> { z };
+                nodeR[key] = new List<float> { r };
+                nodeG[key] = new List<float> { g };
+                nodeB[key] = new List<float> { b };
 
                 if (hasIntensity == true)
                 {
-                    nodeIntensity[key] = new List<float>();
-                    nodeIntensity[key].Add(i);
+                    nodeIntensity[key] = new List<float> { i };
                 }
 
                 if (hasTime == true)
                 {
-                    nodeTime[key] = new List<double>();
-                    nodeTime[key].Add(time);
+                    nodeTime[key] = new List<double> { time };
                 }
             }
         }
@@ -196,7 +232,7 @@ namespace PointCloudConverter.Writers
             List<double> nodeTempTime = null;
 
             // process all tiles
-            foreach (KeyValuePair<string, List<float>> nodeData in nodeX)
+            foreach (KeyValuePair<int, List<float>> nodeData in nodeX)
             {
                 if (nodeData.Value.Count < importSettings.minimumPointCount)
                 {
@@ -206,7 +242,8 @@ namespace PointCloudConverter.Writers
 
                 nodeTempX = nodeData.Value;
 
-                string key = nodeData.Key;
+                //string key = nodeData.Key;
+                int key = nodeData.Key;
 
                 nodeTempY = nodeY[key];
                 nodeTempZ = nodeZ[key];
@@ -323,12 +360,16 @@ namespace PointCloudConverter.Writers
                     if (importSettings.packColors == true)
                     {
                         // get local coords within tile
-                        var keys = nodeData.Key.Split('_');
+                        //var keys = nodeData.Key.Split('_');
+                        (int restoredX, int restoredY, int restoredZ) = Unhash(nodeData.Key);
+                        cellX = restoredX;
+                        cellY = restoredY;
+                        cellZ = restoredZ;
 
                         // TODO no need to parse, we should know these values?
-                        cellX = int.Parse(keys[0]);
-                        cellY = int.Parse(keys[1]);
-                        cellZ = int.Parse(keys[2]);
+                        //cellX = int.Parse(keys[0]);
+                        //cellY = int.Parse(keys[1]);
+                        //cellZ = int.Parse(keys[2]);
                         // offset to local coords (within tile)
                         px -= (cellX * importSettings.gridSize);
                         py -= (cellY * importSettings.gridSize);
@@ -370,13 +411,17 @@ namespace PointCloudConverter.Writers
                     else if (useLossyFiltering == true) // test lossy, not regular packed
                     {
                         // get local coords within tile
-                        var keys = nodeData.Key.Split('_');
+                        //var keys = nodeData.Key.Split('_');
                         // TODO no need to parse, we should know these values? these are world cell grid coors
                         // TODO take reserved grid cells earlier, when reading points! not here on 2nd pass..
-                        cellX = int.Parse(keys[0]);
-                        cellY = int.Parse(keys[1]);
-                        cellZ = int.Parse(keys[2]);
+                        //cellX = int.Parse(keys[0]);
+                        //cellY = int.Parse(keys[1]);
+                        //cellZ = int.Parse(keys[2]);
                         // offset point inside local tile
+                        (int restoredX, int restoredY, int restoredZ) = Unhash(nodeData.Key);
+                        cellX = restoredX;
+                        cellY = restoredY;
+                        cellZ = restoredZ;
                         px -= (cellX * fixedGridSize);
                         py -= (cellY * fixedGridSize);
                         pz -= (cellZ * fixedGridSize);

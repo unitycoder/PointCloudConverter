@@ -427,9 +427,15 @@ namespace PointCloudConverter
                     point.z -= importSettings.offsetZ;
 
                     // scale if enabled
-                    point.x = importSettings.useScale ? point.x * importSettings.scale : point.x;
-                    point.y = importSettings.useScale ? point.y * importSettings.scale : point.y;
-                    point.z = importSettings.useScale ? point.z * importSettings.scale : point.z;
+                    //point.x = importSettings.useScale ? point.x * importSettings.scale : point.x;
+                    //point.y = importSettings.useScale ? point.y * importSettings.scale : point.y;
+                    //point.z = importSettings.useScale ? point.z * importSettings.scale : point.z;
+                    if (importSettings.useScale == true)
+                    {
+                        point.x *= importSettings.scale;
+                        point.y *= importSettings.scale;
+                        point.z *= importSettings.scale;
+                    }
 
                     // flip if enabled
                     if (importSettings.swapYZ == true)

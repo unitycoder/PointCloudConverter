@@ -249,42 +249,48 @@ namespace PointCloudConverter
             }
         }
 
+
         public static void Shuffle<T>(Random rng, ref List<T> array1, ref List<T> array2, ref List<T> array3, ref List<T> arrayR, ref List<T> arrayG, ref List<T> arrayB, ref List<double> arrayTime)
         {
             int index = array1.Count;
+            T temp, temp2, temp3, tempR, tempG, tempB;
+            double tempT;
+
             while (index > 1)
             {
                 int rnd = rng.Next(index--);
 
-                T temp = array1[index];
+                temp = array1[index];
                 array1[index] = array1[rnd];
                 array1[rnd] = temp;
 
-                T temp2 = array2[index];
+                temp2 = array2[index];
                 array2[index] = array2[rnd];
                 array2[rnd] = temp2;
 
-                T temp3 = array3[index];
+                temp3 = array3[index];
                 array3[index] = array3[rnd];
                 array3[rnd] = temp3;
 
-                T tempR = arrayR[index];
+                tempR = arrayR[index];
                 arrayR[index] = arrayR[rnd];
                 arrayR[rnd] = tempR;
 
-                T tempG = arrayG[index];
+                tempG = arrayG[index];
                 arrayG[index] = arrayG[rnd];
                 arrayG[rnd] = tempG;
 
-                T tempB = arrayB[index];
+                tempB = arrayB[index];
                 arrayB[index] = arrayB[rnd];
                 arrayB[rnd] = tempB;
 
-                double tempT = arrayTime[index];
+                tempT = arrayTime[index];
                 arrayTime[index] = arrayTime[rnd];
                 arrayTime[rnd] = tempT;
             }
         }
+
+
 
         // https://stackoverflow.com/a/110570/5452781
         public static void ShuffleXYZ<T>(Random rng, ref T[] array1)
