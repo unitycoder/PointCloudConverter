@@ -20,16 +20,16 @@ namespace PointCloudConverter.Writers
         static List<PointCloudTile> nodeBounds = new List<PointCloudTile>(); // for all tiles
 
         // our nodes (=tiles, =grid cells), string is tileID and float are X,Y,Z,R,G,B values
-        Dictionary<int, List<float>> nodeX = new Dictionary<int, List<float>>();
-        Dictionary<int, List<float>> nodeY = new Dictionary<int, List<float>>();
-        Dictionary<int, List<float>> nodeZ = new Dictionary<int, List<float>>();
+        Dictionary<string, List<float>> nodeX = new Dictionary<string, List<float>>();
+        Dictionary<string, List<float>> nodeY = new Dictionary<string, List<float>>();
+        Dictionary<string, List<float>> nodeZ = new Dictionary<string, List<float>>();
 
-        Dictionary<int, List<float>> nodeR = new Dictionary<int, List<float>>();
-        Dictionary<int, List<float>> nodeG = new Dictionary<int, List<float>>();
-        Dictionary<int, List<float>> nodeB = new Dictionary<int, List<float>>();
+        Dictionary<string, List<float>> nodeR = new Dictionary<string, List<float>>();
+        Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
+        Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
 
-        Dictionary<int, List<float>> nodeIntensity = new Dictionary<int, List<float>>();
-        Dictionary<int, List<double>> nodeTime = new Dictionary<int, List<double>>();
+        Dictionary<string, List<float>> nodeIntensity = new Dictionary<string, List<float>>();
+        Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
 
         static float cloudMinX = float.PositiveInfinity;
         static float cloudMinY = float.PositiveInfinity;
@@ -150,8 +150,8 @@ namespace PointCloudConverter.Writers
             int cellZ = (int)(z / gridSize);
 
             // collect point to its cell node, TODO optimize this is ~23% of total time?
-            //string key = cellX + "_" + cellY + "_" + cellZ;
-            int key = Hash(cellX, cellY, cellZ);
+            string key = cellX + "_" + cellY + "_" + cellZ;
+            //int key = Hash(cellX, cellY, cellZ);
 
             if (nodeX.ContainsKey(key))
             {
@@ -232,7 +232,8 @@ namespace PointCloudConverter.Writers
             List<double> nodeTempTime = null;
 
             // process all tiles
-            foreach (KeyValuePair<int, List<float>> nodeData in nodeX)
+            //foreach (KeyValuePair<int, List<float>> nodeData in nodeX)
+            foreach (KeyValuePair<string, List<float>> nodeData in nodeX)
             {
                 if (nodeData.Value.Count < importSettings.minimumPointCount)
                 {
@@ -242,8 +243,8 @@ namespace PointCloudConverter.Writers
 
                 nodeTempX = nodeData.Value;
 
-                //string key = nodeData.Key;
-                int key = nodeData.Key;
+                string key = nodeData.Key;
+                //int key = nodeData.Key;
 
                 nodeTempY = nodeY[key];
                 nodeTempZ = nodeZ[key];
@@ -360,16 +361,16 @@ namespace PointCloudConverter.Writers
                     if (importSettings.packColors == true)
                     {
                         // get local coords within tile
-                        //var keys = nodeData.Key.Split('_');
-                        (int restoredX, int restoredY, int restoredZ) = Unhash(nodeData.Key);
-                        cellX = restoredX;
-                        cellY = restoredY;
-                        cellZ = restoredZ;
+                        var keys = nodeData.Key.Split('_');
+                        //(int restoredX, int restoredY, int restoredZ) = Unhash(nodeData.Key);
+                        //cellX = restoredX;
+                        //cellY = restoredY;
+                        //cellZ = restoredZ;
 
                         // TODO no need to parse, we should know these values?
-                        //cellX = int.Parse(keys[0]);
-                        //cellY = int.Parse(keys[1]);
-                        //cellZ = int.Parse(keys[2]);
+                        cellX = int.Parse(keys[0]);
+                        cellY = int.Parse(keys[1]);
+                        cellZ = int.Parse(keys[2]);
                         // offset to local coords (within tile)
                         px -= (cellX * importSettings.gridSize);
                         py -= (cellY * importSettings.gridSize);
@@ -411,17 +412,17 @@ namespace PointCloudConverter.Writers
                     else if (useLossyFiltering == true) // test lossy, not regular packed
                     {
                         // get local coords within tile
-                        //var keys = nodeData.Key.Split('_');
+                        var keys = nodeData.Key.Split('_');
                         // TODO no need to parse, we should know these values? these are world cell grid coors
                         // TODO take reserved grid cells earlier, when reading points! not here on 2nd pass..
-                        //cellX = int.Parse(keys[0]);
-                        //cellY = int.Parse(keys[1]);
-                        //cellZ = int.Parse(keys[2]);
+                        cellX = int.Parse(keys[0]);
+                        cellY = int.Parse(keys[1]);
+                        cellZ = int.Parse(keys[2]);
                         // offset point inside local tile
-                        (int restoredX, int restoredY, int restoredZ) = Unhash(nodeData.Key);
-                        cellX = restoredX;
-                        cellY = restoredY;
-                        cellZ = restoredZ;
+                        //(int restoredX, int restoredY, int restoredZ) = Unhash(nodeData.Key);
+                        //cellX = restoredX;
+                        //cellY = restoredY;
+                        //cellZ = restoredZ;
                         px -= (cellX * fixedGridSize);
                         py -= (cellY * fixedGridSize);
                         pz -= (cellZ * fixedGridSize);

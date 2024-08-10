@@ -14,13 +14,14 @@ using System.IO;
 using PointCloudConverter.Structs.VariableLengthRecords;
 using Free.Ports.LibGeoTiff;
 using System.Text;
+using Color = PointCloudConverter.Structs.Color;
 
 namespace PointCloudConverter.Readers
 {
     public class LAZ : IReader
     {
         //laszip_dll lazReader = new laszip_dll();
-        laszip lazReader = new laszip();
+        LASzip.Net.laszip lazReader = new LASzip.Net.laszip();
 
         bool compressedLAZ = false;
         //bool importRGB = true;

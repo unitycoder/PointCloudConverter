@@ -25,6 +25,7 @@ using DragEventArgs = System.Windows.DragEventArgs;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using Newtonsoft.Json;
+using Brushes = System.Windows.Media.Brushes;
 
 namespace PointCloudConverter
 {
@@ -149,10 +150,18 @@ namespace PointCloudConverter
 
 
         // main processing loop
-        private static void ProcessAllFiles(System.Object importSettingsObject)
-        {
-            var importSettings = (ImportSettings)importSettingsObject;
 
+        private static void ProcessAllFiles(object workerParamsObject)
+        {
+            var workerParams = (WorkerParams)workerParamsObject;
+            var importSettings = workerParams.ImportSettings;
+            var cancellationToken = workerParams.CancellationToken;
+
+            // Use cancellationToken to check for cancellation
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return; // Exit the method if cancellation is requested
+            }
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -185,6 +194,11 @@ namespace PointCloudConverter
             {
                 for (int i = 0, len = importSettings.maxFiles; i < len; i++)
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return; // Exit the loop if cancellation is requested
+                    }
+
                     progressFile = i;
                     Log.WriteLine("\nReading bounds from file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
                     var res = GetBounds(importSettings, i);
@@ -229,6 +243,11 @@ namespace PointCloudConverter
             progressFile = 0;
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return; // Exit the loop if cancellation is requested
+                }
+
                 progressFile = i;
                 Log.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
                 //Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
@@ -553,6 +572,12 @@ namespace PointCloudConverter
             StartProcess();
         }
 
+        public class WorkerParams
+        {
+            public ImportSettings ImportSettings { get; set; }
+            public CancellationToken CancellationToken { get; set; }
+        }
+
         void StartProcess(bool doProcess = true)
         {
             // get args from GUI settings, TODO could directly create new import settings..
@@ -613,10 +638,23 @@ namespace PointCloudConverter
 
                 if (doProcess == true)
                 {
+                    //ParameterizedThreadStart start = new ParameterizedThreadStart(ProcessAllFiles);
+                    //workerThread = new Thread(start);
+                    //workerThread.IsBackground = true;
+                    //workerThread.Start(importSettings);
+
+                    var workerParams = new WorkerParams
+                    {
+                        ImportSettings = importSettings,
+                        CancellationToken = _cancellationTokenSource.Token
+                    };
+
                     ParameterizedThreadStart start = new ParameterizedThreadStart(ProcessAllFiles);
-                    workerThread = new Thread(start);
-                    workerThread.IsBackground = true;
-                    workerThread.Start(importSettings);
+                    workerThread = new Thread(start)
+                    {
+                        IsBackground = true
+                    };
+                    workerThread.Start(workerParams);
                 }
             }
             else
@@ -627,15 +665,20 @@ namespace PointCloudConverter
             }
         }
 
-
+        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             SaveSettings();
 
-            abort = true;
+            // Signal the cancellation to the worker thread
+            _cancellationTokenSource.Cancel();
+
             if (workerThread != null)
             {
-                workerThread.Abort();
+                // Wait for the worker thread to finish
+                workerThread.Join();
+
+                // Optionally exit the application
                 Environment.Exit((int)ExitCode.Cancelled);
             }
         }
@@ -856,9 +899,11 @@ namespace PointCloudConverter
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
             abort = true;
+            _cancellationTokenSource.Cancel();
+
             if (workerThread != null)
             {
-                workerThread.Abort();
+                workerThread.Join();
                 Environment.Exit((int)ExitCode.Cancelled);
             }
         }

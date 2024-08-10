@@ -1,4 +1,5 @@
 ﻿using PointCloudConverter.Structs;
+using Color = PointCloudConverter.Structs.Color;
 
 namespace PointCloudConverter.Readers
 {
