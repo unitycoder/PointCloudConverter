@@ -297,6 +297,11 @@ namespace PointCloudConverter
             Console.WriteLine("-randomize" + argSeparator + "true\t\tRandomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)");
             Console.WriteLine("-seed" + argSeparator + "42\t\tSet random seed\tDefault is random value");
             Console.WriteLine("-json" + argSeparator + "false\t\tOutput console log in JSON format\tDefault is false");
+            Console.WriteLine("-customintensityrange" + argSeparator + "false\t\tCustom intensity range (0-65535)\tDefault is false");
+            Console.WriteLine("-metadata" + argSeparator + "false\t\tRead metadata from header, outputs into json file\tDefault is false");
+            Console.WriteLine("-metadataonly" + argSeparator + "false\t\tRead metadata only (dont process points)\tDefault is false");
+            Console.WriteLine("-averagetimestamp" + argSeparator + "false\t\tGet Average timestamp per Tile\tDefault is false");
+            Console.WriteLine("-checkoverlap" + argSeparator + "false\t\tCalculate overlapping tiles\tDefault is false");
             Console.WriteLine("");
             Console.WriteLine("? /? -? help -help /help");
             Console.ForegroundColor = ConsoleColor.White;
