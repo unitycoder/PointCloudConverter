@@ -292,14 +292,13 @@ namespace PointCloudConverter.Readers
             // TODO get timestamp
             //var pointTime = lazReader.point.gps_time;
 
-            // try to detect if colors are outside 0-255 range? TODO just check value?
-            if (p.rgb[0].ToString("X").Length > 2)
+            if (p.rgb[0] > 255 || p.rgb[1] > 255 || p.rgb[2] > 255)
             {
                 c.r = Tools.LUT255[(byte)(p.rgb[0] / 256f)];
                 c.g = Tools.LUT255[(byte)(p.rgb[1] / 256f)];
                 c.b = Tools.LUT255[(byte)(p.rgb[2] / 256f)];
             }
-            else // its 0-255
+            else // Values are within the 0-255 range
             {
                 c.r = Tools.LUT255[(byte)(p.rgb[0])];
                 c.g = Tools.LUT255[(byte)(p.rgb[1])];
@@ -317,7 +316,7 @@ namespace PointCloudConverter.Readers
             var p = lazReader.point;
 
             float i = 0;
-            if (customIntensityRange) // NOTE now only supports 65535 as custom range
+            if (customIntensityRange == true) // NOTE now only supports 65535 as custom range
             {
                 i = Tools.LUT255[(byte)(p.intensity / 255f)];
             }
@@ -337,11 +336,12 @@ namespace PointCloudConverter.Readers
             f.hasError = false;
 
             // Read point
-            lazReader.read_point();
+            int err = lazReader.read_point();
 
             // check for received errors
-            var err = lazReader.get_error();
-            if (err == null)
+            //var err = lazReader.get_error();
+            //if (err == null)
+            if (err != 0)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Failed to read until end of file?");

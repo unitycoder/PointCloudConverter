@@ -1,10 +1,12 @@
 ﻿using PointCloudConverter.Structs;
+using SharpNeatLib.Maths;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Documents;
 
@@ -13,17 +15,21 @@ namespace PointCloudConverter
     public static class Tools
     {
         public static Random rnd = new Random(seed);
+        public static FastRandom frnd = new FastRandom(seed);
+
         static int seed = Guid.NewGuid().GetHashCode();
 
         public static void ResetRandom()
         {
             rnd = new Random(seed);
+            frnd = new FastRandom(seed);
             //Log.WriteLine("new random seed: "+seed);
         }
 
         public static void SetRandomSeed(int newSeed)
         {
             seed = newSeed;
+            rnd = new Random(newSeed);
         }
 
         // force comma as decimal separator
@@ -138,184 +144,106 @@ namespace PointCloudConverter
         //    return (ax * bx + ay * by + az * bz);
         //}
 
-        public static void Shuffle<T>(Random rng, ref List<T> array1, ref List<T> array2, ref List<T> array3, ref List<T> arrayR, ref List<T> arrayG, ref List<T> arrayB)
+        public static void Shuffle(ref List<float> array1, ref List<float> array2, ref List<float> array3, ref List<float> arrayR, ref List<float> arrayG, ref List<float> arrayB)
         {
             int index = array1.Count;
             while (index > 1)
             {
-                int rnd = rng.Next(index--);
+                //int rand = rnd.Next(index--);
+                int rand = frnd.Next(0, index--);
 
-                T temp = array1[index];
-                array1[index] = array1[rnd];
-                array1[rnd] = temp;
 
-                T temp2 = array2[index];
-                array2[index] = array2[rnd];
-                array2[rnd] = temp2;
-
-                T temp3 = array3[index];
-                array3[index] = array3[rnd];
-                array3[rnd] = temp3;
-
-                T tempR = arrayR[index];
-                arrayR[index] = arrayR[rnd];
-                arrayR[rnd] = tempR;
-
-                T tempG = arrayG[index];
-                arrayG[index] = arrayG[rnd];
-                arrayG[rnd] = tempG;
-
-                T tempB = arrayB[index];
-                arrayB[index] = arrayB[rnd];
-                arrayB[rnd] = tempB;
+                // Swap using tuple assignment
+                (array1[index], array1[rand]) = (array1[rand], array1[index]);
+                (array2[index], array2[rand]) = (array2[rand], array2[index]);
+                (array3[index], array3[rand]) = (array3[rand], array3[index]);
+                (arrayR[index], arrayR[rand]) = (arrayR[rand], arrayR[index]);
+                (arrayG[index], arrayG[rand]) = (arrayG[rand], arrayG[index]);
+                (arrayB[index], arrayB[rand]) = (arrayB[rand], arrayB[index]);
             }
         }
 
-        public static void Shuffle<T>(Random rng, ref List<T> array1, ref List<T> array2, ref List<T> array3, ref List<T> arrayR, ref List<T> arrayG, ref List<T> arrayB, ref List<T> arrayIntensity)
+        public static void Shuffle(ref List<float> array1, ref List<float> array2, ref List<float> array3, ref List<float> arrayR, ref List<float> arrayG, ref List<float> arrayB, ref List<float> arrayIntensity)
         {
             int index = array1.Count;
             while (index > 1)
             {
-                int rnd = rng.Next(index--);
+                //int rand = rnd.Next(index--);
+                int rand = frnd.Next(0, index--);
 
-                T temp = array1[index];
-                array1[index] = array1[rnd];
-                array1[rnd] = temp;
 
-                T temp2 = array2[index];
-                array2[index] = array2[rnd];
-                array2[rnd] = temp2;
-
-                T temp3 = array3[index];
-                array3[index] = array3[rnd];
-                array3[rnd] = temp3;
-
-                T tempR = arrayR[index];
-                arrayR[index] = arrayR[rnd];
-                arrayR[rnd] = tempR;
-
-                T tempG = arrayG[index];
-                arrayG[index] = arrayG[rnd];
-                arrayG[rnd] = tempG;
-
-                T tempB = arrayB[index];
-                arrayB[index] = arrayB[rnd];
-                arrayB[rnd] = tempB;
-
-                T tempI = arrayIntensity[index];
-                arrayIntensity[index] = arrayIntensity[rnd];
-                arrayIntensity[rnd] = tempI;
+                // Swap using tuple assignment
+                (array1[index], array1[rand]) = (array1[rand], array1[index]);
+                (array2[index], array2[rand]) = (array2[rand], array2[index]);
+                (array3[index], array3[rand]) = (array3[rand], array3[index]);
+                (arrayR[index], arrayR[rand]) = (arrayR[rand], arrayR[index]);
+                (arrayG[index], arrayG[rand]) = (arrayG[rand], arrayG[index]);
+                (arrayB[index], arrayB[rand]) = (arrayB[rand], arrayB[index]);
+                (arrayIntensity[index], arrayIntensity[rand]) = (arrayIntensity[rand], arrayIntensity[index]);
             }
         }
 
-        public static void Shuffle<T>(Random rng, ref List<T> array1, ref List<T> array2, ref List<T> array3, ref List<T> arrayR, ref List<T> arrayG, ref List<T> arrayB, ref List<T> arrayIntensity, ref List<double> arrayTime)
+        public static void Shuffle(ref List<float> array1, ref List<float> array2, ref List<float> array3, ref List<float> arrayR, ref List<float> arrayG, ref List<float> arrayB, ref List<float> arrayIntensity, ref List<double> arrayTime)
         {
             int index = array1.Count;
             while (index > 1)
             {
-                int rnd = rng.Next(index--);
+                //int rand = rnd.Next(index--);
+                int rand = frnd.Next(0, index--);
 
-                T temp = array1[index];
-                array1[index] = array1[rnd];
-                array1[rnd] = temp;
+                // Swap using tuple assignment
+                (array1[index], array1[rand]) = (array1[rand], array1[index]);
+                (array2[index], array2[rand]) = (array2[rand], array2[index]);
+                (array3[index], array3[rand]) = (array3[rand], array3[index]);
+                (arrayR[index], arrayR[rand]) = (arrayR[rand], arrayR[index]);
+                (arrayG[index], arrayG[rand]) = (arrayG[rand], arrayG[index]);
+                (arrayB[index], arrayB[rand]) = (arrayB[rand], arrayB[index]);
+                (arrayIntensity[index], arrayIntensity[rand]) = (arrayIntensity[rand], arrayIntensity[index]);
 
-                T temp2 = array2[index];
-                array2[index] = array2[rnd];
-                array2[rnd] = temp2;
-
-                T temp3 = array3[index];
-                array3[index] = array3[rnd];
-                array3[rnd] = temp3;
-
-                T tempR = arrayR[index];
-                arrayR[index] = arrayR[rnd];
-                arrayR[rnd] = tempR;
-
-                T tempG = arrayG[index];
-                arrayG[index] = arrayG[rnd];
-                arrayG[rnd] = tempG;
-
-                T tempB = arrayB[index];
-                arrayB[index] = arrayB[rnd];
-                arrayB[rnd] = tempB;
-
-                T tempI = arrayIntensity[index];
-                arrayIntensity[index] = arrayIntensity[rnd];
-                arrayIntensity[rnd] = tempI;
-
-                double tempT = arrayTime[index];
-                arrayTime[index] = arrayTime[rnd];
-                arrayTime[rnd] = tempT;
+                // Handle double separately since it's a different type
+                (arrayTime[index], arrayTime[rand]) = (arrayTime[rand], arrayTime[index]);
             }
         }
 
-
-        public static void Shuffle<T>(Random rng, ref List<T> array1, ref List<T> array2, ref List<T> array3, ref List<T> arrayR, ref List<T> arrayG, ref List<T> arrayB, ref List<double> arrayTime)
+        public static void Shuffle(ref List<float> array1, ref List<float> array2, ref List<float> array3, ref List<float> arrayR, ref List<float> arrayG, ref List<float> arrayB, ref List<double> arrayTime)
         {
             int index = array1.Count;
-            T temp, temp2, temp3, tempR, tempG, tempB;
-            double tempT;
 
             while (index > 1)
             {
-                int rnd = rng.Next(index--);
+                //int rand = rnd.Next(index--);
+                int rand = frnd.Next(0, index--);
 
-                temp = array1[index];
-                array1[index] = array1[rnd];
-                array1[rnd] = temp;
-
-                temp2 = array2[index];
-                array2[index] = array2[rnd];
-                array2[rnd] = temp2;
-
-                temp3 = array3[index];
-                array3[index] = array3[rnd];
-                array3[rnd] = temp3;
-
-                tempR = arrayR[index];
-                arrayR[index] = arrayR[rnd];
-                arrayR[rnd] = tempR;
-
-                tempG = arrayG[index];
-                arrayG[index] = arrayG[rnd];
-                arrayG[rnd] = tempG;
-
-                tempB = arrayB[index];
-                arrayB[index] = arrayB[rnd];
-                arrayB[rnd] = tempB;
-
-                tempT = arrayTime[index];
-                arrayTime[index] = arrayTime[rnd];
-                arrayTime[rnd] = tempT;
+                // Swapping using tuples
+                (array1[index], array1[rand]) = (array1[rand], array1[index]);
+                (array2[index], array2[rand]) = (array2[rand], array2[index]);
+                (array3[index], array3[rand]) = (array3[rand], array3[index]);
+                (arrayR[index], arrayR[rand]) = (arrayR[rand], arrayR[index]);
+                (arrayG[index], arrayG[rand]) = (arrayG[rand], arrayG[index]);
+                (arrayB[index], arrayB[rand]) = (arrayB[rand], arrayB[index]);
+                (arrayTime[index], arrayTime[rand]) = (arrayTime[rand], arrayTime[index]);
             }
         }
-
-
 
         // https://stackoverflow.com/a/110570/5452781
-        public static void ShuffleXYZ<T>(Random rng, ref T[] array1)
+        public static void ShuffleXYZ(ref float[] array1)
         {
             int n = array1.Length;
             int maxVal = array1.Length / 3; // xyz key
 
             while (n > 3)
             {
-                int k = rng.Next(maxVal) * 3; // multiples of 3 only
+                //int k = rnd.Next(maxVal) * 3; // multiples of 3 only
+                int k = frnd.Next(0, maxVal) * 3; // multiples of 3 only
                 n -= 3;
 
-                T tempX = array1[n];
-                array1[n] = array1[k];
-                array1[k] = tempX;
-
-                T tempY = array1[n + 1];
-                array1[n + 1] = array1[k + 1];
-                array1[k + 1] = tempY;
-
-                T tempZ = array1[n + 2];
-                array1[n + 2] = array1[k + 2];
-                array1[k + 2] = tempZ;
+                // Swap X, Y, Z using tuple assignment
+                (array1[n], array1[k]) = (array1[k], array1[n]);
+                (array1[n + 1], array1[k + 1]) = (array1[k + 1], array1[n + 1]);
+                (array1[n + 2], array1[k + 2]) = (array1[k + 2], array1[n + 2]);
             }
         }
+
 
         public static int ParseInt(string s)
         {

@@ -4,6 +4,8 @@ using PointCloudConverter.Logger;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection.PortableExecutable;
+using System.Text;
 using System.Text.Json;
 
 namespace PointCloudConverter.Writers
@@ -18,6 +20,8 @@ namespace PointCloudConverter.Writers
         BinaryWriter writerPoints = null;
 
         static List<PointCloudTile> nodeBounds = new List<PointCloudTile>(); // for all tiles
+
+        Dictionary<string, (int, int, int)> keyCache = new Dictionary<string, (int, int, int)>();
 
         // our nodes (=tiles, =grid cells), string is tileID and float are X,Y,Z,R,G,B values
         Dictionary<string, List<float>> nodeX = new Dictionary<string, List<float>>();
@@ -43,6 +47,7 @@ namespace PointCloudConverter.Writers
             var res = true;
 
             // clear old nodes
+            keyCache.Clear();
             nodeX.Clear();
             nodeY.Clear();
             nodeZ.Clear();
@@ -89,41 +94,43 @@ namespace PointCloudConverter.Writers
 
         }
 
-        int Hash(int x, int y, int z)
-        {
-            unchecked
-            {
-                // Apply offset to ensure all values are positive
-                x += OFFSET;
-                y += OFFSET;
-                z += OFFSET;
+        //int Hash(int x, int y, int z)
+        //{
+        //    unchecked
+        //    {
+        //        // Apply offset to ensure all values are positive
+        //        x += OFFSET;
+        //        y += OFFSET;
+        //        z += OFFSET;
 
-                // Combine the values into a single hash using a method that can handle larger ranges
-                long combined = ((long)x << 40) | ((long)y << 20) | (long)z;
-                return combined.GetHashCode();
-            }
-        }
+        //        // Combine the values into a single hash using a method that can handle larger ranges
+        //        long combined = ((long)x << 40) | ((long)y << 20) | (long)z;
+        //        return combined.GetHashCode();
+        //    }
+        //}
 
-        const int OFFSET = 12345678;
+        //const int OFFSET = 12345678;
 
-        (int x, int y, int z) Unhash(int hash)
-        {
-            // Restore the original x, y, z values
-            long combined = hash;
+        //(int x, int y, int z) Unhash(int hash)
+        //{
+        //    // Restore the original x, y, z values
+        //    long combined = hash;
 
-            int z = (int)(combined & ((1L << 20) - 1));
-            combined >>= 20;
-            int y = (int)(combined & ((1L << 20) - 1));
-            combined >>= 20;
-            int x = (int)combined;
+        //    int z = (int)(combined & ((1L << 20) - 1));
+        //    combined >>= 20;
+        //    int y = (int)(combined & ((1L << 20) - 1));
+        //    combined >>= 20;
+        //    int x = (int)combined;
 
-            // Remove the offset to get original values
-            x -= OFFSET;
-            y -= OFFSET;
-            z -= OFFSET;
+        //    // Remove the offset to get original values
+        //    x -= OFFSET;
+        //    y -= OFFSET;
+        //    z -= OFFSET;
 
-            return (x, y, z);
-        }
+        //    return (x, y, z);
+        //}
+
+        StringBuilder keyBuilder = new StringBuilder(32);
 
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i, bool hasTime, double time)
         {
@@ -149,11 +156,24 @@ namespace PointCloudConverter.Writers
             int cellY = (int)(y / gridSize);
             int cellZ = (int)(z / gridSize);
 
-            // collect point to its cell node, TODO optimize this is ~23% of total time?
-            string key = cellX + "_" + cellY + "_" + cellZ;
-            //int key = Hash(cellX, cellY, cellZ);
+            keyBuilder.Clear();
+            keyBuilder.Append(cellX);
+            keyBuilder.Append('_');
+            keyBuilder.Append(cellY);
+            keyBuilder.Append('_');
+            keyBuilder.Append(cellZ);
+            string key = keyBuilder.ToString();
+            
+            if (importSettings.packColors == true)
+            {
+                if (keyCache.TryGetValue(key, out _) == false)
+                {
+                    keyCache.Add(key, (cellX, cellY, cellZ)); // or if useLossyFiltering
+                }
+            }
 
-            if (nodeX.ContainsKey(key))
+            // if already exists, add to existing list
+            if (nodeX.TryGetValue(key, out _))
             {
                 nodeX[key].Add(x);
                 nodeY[key].Add(y);
@@ -176,15 +196,8 @@ namespace PointCloudConverter.Writers
                 nodeG[key] = new List<float> { g };
                 nodeB[key] = new List<float> { b };
 
-                if (hasIntensity == true)
-                {
-                    nodeIntensity[key] = new List<float> { i };
-                }
-
-                if (hasTime == true)
-                {
-                    nodeTime[key] = new List<double> { time };
-                }
+                if (hasIntensity == true) nodeIntensity[key] = new List<float> { i };
+                if (hasTime == true) nodeTime[key] = new List<double> { time };
             }
         }
 
@@ -272,22 +285,22 @@ namespace PointCloudConverter.Writers
                     {
                         if (importSettings.averageTimestamp == true)
                         {
-                            Tools.Shuffle(Tools.rnd, ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity, ref nodeTempTime);
+                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity, ref nodeTempTime);
                         }
                         else
                         {
-                            Tools.Shuffle(Tools.rnd, ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity);
+                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity);
                         }
                     }
                     else
                     {
                         if (importSettings.averageTimestamp == true)
                         {
-                            Tools.Shuffle(Tools.rnd, ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempTime);
+                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempTime);
                         }
                         else
                         {
-                            Tools.Shuffle(Tools.rnd, ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB);
+                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB);
                         }
                     }
                 }
@@ -335,6 +348,7 @@ namespace PointCloudConverter.Writers
                 //Console.WriteLine("nodeTempX.Count="+ nodeTempX.Count);
 
                 double totalTime = 0; // for average timestamp
+                byte[] pointBuffer = new byte[12]; // hold floats as bytes
 
                 // loop and output all points within that node/tile
                 for (int i = 0, len = nodeTempX.Count; i < len; i++)
@@ -361,16 +375,12 @@ namespace PointCloudConverter.Writers
                     if (importSettings.packColors == true)
                     {
                         // get local coords within tile
-                        var keys = nodeData.Key.Split('_');
-                        //(int restoredX, int restoredY, int restoredZ) = Unhash(nodeData.Key);
-                        //cellX = restoredX;
-                        //cellY = restoredY;
-                        //cellZ = restoredZ;
-
+                        //var keys = nodeData.Key.Split('_');
+                        (cellX, cellY, cellZ) = keyCache[key];
                         // TODO no need to parse, we should know these values?
-                        cellX = int.Parse(keys[0]);
-                        cellY = int.Parse(keys[1]);
-                        cellZ = int.Parse(keys[2]);
+                        //cellX = int.Parse(keys[0]);
+                        //cellY = int.Parse(keys[1]);
+                        //cellZ = int.Parse(keys[2]);
                         // offset to local coords (within tile)
                         px -= (cellX * importSettings.gridSize);
                         py -= (cellY * importSettings.gridSize);
@@ -412,12 +422,13 @@ namespace PointCloudConverter.Writers
                     else if (useLossyFiltering == true) // test lossy, not regular packed
                     {
                         // get local coords within tile
-                        var keys = nodeData.Key.Split('_');
+                        //var keys = nodeData.Key.Split('_');
                         // TODO no need to parse, we should know these values? these are world cell grid coors
                         // TODO take reserved grid cells earlier, when reading points! not here on 2nd pass..
-                        cellX = int.Parse(keys[0]);
-                        cellY = int.Parse(keys[1]);
-                        cellZ = int.Parse(keys[2]);
+                        //cellX = int.Parse(keys[0]);
+                        //cellY = int.Parse(keys[1]);
+                        //cellZ = int.Parse(keys[2]);
+                        (cellX, cellY, cellZ) = keyCache[key];
                         // offset point inside local tile
                         //(int restoredX, int restoredY, int restoredZ) = Unhash(nodeData.Key);
                         //cellX = restoredX;
@@ -484,22 +495,45 @@ namespace PointCloudConverter.Writers
                     }
                     else // write packed and unpacked
                     {
-                        writerPoints.Write(px);
+                        //writerPoints.Write(px);
+                        //if (importSettings.packColors == true && importSettings.importRGB == true && importSettings.importIntensity == true)
+                        //{
+                        //    writerPoints.Write(packed);
+                        //}
+                        //else
+                        //{
+                        //    writerPoints.Write(py);
+                        //}
+                        //writerPoints.Write(pz);
+
+                        unsafe void FloatToBytes(float value, byte[] buffer, int offset)
+                        {
+                            fixed (byte* b = &buffer[offset])
+                            {
+                                *(float*)b = value;
+                            }
+                        }
+
+                        FloatToBytes(px, pointBuffer, 0);
+
                         if (importSettings.packColors == true && importSettings.importRGB == true && importSettings.importIntensity == true)
                         {
-                            writerPoints.Write(packed);
+                            FloatToBytes(packed, pointBuffer, 4);
                         }
                         else
                         {
-                            writerPoints.Write(py);
+                            FloatToBytes(py, pointBuffer, 4);
                         }
-                        writerPoints.Write(pz);
+
+                        FloatToBytes(pz, pointBuffer, 8);
+
+                        writerPoints.Write(pointBuffer);
                     }
 
                     if (importSettings.averageTimestamp == true)
                     {
-                        double ptime = nodeTempTime[i]; // time for this single point
-                        totalTime += ptime;
+                        //double ptime = 
+                        totalTime += nodeTempTime[i]; // time for this single point
                         //Console.WriteLine(ptime);
                     }
 
@@ -515,29 +549,35 @@ namespace PointCloudConverter.Writers
                 if (importSettings.packColors == false && useLossyFiltering == false)
                 {
                     // save separate RGB
-                    BufferedStream bsColors;
-                    bsColors = new BufferedStream(new FileStream(fullpath + ".rgb", FileMode.Create));
-                    var writerColors = new BinaryWriter(bsColors);
-
-                    // output all points within that node cell
-                    for (int i = 0, len = nodeTempX.Count; i < len; i++)
+                    using (var writerColors = new BinaryWriter(new BufferedStream(new FileStream(fullpath + ".rgb", FileMode.Create))))
                     {
-                        // skip points
-                        if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
+                        bool skipPoints = importSettings.skipPoints;
+                        bool keepPoints = importSettings.keepPoints;
+                        int skipEveryN = importSettings.skipEveryN;
+                        int keepEveryN = importSettings.keepEveryN;
 
-                        // keep points
-                        if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
+                        int len = nodeTempX.Count;
+                        byte[] colorBuffer = new byte[12]; // Buffer to hold the RGB values as bytes
 
-                        //if (i < 1000) Console.WriteLine(nodeTempR[i] + ", " + nodeTempG[i] + ", " + nodeTempB[i]);
+                        unsafe void FloatToBytes(float value, byte[] buffer, int offset)
+                        {
+                            fixed (byte* b = &buffer[offset])
+                            {
+                                *(float*)b = value;
+                            }
+                        }
 
-                        writerColors.Write(nodeTempR[i]);
-                        writerColors.Write(nodeTempG[i]);
-                        writerColors.Write(nodeTempB[i]);
-                    } // loop all point in cell cells
+                        for (int i = 0; i < len; i++)
+                        {
+                            if ((skipPoints && (i % skipEveryN == 0)) || (keepPoints && (i % keepEveryN != 0))) continue;
 
-                    // close tile/node
-                    writerColors.Close();
-                    bsColors.Dispose();
+                            FloatToBytes(nodeTempR[i], colorBuffer, 0);
+                            FloatToBytes(nodeTempG[i], colorBuffer, 4);
+                            FloatToBytes(nodeTempB[i], colorBuffer, 8);
+
+                            writerColors.Write(colorBuffer);
+                        }
+                    }
 
                     // TESTING save separate Intensity, if both rgb and intensity are enabled
                     if (importSettings.importRGB == true && importSettings.importIntensity == true)

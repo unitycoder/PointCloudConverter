@@ -2,20 +2,11 @@
 
 using PointCloudConverter.Logger;
 using PointCloudConverter.Structs;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.Unicode;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms;
-using System.Windows.Media;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
 using Color = PointCloudConverter.Structs.Color;
@@ -31,7 +22,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "21.07.2024";
+        static readonly string version = "11.08.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -119,7 +110,13 @@ namespace PointCloudConverter
                 if (importSettings.errors.Count == 0)
                 {
                     // NOTE no background thread from commandline
-                    ProcessAllFiles(importSettings);
+                    var workerParams = new WorkerParams
+                    {
+                        ImportSettings = importSettings,
+                        CancellationToken = _cancellationTokenSource.Token
+                    };
+
+                    ProcessAllFiles(workerParams);
                 }
 
                 // print time
@@ -511,7 +508,7 @@ namespace PointCloudConverter
                     // collect this point XYZ and RGB into node, optionally intensity also
                     importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     progressPoint = i;
-                }
+                } // for all points
 
                 lastStatusMessage = "Saving files..";
                 importSettings.writer.Save(fileIndex);
@@ -551,7 +548,13 @@ namespace PointCloudConverter
                         var dir = Path.GetDirectoryName(importSettings.outputFile);
                         if (Directory.Exists(dir))
                         {
-                            Process.Start(dir);
+                            var psi = new ProcessStartInfo
+                            {
+                                FileName = dir,
+                                UseShellExecute = true,
+                                Verb = "open"
+                            };
+                            Process.Start(psi);
                         }
                     }
                 });

@@ -33,7 +33,7 @@ namespace PointCloudConverter.Logger
     {
         public void Write(string msg)
         {
-            Console.WriteLine(msg);
+            //Console.WriteLine(msg);
             Trace.WriteLine(msg);
         }
 

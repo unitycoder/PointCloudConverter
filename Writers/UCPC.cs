@@ -176,7 +176,7 @@ namespace PointCloudConverter.Writers
             vectorPointer.Free();
 
             Tools.ResetRandom();
-            Tools.ShuffleXYZ(Tools.rnd, ref tempFloats);
+            Tools.ShuffleXYZ(ref tempFloats);
             // need to reset random to use same seed
             Tools.ResetRandom();
 
@@ -221,7 +221,7 @@ namespace PointCloudConverter.Writers
                 vectorPointer.Free();
 
                 // actual point randomization
-                Tools.ShuffleXYZ(Tools.rnd, ref tempFloats);
+                Tools.ShuffleXYZ(ref tempFloats);
 
                 // create new file on top, seek didnt work?
                 bsColorsV2 = new BufferedStream(new FileStream(colorsTempFile, FileMode.Create, FileAccess.ReadWrite, FileShare.Read));

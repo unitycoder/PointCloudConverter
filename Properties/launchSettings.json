@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PointCloudConverter": {
+      "commandName": "Project",
+      "hotReloadEnabled": false
+    }
+  }
+}
