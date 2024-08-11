@@ -160,8 +160,8 @@ namespace PointCloudConverter
                 return; // Exit the method if cancellation is requested
             }
 
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
+            //Stopwatch stopwatch = new Stopwatch();
+            //stopwatch.Start();
 
             // if user has set maxFiles param, loop only that many files
             importSettings.maxFiles = importSettings.maxFiles > 0 ? importSettings.maxFiles : importSettings.inputFiles.Count;
@@ -267,9 +267,9 @@ namespace PointCloudConverter
             // hack to fix progress bar not updating on last file
             progressFile++;
 
-            stopwatch.Stop();
-            Log.WriteLine("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
-            stopwatch.Reset();
+            //stopwatch.Stop();
+            //Log.WriteLine("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
+            //stopwatch.Reset();
 
             Application.Current.Dispatcher.Invoke(new Action(() =>
             {

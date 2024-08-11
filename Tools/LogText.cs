@@ -1,6 +1,5 @@
 ﻿using PointCloudConverter.Logger;
 using PointCloudConverter;
-using System;
 using System.Diagnostics;
 
 namespace PointCloudConverter.Logger
@@ -33,7 +32,7 @@ namespace PointCloudConverter.Logger
     {
         public void Write(string msg)
         {
-            //Console.WriteLine(msg);
+            Console.WriteLine(msg);
             Trace.WriteLine(msg);
         }
 

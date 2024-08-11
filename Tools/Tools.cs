@@ -1,14 +1,9 @@
 ﻿using PointCloudConverter.Structs;
 using SharpNeatLib.Maths;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Windows.Documents;
 
 namespace PointCloudConverter
 {

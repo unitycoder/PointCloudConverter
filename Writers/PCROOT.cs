@@ -1,10 +1,7 @@
 ﻿// PCROOT (v3) Exporter https://github.com/unitycoder/UnityPointCloudViewer/wiki/Binary-File-Format-Structure#custom-v3-tiles-pcroot-and-pct-rgb
 
 using PointCloudConverter.Logger;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Text.Json;
 
