@@ -15,13 +15,12 @@ jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: windows-2019
+    runs-on: windows-2022
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: Install 7Zip PowerShell Module
         shell: powershell
-        
         run: |
           # cancel early, if not build commit
           $strVal ='${{ github.event.commits[0].message }}'
@@ -33,22 +32,28 @@ jobs:
                 exit(1)
           }
           Install-Module 7Zip4PowerShell -Force -Verbose 
-      - uses: actions/checkout@v2
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Setup .NET 8.0 SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
       
       - name: Restore NuGet packages
-        run: nuget restore PointCloudConverter.sln
+        run: dotnet restore PointCloudConverter.sln
       
       - name: Build Binary
-        shell: cmd
-        run: call .\Build.cmd      
-        
+        run: dotnet build PointCloudConverter.sln --configuration Release --no-restore
+      
       - name: Build Artifact
         shell: cmd
         run: call .\ArtifactBuild.cmd      
         
       - name: Create Release
         id: create_release
-        uses: actions/create-release@latest
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
