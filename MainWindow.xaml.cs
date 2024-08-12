@@ -54,8 +54,6 @@ namespace PointCloudConverter
 
         public MainWindow()
         {
-            Console.WriteLine(123);
-            Trace.WriteLine(123);
             InitializeComponent();
             mainWindowStatic = this;
             Main();
@@ -63,9 +61,6 @@ namespace PointCloudConverter
 
         private void Main()
         {
-            Console.WriteLine(123);
-            Trace.WriteLine(123);
-
             // check cmdline args
             string[] args = Environment.GetCommandLineArgs();
 
@@ -74,11 +69,9 @@ namespace PointCloudConverter
 
             // default logger
             Log.CreateLogger(isJSON: false, version: version);
-            Log.WriteLine("123");
 
             // default code
             Environment.ExitCode = (int)ExitCode.Success;
-
 
             if (args.Length > 1)
             {
