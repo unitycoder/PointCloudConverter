@@ -36,7 +36,6 @@
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
     <!-- <PackageReference Include="laszip.net" Version="1.0.0" PrivateAssets="all" /> -->
     <PackageReference Include="System.Drawing.Common" Version="8.0.7" />
-	<PackageReference Include="System.Windows.Forms" Version="4.0.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,10 +1,7 @@
 ﻿// PCROOT (v3) Exporter https://github.com/unitycoder/UnityPointCloudViewer/wiki/Binary-File-Format-Structure#custom-v3-tiles-pcroot-and-pct-rgb
 
 using PointCloudConverter.Logger;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Text.Json;
 
@@ -228,7 +225,7 @@ namespace PointCloudConverter.Writers
             "\"folder\": " + JsonSerializer.Serialize(baseFolder) + "}";
 
             // TODO combine 2 outputs.. only other one shows up now
-            Log.WriteLine("Saving " + nodeX.Count + " tiles to folder: " + baseFolder);
+            Log.WriteLine("Saving " + nodeX.Count + " tiles into: " + baseFolder);
             Log.WriteLine(jsonString, LogEvent.End);
 
             Console.ForegroundColor = ConsoleColor.White;
@@ -798,8 +795,6 @@ namespace PointCloudConverter.Writers
 
             if (h < 0) h += 360;
         }
-
-
 
     } // class
 } // namespace
