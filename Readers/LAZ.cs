@@ -21,7 +21,7 @@ namespace PointCloudConverter.Readers
     public class LAZ : IReader
     {
         //laszip_dll lazReader = new laszip_dll();
-        LASzip.Net.laszip lazReader = new LASzip.Net.laszip();
+        laszip lazReader = new laszip();
 
         bool compressedLAZ = false;
         //bool importRGB = true;
@@ -30,6 +30,7 @@ namespace PointCloudConverter.Readers
 
         bool IReader.InitReader(ImportSettings importSettings, int fileIndex)
         {
+            Log.WriteLine("initreader: " + fileIndex);
             // TODO check errors
             var file = importSettings.inputFiles[fileIndex];
             //importRGB = importSettings.importRGB;

@@ -17,12 +17,13 @@ using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using Newtonsoft.Json;
 using Brushes = System.Windows.Media.Brushes;
+using System.Threading.Tasks;
 
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "12.08.2024";
+        static readonly string version = "13.08.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -148,7 +149,7 @@ namespace PointCloudConverter
 
         // main processing loop
 
-        private static void ProcessAllFiles(object workerParamsObject)
+        private static async Task ProcessAllFiles(object workerParamsObject)
         {
             var workerParams = (WorkerParams)workerParamsObject;
             var importSettings = workerParams.ImportSettings;
@@ -157,7 +158,8 @@ namespace PointCloudConverter
             // Use cancellationToken to check for cancellation
             if (cancellationToken.IsCancellationRequested)
             {
-                return; // Exit the method if cancellation is requested
+                Environment.ExitCode = (int)ExitCode.Cancelled;
+                return;
             }
 
             Stopwatch stopwatch = new Stopwatch();
@@ -171,6 +173,7 @@ namespace PointCloudConverter
 
             // loop input files
             errorCounter = 0;
+
             progressFile = 0;
             progressTotalFiles = importSettings.maxFiles - 1;
             if (progressTotalFiles < 0) progressTotalFiles = 0;
@@ -238,34 +241,164 @@ namespace PointCloudConverter
 
             lasHeaders.Clear();
             progressFile = 0;
+
+            //for (int i = 0, len = importSettings.maxFiles; i < len; i++)
+            //{
+            //    if (cancellationToken.IsCancellationRequested)
+            //    {
+            //        return; // Exit the loop if cancellation is requested
+            //    }
+
+            //    progressFile = i;
+            //    Log.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
+            //    //Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
+            //    //if (abort==true) 
+            //    // do actual point cloud parsing for this file
+            //    var res = ParseFile(importSettings, i);
+            //    if (res == false)
+            //    {
+            //        errorCounter++;
+            //        if (importSettings.useJSONLog)
+            //        {
+            //            Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+            //        }
+            //        else
+            //        {
+            //            Log.WriteLine("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+            //        }
+            //    }
+            //}
+            //// hack to fix progress bar not updating on last file
+            //progressFile++;
+
+            int maxThreads = 1;
+            var semaphore = new SemaphoreSlim(maxThreads);
+
+            var tasks = new List<Task>();
+
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    return; // Exit the loop if cancellation is requested
+                    //break; // Exit the loop if cancellation is requested
+                    return;
                 }
 
                 progressFile = i;
                 Log.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
-                //Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
-                //if (abort==true) 
-                // do actual point cloud parsing for this file
-                var res = ParseFile(importSettings, i);
-                if (res == false)
+
+                await semaphore.WaitAsync(); // Wait for an available slot in the semaphore
+                int? taskId = Task.CurrentId; // Get the current task ID
+
+                int index = i; // Capture the current index in the loop
+                //tasks.Add(Task.Run(() => ParseAndReleaseSemaphore(importSettings, i, semaphore, taskId)));
+                tasks.Add(Task.Run(async () =>
                 {
-                    errorCounter++;
-                    if (importSettings.useJSONLog)
+                    int? taskId = Task.CurrentId; // Get the current task ID
+
+                    try
                     {
-                        Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                        // Do actual point cloud parsing for this file and pass taskId
+                        var res = ParseFile(importSettings, index, taskId);
+                        if (!res)
+                        {
+                            Interlocked.Increment(ref errorCounter); // thread-safe error counter increment
+                            if (importSettings.useJSONLog)
+                            {
+                                Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                            }
+                            else
+                            {
+                                Log.WriteLine("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                            }
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        Log.WriteLine("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                        Log.WriteLine("Exception> " + ex.Message, LogEvent.Error);
+                        throw; // Rethrow to ensure Task.WhenAll sees the exception
+                    }
+                    finally
+                    {
+                        semaphore.Release(); // Release the semaphore slot when the task is done
+                    }
+                }));
+
+                //tasks.Add(Task.Run(async () =>
+                //{
+                //    int? taskId = Task.CurrentId; // Get the current task ID
+
+                //    try
+                //    {
+                //        // Do actual point cloud parsing for this file and pass taskId
+                //        var res = ParseFile(importSettings, i, taskId);
+                //        if (!res)
+                //        {
+                //            Interlocked.Increment(ref errorCounter); // thread-safe error counter increment
+                //            if (importSettings.useJSONLog)
+                //            {
+                //                Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                //            }
+                //            else
+                //            {
+                //                Log.WriteLine("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                //            }
+                //        }
+                //    }
+                //    finally
+                //    {
+                //        semaphore.Release(); // Release the semaphore slot when the task is done
+                //    }
+                //}));
+            } // for all files
+
+            await Task.WhenAll(tasks); // Wait for all tasks to complete
+
+            Trace.WriteLine(" ---------------------- all finished -------------------- ");
+
+            // if this was last file
+            //if (fileIndex == (importSettings.maxFiles - 1))
+            //            {
+            JsonSerializerSettings settings = new JsonSerializerSettings
+            {
+                StringEscapeHandling = StringEscapeHandling.Default // This prevents escaping of characters and write the WKT string properly
+            };
+
+            string jsonMeta = JsonConvert.SerializeObject(lasHeaders, settings);
+
+            // var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
+            //Log.WriteLine("MetaData: " + jsonMeta);
+            // write metadata to file
+            if (importSettings.importMetadata == true)
+            {
+                var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
+                Log.WriteLine("Writing metadata to file: " + jsonFile);
+                File.WriteAllText(jsonFile, jsonMeta);
+            }
+
+            lastStatusMessage = "Done!";
+            Console.ForegroundColor = ConsoleColor.Green;
+            Log.WriteLine("Finished!");
+            Console.ForegroundColor = ConsoleColor.White;
+            mainWindowStatic.Dispatcher.Invoke(() =>
+            {
+                if ((bool)mainWindowStatic.chkOpenOutputFolder.IsChecked)
+                {
+                    var dir = Path.GetDirectoryName(importSettings.outputFile);
+                    if (Directory.Exists(dir))
+                    {
+                        var psi = new ProcessStartInfo
+                        {
+                            FileName = dir,
+                            UseShellExecute = true,
+                            Verb = "open"
+                        };
+                        Process.Start(psi);
                     }
                 }
-            }
-            // hack to fix progress bar not updating on last file
-            progressFile++;
+            });
+            //    } // if last file
+
 
             stopwatch.Stop();
             Log.WriteLine("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
@@ -282,6 +415,7 @@ namespace PointCloudConverter
                 mainWindowStatic.progressBarPoints.Foreground = Brushes.Green;
             }));
         } // ProcessAllFiles
+
 
         void HideProcessingPanel()
         {
@@ -338,11 +472,25 @@ namespace PointCloudConverter
             return (true, bounds.minX, bounds.minY, bounds.minZ);
         }
 
-
         // process single file
-        static bool ParseFile(ImportSettings importSettings, int fileIndex)
+        static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId)
         {
-            var res = importSettings.reader.InitReader(importSettings, fileIndex);
+            Log.WriteLine("taskid: " + taskId + " fileindex: " + fileIndex);
+
+            // each thread needs its own reader
+            bool res;
+
+            try
+            {
+                res = importSettings.reader.InitReader(importSettings, fileIndex);
+            }
+            catch (Exception)
+            {
+                throw new Exception("Error> Failed to initialize reader: " + importSettings.inputFiles[fileIndex]);
+            }
+
+            Log.WriteLine("taskid: " + taskId + " reader initialized");
+
             if (res == false)
             {
                 Log.WriteLine("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
@@ -515,50 +663,52 @@ namespace PointCloudConverter
                 lastStatusMessage = "Finished saving..";
                 importSettings.reader.Close();
 
-            }
+            } // if importMetadataOnly == false
 
-            // if this was last file
-            if (fileIndex == (importSettings.maxFiles - 1))
-            {
-                JsonSerializerSettings settings = new JsonSerializerSettings
-                {
-                    StringEscapeHandling = StringEscapeHandling.Default // This prevents escaping of characters and write the WKT string properly
-                };
+            // TODO here need to check if all tasks are done (they are not in order)
+            Log.WriteLine("taskid: " + taskId + " done");
+            //// if this was last file
+            //if (fileIndex == (importSettings.maxFiles - 1))
+            //{
+            //    JsonSerializerSettings settings = new JsonSerializerSettings
+            //    {
+            //        StringEscapeHandling = StringEscapeHandling.Default // This prevents escaping of characters and write the WKT string properly
+            //    };
 
-                string jsonMeta = JsonConvert.SerializeObject(lasHeaders, settings);
+            //    string jsonMeta = JsonConvert.SerializeObject(lasHeaders, settings);
 
-                // var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
-                //Log.WriteLine("MetaData: " + jsonMeta);
-                // write metadata to file
-                if (importSettings.importMetadata == true)
-                {
-                    var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
-                    Log.WriteLine("Writing metadata to file: " + jsonFile);
-                    File.WriteAllText(jsonFile, jsonMeta);
-                }
+            //    // var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
+            //    //Log.WriteLine("MetaData: " + jsonMeta);
+            //    // write metadata to file
+            //    if (importSettings.importMetadata == true)
+            //    {
+            //        var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
+            //        Log.WriteLine("Writing metadata to file: " + jsonFile);
+            //        File.WriteAllText(jsonFile, jsonMeta);
+            //    }
 
-                lastStatusMessage = "Done!";
-                Console.ForegroundColor = ConsoleColor.Green;
-                Log.WriteLine("Finished!");
-                Console.ForegroundColor = ConsoleColor.White;
-                mainWindowStatic.Dispatcher.Invoke(() =>
-                {
-                    if ((bool)mainWindowStatic.chkOpenOutputFolder.IsChecked)
-                    {
-                        var dir = Path.GetDirectoryName(importSettings.outputFile);
-                        if (Directory.Exists(dir))
-                        {
-                            var psi = new ProcessStartInfo
-                            {
-                                FileName = dir,
-                                UseShellExecute = true,
-                                Verb = "open"
-                            };
-                            Process.Start(psi);
-                        }
-                    }
-                });
-            }
+            //    lastStatusMessage = "Done!";
+            //    Console.ForegroundColor = ConsoleColor.Green;
+            //    Log.WriteLine("Finished!");
+            //    Console.ForegroundColor = ConsoleColor.White;
+            //    mainWindowStatic.Dispatcher.Invoke(() =>
+            //    {
+            //        if ((bool)mainWindowStatic.chkOpenOutputFolder.IsChecked)
+            //        {
+            //            var dir = Path.GetDirectoryName(importSettings.outputFile);
+            //            if (Directory.Exists(dir))
+            //            {
+            //                var psi = new ProcessStartInfo
+            //                {
+            //                    FileName = dir,
+            //                    UseShellExecute = true,
+            //                    Verb = "open"
+            //                };
+            //                Process.Start(psi);
+            //            }
+            //        }
+            //    });
+            //} // if last file
 
             return true;
         } // ParseFile
@@ -646,18 +796,25 @@ namespace PointCloudConverter
                     //workerThread.IsBackground = true;
                     //workerThread.Start(importSettings);
 
+                    //var workerParams = new WorkerParams
+                    //{
+                    //    ImportSettings = importSettings,
+                    //    CancellationToken = _cancellationTokenSource.Token
+                    //};
+
+                    //ParameterizedThreadStart start = new ParameterizedThreadStart(ProcessAllFiles);
+                    //workerThread = new Thread(start)
+                    //{
+                    //    IsBackground = true
+                    //};
+                    //workerThread.Start(workerParams);
                     var workerParams = new WorkerParams
                     {
                         ImportSettings = importSettings,
                         CancellationToken = _cancellationTokenSource.Token
                     };
 
-                    ParameterizedThreadStart start = new ParameterizedThreadStart(ProcessAllFiles);
-                    workerThread = new Thread(start)
-                    {
-                        IsBackground = true
-                    };
-                    workerThread.Start(workerParams);
+                    Task.Run(() => ProcessAllFiles(workerParams));
                 }
             }
             else
