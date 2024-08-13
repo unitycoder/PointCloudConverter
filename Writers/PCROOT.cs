@@ -160,7 +160,7 @@ namespace PointCloudConverter.Writers
             keyBuilder.Append('_');
             keyBuilder.Append(cellZ);
             string key = keyBuilder.ToString();
-            
+
             if (importSettings.packColors == true)
             {
                 if (keyCache.TryGetValue(key, out _) == false)
@@ -722,23 +722,32 @@ namespace PointCloudConverter.Writers
                 if (useLossyFiltering == true) versionID = 3;
                 if (importSettings.importIntensity == true && importSettings.importRGB && importSettings.packColors) versionID = 4; // new int packed format
 
+                bool addComments = false;
+
                 // add comment to first row (version, gridsize, pointcount, boundsMinX, boundsMinY, boundsMinZ, boundsMaxX, boundsMaxY, boundsMaxZ)
                 string identifer = "# PCROOT - https://github.com/unitycoder/PointCloudConverter";
-                tilerootdata.Insert(0, identifer);
+                if (addComments) tilerootdata.Insert(0, identifer);
 
                 string commentRow = "# version" + sep + "gridsize" + sep + "pointcount" + sep + "boundsMinX" + sep + "boundsMinY" + sep + "boundsMinZ" + sep + "boundsMaxX" + sep + "boundsMaxY" + sep + "boundsMaxZ" + sep + "autoOffsetX" + sep + "autoOffsetY" + sep + "autoOffsetZ" + sep + "packMagicValue";
                 if (importSettings.importRGB == true && importSettings.importIntensity == true) commentRow += sep + "intensity";
-                tilerootdata.Insert(1, commentRow);
+                if (addComments) tilerootdata.Insert(1, commentRow);
 
                 // add global header settings to first row
                 //               version,          gridsize,                   pointcount,             boundsMinX,       boundsMinY,       boundsMinZ,       boundsMaxX,       boundsMaxY,       boundsMaxZ
                 string globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep + cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep + cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
                 //                  autoOffsetX,             globalOffsetY,           globalOffsetZ,           packMagic 
                 globalData += sep + importSettings.offsetX + sep + importSettings.offsetY + sep + importSettings.offsetZ + sep + importSettings.packMagicValue;
-                tilerootdata.Insert(2, globalData);
+                if (addComments)
+                {
+                    tilerootdata.Insert(2, globalData);
+                }
+                else
+                {
+                    tilerootdata.Insert(0, globalData);
+                }
 
                 // append comment for rows also
-                tilerootdata.Insert(3, "# filename" + sep + "pointcount" + sep + "minX" + sep + "minY" + sep + "minZ" + sep + "maxX" + sep + "maxY" + sep + "maxZ" + sep + "cellX" + sep + "cellY" + sep + "cellZ" + sep + "averageTimeStamp" + sep + "overlapRatio");
+                if (addComments) tilerootdata.Insert(3, "# filename" + sep + "pointcount" + sep + "minX" + sep + "minY" + sep + "minZ" + sep + "maxX" + sep + "maxY" + sep + "maxZ" + sep + "cellX" + sep + "cellY" + sep + "cellZ" + sep + "averageTimeStamp" + sep + "overlapRatio");
 
                 File.WriteAllLines(outputFileRoot, tilerootdata.ToArray());
 
