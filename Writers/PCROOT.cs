@@ -198,6 +198,23 @@ namespace PointCloudConverter.Writers
             }
         }
 
+
+        unsafe void FloatToBytes(float value, byte[] buffer, int offset)
+        {
+            fixed (byte* b = &buffer[offset])
+            {
+                *(float*)b = value;
+            }
+        }
+
+        unsafe void IntToBytes(int value, byte[] buffer, int offset)
+        {
+            fixed (byte* b = &buffer[offset])
+            {
+                *(int*)b = value;
+            }
+        }
+
         void IWriter.Save(int fileIndex)
         {
             // TEST 
@@ -503,28 +520,22 @@ namespace PointCloudConverter.Writers
                         //}
                         //writerPoints.Write(pz);
 
-                        unsafe void FloatToBytes(float value, byte[] buffer, int offset)
-                        {
-                            fixed (byte* b = &buffer[offset])
-                            {
-                                *(float*)b = value;
-                            }
-                        }
 
                         FloatToBytes(px, pointBuffer, 0);
 
                         if (importSettings.packColors == true && importSettings.importRGB == true && importSettings.importIntensity == true)
                         {
-                            FloatToBytes(packed, pointBuffer, 4);
+                            IntToBytes(packed, pointBuffer, 4);  // Convert int to bytes manually
                         }
                         else
                         {
-                            FloatToBytes(py, pointBuffer, 4);
+                            FloatToBytes(py, pointBuffer, 4);    // Convert float to bytes manually
                         }
 
                         FloatToBytes(pz, pointBuffer, 8);
 
                         writerPoints.Write(pointBuffer);
+
                     }
 
                     if (importSettings.averageTimestamp == true)
