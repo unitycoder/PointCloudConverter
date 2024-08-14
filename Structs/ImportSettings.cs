@@ -20,6 +20,8 @@ namespace PointCloudConverter
         public IReader reader = new LAZ(null); // single threaded reader
         public Dictionary<int?, IReader> Readers { get; set; } = new Dictionary<int?, IReader>();
         public IWriter writer = new UCPC();
+        public Dictionary<int?, IWriter> Writers { get; set; } = new Dictionary<int?, IWriter>();
+
 
         // Method to get or create a reader for a specific task ID
         public IReader GetOrCreateReader(int? taskId)
@@ -30,6 +32,16 @@ namespace PointCloudConverter
             }
 
             return Readers[taskId];
+        }        
+        
+        public IWriter GetOrCreateWriter(int? taskId)
+        {
+            if (!Writers.ContainsKey(taskId))
+            {
+                Writers[taskId] = new PCROOT(taskId);
+            }
+
+            return Writers[taskId];
         }
 
         public bool haveError { get; set; } = false; // if errors during parsing args

@@ -159,7 +159,7 @@ namespace PointCloudConverter
                                     {
                                         // TODO check enum names or interfaces
                                         case "PCROOT":
-                                            importSettings.writer = new PCROOT();
+                                            importSettings.writer = new PCROOT(null);
                                             importSettings.exportFormat = ExportFormat.PCROOT;
                                             importSettings.randomize = true; // required for V3
                                             break;

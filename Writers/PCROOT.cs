@@ -2,6 +2,7 @@
 
 using PointCloudConverter.Logger;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 
@@ -39,8 +40,19 @@ namespace PointCloudConverter.Writers
         static float cloudMaxY = float.NegativeInfinity;
         static float cloudMaxZ = float.NegativeInfinity;
 
+        int? taskID;
+
+        // add constructor
+        public PCROOT(int? _taskID)
+        {
+            Log.WriteLine("*** PCROOT writer created for task: " + _taskID);
+            taskID = _taskID;
+        }
+
         bool IWriter.InitWriter(ImportSettings _importSettings, int _pointCount)
         {
+            Log.WriteLine("--------------------- initwriter for taskID: " + taskID);
+
             var res = true;
 
             // clear old nodes
@@ -90,42 +102,6 @@ namespace PointCloudConverter.Writers
         {
 
         }
-
-        //int Hash(int x, int y, int z)
-        //{
-        //    unchecked
-        //    {
-        //        // Apply offset to ensure all values are positive
-        //        x += OFFSET;
-        //        y += OFFSET;
-        //        z += OFFSET;
-
-        //        // Combine the values into a single hash using a method that can handle larger ranges
-        //        long combined = ((long)x << 40) | ((long)y << 20) | (long)z;
-        //        return combined.GetHashCode();
-        //    }
-        //}
-
-        //const int OFFSET = 12345678;
-
-        //(int x, int y, int z) Unhash(int hash)
-        //{
-        //    // Restore the original x, y, z values
-        //    long combined = hash;
-
-        //    int z = (int)(combined & ((1L << 20) - 1));
-        //    combined >>= 20;
-        //    int y = (int)(combined & ((1L << 20) - 1));
-        //    combined >>= 20;
-        //    int x = (int)combined;
-
-        //    // Remove the offset to get original values
-        //    x -= OFFSET;
-        //    y -= OFFSET;
-        //    z -= OFFSET;
-
-        //    return (x, y, z);
-        //}
 
         StringBuilder keyBuilder = new StringBuilder(32);
 
@@ -198,7 +174,7 @@ namespace PointCloudConverter.Writers
             }
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void FloatToBytes(float value, byte[] buffer, int offset)
         {
             fixed (byte* b = &buffer[offset])
@@ -207,6 +183,7 @@ namespace PointCloudConverter.Writers
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void IntToBytes(int value, byte[] buffer, int offset)
         {
             fixed (byte* b = &buffer[offset])
@@ -217,8 +194,7 @@ namespace PointCloudConverter.Writers
 
         void IWriter.Save(int fileIndex)
         {
-            // TEST 
-            bool useLossyFiltering = false;
+            bool useLossyFiltering = false; //not used, for testing only
             if (useLossyFiltering == true)
             {
                 Console.WriteLine("************* useLossyFiltering ****************");
@@ -567,13 +543,13 @@ namespace PointCloudConverter.Writers
                         int len = nodeTempX.Count;
                         byte[] colorBuffer = new byte[12]; // Buffer to hold the RGB values as bytes
 
-                        unsafe void FloatToBytes(float value, byte[] buffer, int offset)
-                        {
-                            fixed (byte* b = &buffer[offset])
-                            {
-                                *(float*)b = value;
-                            }
-                        }
+                        //unsafe void FloatToBytes(float value, byte[] buffer, int offset)
+                        //{
+                        //    fixed (byte* b = &buffer[offset])
+                        //    {
+                        //        *(float*)b = value;
+                        //    }
+                        //}
 
                         for (int i = 0; i < len; i++)
                         {
@@ -648,6 +624,7 @@ namespace PointCloudConverter.Writers
 
             // save rootfile
             // only save after last file, TODO should save this if process fails or user cancels, so no need to start from 0 again.. but then needs some merge or continue from index n feature
+            Log.WriteLine(" *****************************  TODO save this only after last file from all threads ***************************** ");
             if (fileIndex == (importSettings.maxFiles - 1))
             {
                 // check if any tile overlaps with other tiles

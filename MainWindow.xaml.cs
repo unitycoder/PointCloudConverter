@@ -272,7 +272,7 @@ namespace PointCloudConverter
             //// hack to fix progress bar not updating on last file
             //progressFile++;
 
-            int maxThreads = 1;
+            int maxThreads = 4;
             var semaphore = new SemaphoreSlim(maxThreads);
 
             var tasks = new List<Task>();
@@ -285,11 +285,11 @@ namespace PointCloudConverter
                     return;
                 }
 
-                progressFile = i;
-                Log.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
-
                 await semaphore.WaitAsync(); // Wait for an available slot in the semaphore
                 int? taskId = Task.CurrentId; // Get the current task ID
+
+                progressFile = i;
+                Log.WriteLine("task:" + taskId + " is reading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")\n");
 
                 int index = i; // Capture the current index in the loop
                 //tasks.Add(Task.Run(() => ParseAndReleaseSemaphore(importSettings, i, semaphore, taskId)));
@@ -481,11 +481,11 @@ namespace PointCloudConverter
             bool res;
 
             //importSettings.reader = new LAZ(taskId);
-            IReader reader = importSettings.GetOrCreateReader(taskId);
+            IReader taskReader = importSettings.GetOrCreateReader(taskId);
 
             try
             {
-                res = reader.InitReader(importSettings, fileIndex);
+                res = taskReader.InitReader(importSettings, fileIndex);
             }
             catch (Exception)
             {
@@ -503,13 +503,13 @@ namespace PointCloudConverter
 
             if (importSettings.importMetadata == true)
             {
-                var metaData = reader.GetMetaData(importSettings, fileIndex);
+                var metaData = taskReader.GetMetaData(importSettings, fileIndex);
                 lasHeaders.Add(metaData);
             }
 
             if (importSettings.importMetadataOnly == false)
             {
-                int fullPointCount = reader.GetPointCount();
+                int fullPointCount = taskReader.GetPointCount();
                 int pointCount = fullPointCount;
 
                 // show stats for decimations
@@ -556,10 +556,12 @@ namespace PointCloudConverter
                     importSettings.offsetZ = 0;
                 }
 
-                var writerRes = importSettings.writer.InitWriter(importSettings, pointCount);
+                var taskWriter = importSettings.GetOrCreateWriter(taskId);
+                //var writerRes = importSettings.writer.InitWriter(importSettings, pointCount);
+                var writerRes = taskWriter.InitWriter(importSettings, pointCount);
                 if (writerRes == false)
                 {
-                    Log.WriteLine("Error> Failed to initialize Writer");
+                    Log.WriteLine("Error> Failed to initialize Writer, fileindex: " + fileIndex + " taskid:" + taskId);
                     return false;
                 }
 
@@ -585,7 +587,7 @@ namespace PointCloudConverter
                     if (importSettings.useLimit == true && i > pointCount) break;
 
                     // get point XYZ
-                    Float3 point = reader.GetXYZ();
+                    Float3 point = taskReader.GetXYZ();
                     if (point.hasError == true) break;
 
                     // add offsets (its 0 if not used)
@@ -631,13 +633,13 @@ namespace PointCloudConverter
 
                     if (importSettings.importRGB == true)
                     {
-                        rgb = reader.GetRGB();
+                        rgb = taskReader.GetRGB();
                     }
 
                     // TODO get intensity as separate value, TODO is this float or rgb?
                     if (importSettings.importIntensity == true)
                     {
-                        intensity = reader.GetIntensity();
+                        intensity = taskReader.GetIntensity();
                         //if (i < 100) Console.WriteLine(intensity.r);
 
                         // if no rgb, then replace RGB with intensity
@@ -652,19 +654,21 @@ namespace PointCloudConverter
                     if (importSettings.averageTimestamp == true)
                     {
                         // get time
-                        time = reader.GetTime();
+                        time = taskReader.GetTime();
                         //Console.WriteLine("Time: " + time);
                     }
 
                     // collect this point XYZ and RGB into node, optionally intensity also
-                    importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
+                    //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
+                    taskWriter.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     progressPoint = i;
                 } // for all points
 
                 lastStatusMessage = "Saving files..";
-                importSettings.writer.Save(fileIndex);
+                //importSettings.writer.Save(fileIndex);
+                taskWriter.Save(fileIndex);
                 lastStatusMessage = "Finished saving..";
-                reader.Close();
+                taskReader.Close();
 
             } // if importMetadataOnly == false
 
