@@ -18,6 +18,7 @@ using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using Newtonsoft.Json;
 using Brushes = System.Windows.Media.Brushes;
 using System.Threading.Tasks;
+using PointCloudConverter.Readers;
 
 namespace PointCloudConverter
 {
@@ -399,7 +400,6 @@ namespace PointCloudConverter
             });
             //    } // if last file
 
-
             stopwatch.Stop();
             Log.WriteLine("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
             stopwatch.Reset();
@@ -480,16 +480,19 @@ namespace PointCloudConverter
             // each thread needs its own reader
             bool res;
 
+            //importSettings.reader = new LAZ(taskId);
+            IReader reader = importSettings.GetOrCreateReader(taskId);
+
             try
             {
-                res = importSettings.reader.InitReader(importSettings, fileIndex);
+                res = reader.InitReader(importSettings, fileIndex);
             }
             catch (Exception)
             {
                 throw new Exception("Error> Failed to initialize reader: " + importSettings.inputFiles[fileIndex]);
             }
 
-            Log.WriteLine("taskid: " + taskId + " reader initialized");
+            //Log.WriteLine("taskid: " + taskId + " reader initialized");
 
             if (res == false)
             {
@@ -500,13 +503,13 @@ namespace PointCloudConverter
 
             if (importSettings.importMetadata == true)
             {
-                var metaData = importSettings.reader.GetMetaData(importSettings, fileIndex);
+                var metaData = reader.GetMetaData(importSettings, fileIndex);
                 lasHeaders.Add(metaData);
             }
 
             if (importSettings.importMetadataOnly == false)
             {
-                int fullPointCount = importSettings.reader.GetPointCount();
+                int fullPointCount = reader.GetPointCount();
                 int pointCount = fullPointCount;
 
                 // show stats for decimations
@@ -582,7 +585,7 @@ namespace PointCloudConverter
                     if (importSettings.useLimit == true && i > pointCount) break;
 
                     // get point XYZ
-                    Float3 point = importSettings.reader.GetXYZ();
+                    Float3 point = reader.GetXYZ();
                     if (point.hasError == true) break;
 
                     // add offsets (its 0 if not used)
@@ -628,13 +631,13 @@ namespace PointCloudConverter
 
                     if (importSettings.importRGB == true)
                     {
-                        rgb = importSettings.reader.GetRGB();
+                        rgb = reader.GetRGB();
                     }
 
                     // TODO get intensity as separate value, TODO is this float or rgb?
                     if (importSettings.importIntensity == true)
                     {
-                        intensity = importSettings.reader.GetIntensity();
+                        intensity = reader.GetIntensity();
                         //if (i < 100) Console.WriteLine(intensity.r);
 
                         // if no rgb, then replace RGB with intensity
@@ -649,7 +652,7 @@ namespace PointCloudConverter
                     if (importSettings.averageTimestamp == true)
                     {
                         // get time
-                        time = importSettings.reader.GetTime();
+                        time = reader.GetTime();
                         //Console.WriteLine("Time: " + time);
                     }
 
@@ -661,7 +664,7 @@ namespace PointCloudConverter
                 lastStatusMessage = "Saving files..";
                 importSettings.writer.Save(fileIndex);
                 lastStatusMessage = "Finished saving..";
-                importSettings.reader.Close();
+                reader.Close();
 
             } // if importMetadataOnly == false
 

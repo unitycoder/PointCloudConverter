@@ -138,7 +138,7 @@ namespace PointCloudConverter
                                 else
                                 {
                                     importSettings.importFormat = ImportFormat.LAS;
-                                    importSettings.reader = new LAZ();
+                                    importSettings.reader = new LAZ(null);
                                 }
                                 break;
                             case "-exportformat":
@@ -759,7 +759,7 @@ namespace PointCloudConverter
             if (importSettings.importFormat == ImportFormat.Unknown)
             {
                 importSettings.importFormat = ImportFormat.LAS;
-                importSettings.reader = new LAZ();
+                importSettings.reader = new LAZ(null);
                 Log.WriteLine("No import format defined, using Default: " + importSettings.importFormat.ToString());
             }
 

@@ -13,12 +13,24 @@ namespace PointCloudConverter
     {
         // filled in by program (so that json serializer is easier)
         public string version { get; set; } = "0.0.0";
-        
+
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public Logger.LogEvent @event { get; set; }
 
-        public IReader reader = new LAZ();
+        public IReader reader = new LAZ(null); // single threaded reader
+        public Dictionary<int?, IReader> Readers { get; set; } = new Dictionary<int?, IReader>();
         public IWriter writer = new UCPC();
+
+        // Method to get or create a reader for a specific task ID
+        public IReader GetOrCreateReader(int? taskId)
+        {
+            if (!Readers.ContainsKey(taskId))
+            {
+                Readers[taskId] = new LAZ(taskId);
+            }
+
+            return Readers[taskId];
+        }
 
         public bool haveError { get; set; } = false; // if errors during parsing args
         //public string[] errorMessages = null; // last error message(s)
@@ -26,7 +38,7 @@ namespace PointCloudConverter
         public bool useScale { get; set; } = false;
         public float scale { get; set; } = 1f;
 
-        [JsonConverter(typeof(JsonStringEnumConverter))] 
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public ImportFormat importFormat { get; set; } = ImportFormat.LAS; //default to las for now
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ExportFormat exportFormat { get; set; } = ExportFormat.UCPC; // defaults to UCPC (v2)
@@ -48,7 +60,7 @@ namespace PointCloudConverter
         public float offsetX { get; set; } = 0;
         public float offsetY { get; set; } = 0;
         public float offsetZ { get; set; } = 0;
-        public bool useLimit { get; set; }  = false;
+        public bool useLimit { get; set; } = false;
         public int limit { get; set; } = 0;
         public bool randomize { get; set; } = false;
         public float gridSize { get; set; } = 25;

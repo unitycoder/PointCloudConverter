@@ -28,9 +28,18 @@ namespace PointCloudConverter.Readers
         //bool importIntensity = false;
         bool customIntensityRange = false;
 
+        int? taskID;
+
+        // add constructor
+        public LAZ(int? _taskID)
+        {
+            Log.WriteLine("*** LAZ reader created for task: " + _taskID);
+            taskID = _taskID;
+        }
+
         bool IReader.InitReader(ImportSettings importSettings, int fileIndex)
         {
-            Log.WriteLine("initreader: " + fileIndex);
+            Log.WriteLine("--------------------- initreader: " + fileIndex + " taskID: " + taskID);
             // TODO check errors
             var file = importSettings.inputFiles[fileIndex];
             //importRGB = importSettings.importRGB;
