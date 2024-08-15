@@ -256,7 +256,7 @@ namespace PointCloudConverter.Writers
             importSettings.writer.WriteRGB(r, g, b);
         }
 
-        void IWriter.Save(int fileIndex)
+        void IWriter.Save(int fileIndex, bool isLastTask)
         {
             importSettings.writer.CreateHeader(pointCount);
             if (importSettings.randomize == true) importSettings.writer.Randomize();

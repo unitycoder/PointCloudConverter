@@ -192,7 +192,7 @@ namespace PointCloudConverter.Writers
             }
         }
 
-        void IWriter.Save(int fileIndex)
+        void IWriter.Save(int fileIndex, bool isLastTask)
         {
             bool useLossyFiltering = false; //not used, for testing only
             if (useLossyFiltering == true)
@@ -624,9 +624,10 @@ namespace PointCloudConverter.Writers
 
             // save rootfile
             // only save after last file, TODO should save this if process fails or user cancels, so no need to start from 0 again.. but then needs some merge or continue from index n feature
-            Log.WriteLine(" *****************************  TODO save this only after last file from all threads ***************************** ");
-            if (fileIndex == (importSettings.maxFiles - 1))
+            if (isLastTask == true)
+            //if (fileIndex == (importSettings.maxFiles - 1))
             {
+                Log.WriteLine(" *****************************  save this only after last file from all threads ***************************** ");
                 // check if any tile overlaps with other tiles
                 if (importSettings.checkoverlap == true)
                 {

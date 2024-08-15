@@ -291,6 +291,8 @@ namespace PointCloudConverter
                 progressFile = i;
                 Log.WriteLine("task:" + taskId + " is reading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")\n");
 
+                bool isLastTask = (i == len - 1); // Check if this is the last task
+
                 int index = i; // Capture the current index in the loop
                 //tasks.Add(Task.Run(() => ParseAndReleaseSemaphore(importSettings, i, semaphore, taskId)));
                 tasks.Add(Task.Run(async () =>
@@ -300,7 +302,7 @@ namespace PointCloudConverter
                     try
                     {
                         // Do actual point cloud parsing for this file and pass taskId
-                        var res = ParseFile(importSettings, index, taskId);
+                        var res = ParseFile(importSettings, index, taskId, isLastTask);
                         if (!res)
                         {
                             Interlocked.Increment(ref errorCounter); // thread-safe error counter increment
@@ -473,7 +475,7 @@ namespace PointCloudConverter
         }
 
         // process single file
-        static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId)
+        static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId, bool isLastTask)
         {
             Log.WriteLine("taskid: " + taskId + " fileindex: " + fileIndex);
 
@@ -666,7 +668,7 @@ namespace PointCloudConverter
 
                 lastStatusMessage = "Saving files..";
                 //importSettings.writer.Save(fileIndex);
-                taskWriter.Save(fileIndex);
+                taskWriter.Save(fileIndex, isLastTask);
                 lastStatusMessage = "Finished saving..";
                 taskReader.Close();
 
