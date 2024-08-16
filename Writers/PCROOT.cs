@@ -1,6 +1,8 @@
 ﻿// PCROOT (v3) Exporter https://github.com/unitycoder/UnityPointCloudViewer/wiki/Binary-File-Format-Structure#custom-v3-tiles-pcroot-and-pct-rgb
 
 using PointCloudConverter.Logger;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -13,7 +15,7 @@ namespace PointCloudConverter.Writers
         const string tileExtension = ".pct";
         const string sep = "|";
 
-        ImportSettings importSettings;
+        static ImportSettings importSettings;
         BufferedStream bsPoints = null;
         BinaryWriter writerPoints = null;
 
@@ -88,8 +90,151 @@ namespace PointCloudConverter.Writers
 
         }
 
+        // for pcroot, this is saving the rootfile
         void IWriter.Close()
         {
+            // save rootfile
+            // only save after last file, TODO should save this if process fails or user cancels, so no need to start from 0 again.. but then needs some merge or continue from index n feature
+            // if (isLastTask == true)
+            //if (fileIndex == (importSettings.maxFiles - 1))
+            // {
+            Log.WriteLine(" *****************************  save this only after last file from all threads ***************************** ");
+            // check if any tile overlaps with other tiles
+            if (importSettings.checkoverlap == true)
+            {
+                for (int i = 0, len = nodeBounds.Count; i < len; i++)
+                {
+                    var cb = nodeBounds[i];
+                    // check if this tile overlaps with other tiles
+                    for (int j = 0, len2 = nodeBounds.Count; j < len2; j++)
+                    {
+                        if (i == j) continue; // skip self
+                        var cb2 = nodeBounds[j];
+                        // check if this tile overlaps with other tile
+                        float epsilon = 1e-6f;
+                        bool overlaps = cb.minX < cb2.maxX + epsilon && cb.maxX > cb2.minX - epsilon &&
+                                        cb.minY < cb2.maxY + epsilon && cb.maxY > cb2.minY - epsilon &&
+                                        cb.minZ < cb2.maxZ + epsilon && cb.maxZ > cb2.minZ - epsilon;
+
+                        if (overlaps)
+                        {
+                            // calculate overlap ratio
+                            float overlapX = Math.Min(cb.maxX, cb2.maxX) - Math.Max(cb.minX, cb2.minX);
+                            float overlapY = Math.Min(cb.maxY, cb2.maxY) - Math.Max(cb.minY, cb2.minY);
+                            float overlapZ = Math.Min(cb.maxZ, cb2.maxZ) - Math.Max(cb.minZ, cb2.minZ);
+                            float overlapVolume = overlapX * overlapY * overlapZ;
+                            float volume1 = (cb.maxX - cb.minX) * (cb.maxY - cb.minY) * (cb.maxZ - cb.minZ);
+                            float volume2 = (cb2.maxX - cb2.minX) * (cb2.maxY - cb2.minY) * (cb2.maxZ - cb2.minZ);
+
+                            // check if the volume of either tile is zero
+                            if (volume1 != 0 && volume2 != 0)
+                            {
+                                float overlapRatio = overlapVolume / Math.Min(volume1, volume2);
+                                cb.overlapRatio = overlapRatio;
+                            }
+                            else
+                            {
+                                cb.overlapRatio = 0; // or any other appropriate value
+                            }
+
+                            nodeBounds[i] = cb;
+                        }
+                    }
+                }
+            } // if checkoverlap
+
+            string fileOnly = Path.GetFileNameWithoutExtension(importSettings.outputFile);
+            string baseFolder = Path.GetDirectoryName(importSettings.outputFile);
+
+
+            var tilerootdata = new List<string>();
+            var outputFileRoot = Path.Combine(baseFolder, fileOnly) + ".pcroot";
+
+            // add to tileroot list
+            long totalPointCount = 0;
+            for (int i = 0, len = nodeBounds.Count; i < len; i++)
+            {
+                var tilerow = nodeBounds[i].fileName + sep + nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep + nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
+                tilerootdata.Add(tilerow);
+                totalPointCount += nodeBounds[i].totalPoints;
+            }
+
+            string jsonString = "{" +
+            "\"event\": \"" + LogEvent.File + "\"," +
+            "\"path\": " + JsonSerializer.Serialize(outputFileRoot) + "," +
+            "\"totalpoints\": " + totalPointCount + "," +
+            "\"skippedNodes\": " + skippedNodesCounter + "," +
+            "\"skippedPoints\": " + skippedPointsCounter + "" +
+            "}";
+
+            Log.WriteLine(jsonString, LogEvent.End);
+            Log.WriteLine("\nSaving rootfile: " + outputFileRoot + "\n*Total points= " + Tools.HumanReadableCount(totalPointCount));
+
+            int versionID = importSettings.packColors ? 2 : 1; // (1 = original, 2 = packed v3 format)
+            if (importSettings.packColors == true) versionID = 2;
+            if (useLossyFiltering == true) versionID = 3;
+            if (importSettings.importIntensity == true && importSettings.importRGB && importSettings.packColors) versionID = 4; // new int packed format
+
+            bool addComments = false;
+
+            // add comment to first row (version, gridsize, pointcount, boundsMinX, boundsMinY, boundsMinZ, boundsMaxX, boundsMaxY, boundsMaxZ)
+            string identifer = "# PCROOT - https://github.com/unitycoder/PointCloudConverter";
+            if (addComments) tilerootdata.Insert(0, identifer);
+
+            string commentRow = "# version" + sep + "gridsize" + sep + "pointcount" + sep + "boundsMinX" + sep + "boundsMinY" + sep + "boundsMinZ" + sep + "boundsMaxX" + sep + "boundsMaxY" + sep + "boundsMaxZ" + sep + "autoOffsetX" + sep + "autoOffsetY" + sep + "autoOffsetZ" + sep + "packMagicValue";
+            if (importSettings.importRGB == true && importSettings.importIntensity == true) commentRow += sep + "intensity";
+            if (addComments) tilerootdata.Insert(1, commentRow);
+
+            // add global header settings to first row
+            //               version,          gridsize,                   pointcount,             boundsMinX,       boundsMinY,       boundsMinZ,       boundsMaxX,       boundsMaxY,       boundsMaxZ
+            string globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep + cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep + cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
+            //                  autoOffsetX,             globalOffsetY,           globalOffsetZ,           packMagic 
+            globalData += sep + importSettings.offsetX + sep + importSettings.offsetY + sep + importSettings.offsetZ + sep + importSettings.packMagicValue;
+            if (addComments)
+            {
+                tilerootdata.Insert(2, globalData);
+            }
+            else
+            {
+                tilerootdata.Insert(0, globalData);
+            }
+
+            // append comment for rows also
+            if (addComments) tilerootdata.Insert(3, "# filename" + sep + "pointcount" + sep + "minX" + sep + "minY" + sep + "minZ" + sep + "maxX" + sep + "maxY" + sep + "maxZ" + sep + "cellX" + sep + "cellY" + sep + "cellZ" + sep + "averageTimeStamp" + sep + "overlapRatio");
+
+            File.WriteAllLines(outputFileRoot, tilerootdata.ToArray());
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Log.WriteLine("Done saving v3 : " + outputFileRoot);
+            Console.ForegroundColor = ConsoleColor.White;
+            if (skippedNodesCounter > 0)
+            {
+                Log.WriteLine("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
+            }
+
+            if (useLossyFiltering == true && skippedPointsCounter > 0)
+            {
+                Log.WriteLine("*Skipped " + skippedPointsCounter + " points due to bytepacked grid filtering");
+            }
+
+            if ((tilerootdata.Count - 1) <= 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                // TODO add json error log
+                Log.WriteLine("Error> No tiles found! Try enable -scale (to make your cloud to smaller) Or make -gridsize bigger, or set -limit point count to smaller value");
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+
+            // cleanup after last file
+            nodeBounds.Clear();
+
+            cloudMinX = float.PositiveInfinity;
+            cloudMinY = float.PositiveInfinity;
+            cloudMinZ = float.PositiveInfinity;
+            cloudMaxX = float.NegativeInfinity;
+            cloudMaxY = float.NegativeInfinity;
+            cloudMaxZ = float.NegativeInfinity;
+            //   } // if last file
 
         }
 
@@ -192,16 +337,17 @@ namespace PointCloudConverter.Writers
             }
         }
 
+        static int skippedNodesCounter = 0;
+        static int skippedPointsCounter = 0;
+        static bool useLossyFiltering = false; //not used, for testing only
+
         void IWriter.Save(int fileIndex, bool isLastTask)
         {
-            bool useLossyFiltering = false; //not used, for testing only
             if (useLossyFiltering == true)
             {
                 Console.WriteLine("************* useLossyFiltering ****************");
             }
 
-            int skippedNodesCounter = 0;
-            int skippedPointsCounter = 0;
 
             string fileOnly = Path.GetFileNameWithoutExtension(importSettings.outputFile);
             string baseFolder = Path.GetDirectoryName(importSettings.outputFile);
@@ -532,35 +678,44 @@ namespace PointCloudConverter.Writers
                 // not packed
                 if (importSettings.packColors == false && useLossyFiltering == false)
                 {
-                    // save separate RGB
-                    using (var writerColors = new BinaryWriter(new BufferedStream(new FileStream(fullpath + ".rgb", FileMode.Create))))
+                    try
                     {
-                        bool skipPoints = importSettings.skipPoints;
-                        bool keepPoints = importSettings.keepPoints;
-                        int skipEveryN = importSettings.skipEveryN;
-                        int keepEveryN = importSettings.keepEveryN;
 
-                        int len = nodeTempX.Count;
-                        byte[] colorBuffer = new byte[12]; // Buffer to hold the RGB values as bytes
-
-                        //unsafe void FloatToBytes(float value, byte[] buffer, int offset)
-                        //{
-                        //    fixed (byte* b = &buffer[offset])
-                        //    {
-                        //        *(float*)b = value;
-                        //    }
-                        //}
-
-                        for (int i = 0; i < len; i++)
+                        // save separate RGB
+                        using (var writerColors = new BinaryWriter(new BufferedStream(new FileStream(fullpath + ".rgb", FileMode.Create))))
                         {
-                            if ((skipPoints && (i % skipEveryN == 0)) || (keepPoints && (i % keepEveryN != 0))) continue;
+                            bool skipPoints = importSettings.skipPoints;
+                            bool keepPoints = importSettings.keepPoints;
+                            int skipEveryN = importSettings.skipEveryN;
+                            int keepEveryN = importSettings.keepEveryN;
 
-                            FloatToBytes(nodeTempR[i], colorBuffer, 0);
-                            FloatToBytes(nodeTempG[i], colorBuffer, 4);
-                            FloatToBytes(nodeTempB[i], colorBuffer, 8);
+                            int len = nodeTempX.Count;
+                            byte[] colorBuffer = new byte[12]; // Buffer to hold the RGB values as bytes
 
-                            writerColors.Write(colorBuffer);
+                            //unsafe void FloatToBytes(float value, byte[] buffer, int offset)
+                            //{
+                            //    fixed (byte* b = &buffer[offset])
+                            //    {
+                            //        *(float*)b = value;
+                            //    }
+                            //}
+
+                            for (int i = 0; i < len; i++)
+                            {
+                                if ((skipPoints && (i % skipEveryN == 0)) || (keepPoints && (i % keepEveryN != 0))) continue;
+
+                                FloatToBytes(nodeTempR[i], colorBuffer, 0);
+                                FloatToBytes(nodeTempG[i], colorBuffer, 4);
+                                FloatToBytes(nodeTempB[i], colorBuffer, 8);
+
+                                writerColors.Write(colorBuffer);
+                            }
                         }
+                    }
+                    catch (Exception e)
+                    {
+                        Trace.WriteLine("Error writing RGB file: " + e.Message);
+                        throw;
                     }
 
                     // TESTING save separate Intensity, if both rgb and intensity are enabled
@@ -622,145 +777,11 @@ namespace PointCloudConverter.Writers
                 nodeBounds.Add(cb);
             } // loop all nodes/tiles foreach
 
-            // save rootfile
-            // only save after last file, TODO should save this if process fails or user cancels, so no need to start from 0 again.. but then needs some merge or continue from index n feature
-            if (isLastTask == true)
-            //if (fileIndex == (importSettings.maxFiles - 1))
-            {
-                Log.WriteLine(" *****************************  save this only after last file from all threads ***************************** ");
-                // check if any tile overlaps with other tiles
-                if (importSettings.checkoverlap == true)
-                {
-                    for (int i = 0, len = nodeBounds.Count; i < len; i++)
-                    {
-                        var cb = nodeBounds[i];
-                        // check if this tile overlaps with other tiles
-                        for (int j = 0, len2 = nodeBounds.Count; j < len2; j++)
-                        {
-                            if (i == j) continue; // skip self
-                            var cb2 = nodeBounds[j];
-                            // check if this tile overlaps with other tile
-                            float epsilon = 1e-6f;
-                            bool overlaps = cb.minX < cb2.maxX + epsilon && cb.maxX > cb2.minX - epsilon &&
-                                            cb.minY < cb2.maxY + epsilon && cb.maxY > cb2.minY - epsilon &&
-                                            cb.minZ < cb2.maxZ + epsilon && cb.maxZ > cb2.minZ - epsilon;
 
-                            if (overlaps)
-                            {
-                                // calculate overlap ratio
-                                float overlapX = Math.Min(cb.maxX, cb2.maxX) - Math.Max(cb.minX, cb2.minX);
-                                float overlapY = Math.Min(cb.maxY, cb2.maxY) - Math.Max(cb.minY, cb2.minY);
-                                float overlapZ = Math.Min(cb.maxZ, cb2.maxZ) - Math.Max(cb.minZ, cb2.minZ);
-                                float overlapVolume = overlapX * overlapY * overlapZ;
-                                float volume1 = (cb.maxX - cb.minX) * (cb.maxY - cb.minY) * (cb.maxZ - cb.minZ);
-                                float volume2 = (cb2.maxX - cb2.minX) * (cb2.maxY - cb2.minY) * (cb2.maxZ - cb2.minZ);
 
-                                // check if the volume of either tile is zero
-                                if (volume1 != 0 && volume2 != 0)
-                                {
-                                    float overlapRatio = overlapVolume / Math.Min(volume1, volume2);
-                                    cb.overlapRatio = overlapRatio;
-                                }
-                                else
-                                {
-                                    cb.overlapRatio = 0; // or any other appropriate value
-                                }
 
-                                nodeBounds[i] = cb;
-                            }
-                        }
-                    }
-                }
-
-                var tilerootdata = new List<string>();
-                var outputFileRoot = Path.Combine(baseFolder, fileOnly) + ".pcroot";
-
-                // add to tileroot list
-                long totalPointCount = 0;
-                for (int i = 0, len = nodeBounds.Count; i < len; i++)
-                {
-                    var tilerow = nodeBounds[i].fileName + sep + nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep + nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
-                    tilerootdata.Add(tilerow);
-                    totalPointCount += nodeBounds[i].totalPoints;
-                }
-
-                jsonString = "{" +
-                "\"event\": \"" + LogEvent.File + "\"," +
-                "\"path\": " + JsonSerializer.Serialize(outputFileRoot) + "," +
-                "\"totalpoints\": " + totalPointCount + "," +
-                "\"skippedNodes\": " + skippedNodesCounter + "," +
-                "\"skippedPoints\": " + skippedPointsCounter + "" +
-                "}";
-
-                Log.WriteLine(jsonString, LogEvent.End);
-                Log.WriteLine("\nSaving rootfile: " + outputFileRoot + "\n*Total points= " + Tools.HumanReadableCount(totalPointCount));
-
-                int versionID = importSettings.packColors ? 2 : 1; // (1 = original, 2 = packed v3 format)
-                if (importSettings.packColors == true) versionID = 2;
-                if (useLossyFiltering == true) versionID = 3;
-                if (importSettings.importIntensity == true && importSettings.importRGB && importSettings.packColors) versionID = 4; // new int packed format
-
-                bool addComments = false;
-
-                // add comment to first row (version, gridsize, pointcount, boundsMinX, boundsMinY, boundsMinZ, boundsMaxX, boundsMaxY, boundsMaxZ)
-                string identifer = "# PCROOT - https://github.com/unitycoder/PointCloudConverter";
-                if (addComments) tilerootdata.Insert(0, identifer);
-
-                string commentRow = "# version" + sep + "gridsize" + sep + "pointcount" + sep + "boundsMinX" + sep + "boundsMinY" + sep + "boundsMinZ" + sep + "boundsMaxX" + sep + "boundsMaxY" + sep + "boundsMaxZ" + sep + "autoOffsetX" + sep + "autoOffsetY" + sep + "autoOffsetZ" + sep + "packMagicValue";
-                if (importSettings.importRGB == true && importSettings.importIntensity == true) commentRow += sep + "intensity";
-                if (addComments) tilerootdata.Insert(1, commentRow);
-
-                // add global header settings to first row
-                //               version,          gridsize,                   pointcount,             boundsMinX,       boundsMinY,       boundsMinZ,       boundsMaxX,       boundsMaxY,       boundsMaxZ
-                string globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep + cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep + cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
-                //                  autoOffsetX,             globalOffsetY,           globalOffsetZ,           packMagic 
-                globalData += sep + importSettings.offsetX + sep + importSettings.offsetY + sep + importSettings.offsetZ + sep + importSettings.packMagicValue;
-                if (addComments)
-                {
-                    tilerootdata.Insert(2, globalData);
-                }
-                else
-                {
-                    tilerootdata.Insert(0, globalData);
-                }
-
-                // append comment for rows also
-                if (addComments) tilerootdata.Insert(3, "# filename" + sep + "pointcount" + sep + "minX" + sep + "minY" + sep + "minZ" + sep + "maxX" + sep + "maxY" + sep + "maxZ" + sep + "cellX" + sep + "cellY" + sep + "cellZ" + sep + "averageTimeStamp" + sep + "overlapRatio");
-
-                File.WriteAllLines(outputFileRoot, tilerootdata.ToArray());
-
-                Console.ForegroundColor = ConsoleColor.Green;
-                Log.WriteLine("Done saving v3 : " + outputFileRoot);
-                Console.ForegroundColor = ConsoleColor.White;
-                if (skippedNodesCounter > 0)
-                {
-                    Log.WriteLine("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
-                }
-
-                if (useLossyFiltering == true && skippedPointsCounter > 0)
-                {
-                    Log.WriteLine("*Skipped " + skippedPointsCounter + " points due to bytepacked grid filtering");
-                }
-
-                if ((tilerootdata.Count - 1) <= 0)
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    // TODO add json error log
-                    Log.WriteLine("Error> No tiles found! Try enable -scale (to make your cloud to smaller) Or make -gridsize bigger, or set -limit point count to smaller value");
-                    Console.ForegroundColor = ConsoleColor.White;
-                }
-
-                // cleanup after last file
-                nodeBounds.Clear();
-
-                cloudMinX = float.PositiveInfinity;
-                cloudMinY = float.PositiveInfinity;
-                cloudMinZ = float.PositiveInfinity;
-                cloudMaxX = float.NegativeInfinity;
-                cloudMaxY = float.NegativeInfinity;
-                cloudMaxZ = float.NegativeInfinity;
-            } // if last file
         } // Save()
+
 
         void RGBtoHSV(float r, float g, float b, out float h, out float s, out float v)
         {

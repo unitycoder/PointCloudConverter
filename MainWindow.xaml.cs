@@ -359,6 +359,9 @@ namespace PointCloudConverter
 
             Trace.WriteLine(" ---------------------- all finished -------------------- ");
 
+            // now write header for for pcroot
+            importSettings.writer.Close();
+
             // if this was last file
             //if (fileIndex == (importSettings.maxFiles - 1))
             //            {
