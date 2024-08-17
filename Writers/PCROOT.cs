@@ -10,7 +10,7 @@ using System.Text.Json;
 
 namespace PointCloudConverter.Writers
 {
-    public class PCROOT : IWriter
+    public class PCROOT : IWriter, IDisposable
     {
         const string tileExtension = ".pct";
         const string sep = "|";
@@ -43,6 +43,95 @@ namespace PointCloudConverter.Writers
         static float cloudMaxZ = float.NegativeInfinity;
 
         int? taskID;
+
+        // Implement IDisposable to clean up resources
+        public void Dispose()
+        {
+            // print used memory
+            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+
+
+
+            Log.WriteLine("*** PCROOT writer disposed for task: " + taskID);
+            // Dispose of managed resources
+            Dispose(true);
+            GC.SuppressFinalize(this);
+            GC.Collect();
+
+            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+        }
+
+
+        private void ClearDictionary(Dictionary<string, List<float>> dictionary)
+        {
+            if (dictionary != null)
+            {
+                foreach (var key in dictionary.Keys)
+                {
+                    dictionary[key]?.Clear();  // Clear the lists to free up memory
+                }
+                dictionary.Clear();  // Clear the dictionary itself
+            }
+        }        
+        
+        private void ClearDictionary(Dictionary<string, List<double>> dictionary)
+        {
+            if (dictionary != null)
+            {
+                foreach (var key in dictionary.Keys)
+                {
+                    dictionary[key]?.Clear();  // Clear the lists to free up memory
+                }
+                dictionary.Clear();  // Clear the dictionary itself
+            }
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // Dispose managed resources here
+                bsPoints?.Dispose();
+                writerPoints?.Dispose();
+
+                // Clear and nullify collections
+                keyCache.Clear();
+                keyCache = null;
+
+                ClearDictionary(nodeX);
+                nodeX = null;
+
+                ClearDictionary(nodeY);
+                nodeY = null;
+
+                ClearDictionary(nodeZ);
+                nodeZ = null;
+
+                ClearDictionary(nodeR);
+                nodeR = null;
+
+                ClearDictionary(nodeG);
+                nodeG = null;
+
+                ClearDictionary(nodeB);
+                nodeB = null;
+
+                ClearDictionary(nodeIntensity);
+                nodeIntensity = null;
+
+                ClearDictionary(nodeTime);
+                nodeTime = null;
+
+                // Clear static collections
+                //nodeBounds.Clear();
+            }
+        }
+
+        ~PCROOT()
+        {
+            // Finalizer to ensure resources are released
+            Dispose(false);
+        }
 
         // add constructor
         public PCROOT(int? _taskID)
@@ -226,7 +315,7 @@ namespace PointCloudConverter.Writers
             }
 
             // cleanup after last file
-            nodeBounds.Clear();
+            //nodeBounds.Clear();
 
             cloudMinX = float.PositiveInfinity;
             cloudMinY = float.PositiveInfinity;
@@ -236,11 +325,26 @@ namespace PointCloudConverter.Writers
             cloudMaxZ = float.NegativeInfinity;
             //   } // if last file
 
-        }
+            // clear all lists
+            keyCache.Clear();
+            nodeX.Clear();
+            nodeY.Clear();
+            nodeZ.Clear();
+            nodeR.Clear();
+            nodeG.Clear();
+            nodeB.Clear();
+            nodeIntensity.Clear();
+            nodeTime.Clear();
+
+            // dispose
+            bsPoints?.Dispose();
+            writerPoints?.Dispose();
+
+        } // close
 
         void IWriter.Cleanup(int fileIndex)
         {
-
+            Dispose();
         }
 
         void IWriter.Randomize()
@@ -776,9 +880,6 @@ namespace PointCloudConverter.Writers
 
                 nodeBounds.Add(cb);
             } // loop all nodes/tiles foreach
-
-
-
 
         } // Save()
 

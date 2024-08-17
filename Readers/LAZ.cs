@@ -39,13 +39,22 @@ namespace PointCloudConverter.Readers
 
         bool IReader.InitReader(ImportSettings importSettings, int fileIndex)
         {
-            Log.WriteLine("--------------------- initreader: " + fileIndex + " taskID: " + taskID);
-            // TODO check errors
-            var file = importSettings.inputFiles[fileIndex];
-            //importRGB = importSettings.importRGB;
-            //importIntensity = importSettings.importIntensity;
-            customIntensityRange = importSettings.useCustomIntensityRange;
-            var res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
+            int res = 1;
+            //try
+            //{
+                Log.WriteLine("--------------------- initreader: " + fileIndex + " taskID: " + taskID);
+                // TODO check errors
+                var file = importSettings.inputFiles[fileIndex];
+                //importRGB = importSettings.importRGB;
+                //importIntensity = importSettings.importIntensity;
+                customIntensityRange = importSettings.useCustomIntensityRange;
+                res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
+            //}
+            //catch (Exception e)
+            //{
+            //    Log.WriteLine("Error in LAZ.InitReader: " + e.Message);
+            //    throw;
+            //}
             return (res == 0);
         }
 

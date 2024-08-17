@@ -272,7 +272,13 @@ namespace PointCloudConverter
             //// hack to fix progress bar not updating on last file
             //progressFile++;
 
-            int maxThreads = 4;
+            int maxThreads = 8;
+
+            // clamp to max of inputfiles (otherwise errors in threading)
+            maxThreads = Math.Min(maxThreads, importSettings.maxFiles - 1); // FIXME: -1 because otherwise keynotfindexception in last file or after it?
+            // clamp to min 1
+            maxThreads = Math.Max(maxThreads, 1);
+
             var semaphore = new SemaphoreSlim(maxThreads);
 
             var tasks = new List<Task>();
@@ -359,7 +365,7 @@ namespace PointCloudConverter
 
             Trace.WriteLine(" ---------------------- all finished -------------------- ");
 
-            // now write header for for pcroot
+            // now write header for for pcroot (using main writer)
             importSettings.writer.Close();
 
             // if this was last file
@@ -480,7 +486,7 @@ namespace PointCloudConverter
         // process single file
         static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId, bool isLastTask)
         {
-            Log.WriteLine("taskid: " + taskId + " fileindex: " + fileIndex);
+            Log.WriteLine("parsefile, taskid: " + taskId + " fileindex: " + fileIndex);
 
             // each thread needs its own reader
             bool res;
@@ -675,53 +681,15 @@ namespace PointCloudConverter
                 lastStatusMessage = "Finished saving..";
                 taskReader.Close();
 
+
+                Log.WriteLine("------------ release reader and writer ------------");
+                importSettings.ReleaseReader(taskId);
+                importSettings.ReleaseWriter(taskId);
+                Log.WriteLine("------------ reader and writer released ------------");
             } // if importMetadataOnly == false
 
             // TODO here need to check if all tasks are done (they are not in order)
             Log.WriteLine("taskid: " + taskId + " done");
-            //// if this was last file
-            //if (fileIndex == (importSettings.maxFiles - 1))
-            //{
-            //    JsonSerializerSettings settings = new JsonSerializerSettings
-            //    {
-            //        StringEscapeHandling = StringEscapeHandling.Default // This prevents escaping of characters and write the WKT string properly
-            //    };
-
-            //    string jsonMeta = JsonConvert.SerializeObject(lasHeaders, settings);
-
-            //    // var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
-            //    //Log.WriteLine("MetaData: " + jsonMeta);
-            //    // write metadata to file
-            //    if (importSettings.importMetadata == true)
-            //    {
-            //        var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
-            //        Log.WriteLine("Writing metadata to file: " + jsonFile);
-            //        File.WriteAllText(jsonFile, jsonMeta);
-            //    }
-
-            //    lastStatusMessage = "Done!";
-            //    Console.ForegroundColor = ConsoleColor.Green;
-            //    Log.WriteLine("Finished!");
-            //    Console.ForegroundColor = ConsoleColor.White;
-            //    mainWindowStatic.Dispatcher.Invoke(() =>
-            //    {
-            //        if ((bool)mainWindowStatic.chkOpenOutputFolder.IsChecked)
-            //        {
-            //            var dir = Path.GetDirectoryName(importSettings.outputFile);
-            //            if (Directory.Exists(dir))
-            //            {
-            //                var psi = new ProcessStartInfo
-            //                {
-            //                    FileName = dir,
-            //                    UseShellExecute = true,
-            //                    Verb = "open"
-            //                };
-            //                Process.Start(psi);
-            //            }
-            //        }
-            //    });
-            //} // if last file
-
             return true;
         } // ParseFile
 
@@ -730,11 +698,44 @@ namespace PointCloudConverter
             // reset progress
             progressTotalFiles = 0;
             progressTotalPoints = 0;
-            ProgressTick(null, null);
+            if (ValidateSettings() == true)
+            {
+                ProgressTick(null, null);
+                gridProcessingPanel.Visibility = Visibility.Visible;
+                SaveSettings();
+                StartProcess();
+            }
+            else
+            {
+                Log.WriteLine("Error> Invalid settings, aborting..");
+            }
 
-            gridProcessingPanel.Visibility = Visibility.Visible;
-            SaveSettings();
-            StartProcess();
+        }
+
+        private bool ValidateSettings()
+        {
+            bool res = true;
+            if (string.IsNullOrEmpty(txtInputFile.Text))
+            {
+                System.Windows.MessageBox.Show("Please select input file", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+            if (string.IsNullOrEmpty(txtOutput.Text))
+            {
+                System.Windows.MessageBox.Show("Please select output file", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+            if (cmbImportFormat.SelectedItem == null)
+            {
+                System.Windows.MessageBox.Show("Please select import format", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+            if (cmbExportFormat.SelectedItem == null)
+            {
+                System.Windows.MessageBox.Show("Please select export format", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+            return res;
         }
 
         public class WorkerParams

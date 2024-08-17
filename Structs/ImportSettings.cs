@@ -31,6 +31,8 @@ namespace PointCloudConverter
                 Readers[taskId] = new LAZ(taskId);
             }
 
+            Log.WriteLine(">>>>> Total Readers in dictionary: " + Readers.Count);
+
             return Readers[taskId];
         }        
         
@@ -41,7 +43,32 @@ namespace PointCloudConverter
                 Writers[taskId] = new PCROOT(taskId);
             }
 
+            Log.WriteLine(">>>>> Total Writers in dictionary: " + Writers.Count);
+
             return Writers[taskId];
+        }
+
+        public void ReleaseReader(int? taskId)
+        {
+            if (Readers.ContainsKey(taskId))
+            {
+                Readers[taskId]?.Close(); 
+                Readers.Remove(taskId);
+            }
+        }
+
+        // Method to release (close) the writer for a specific task ID
+        public void ReleaseWriter(int? taskId)
+        {
+            if (Writers.ContainsKey(taskId))
+            {
+                Writers[taskId]?.Cleanup(0);
+                Writers.Remove(taskId);
+            }
+            else
+            {
+                Log.WriteLine("----->>>>> Writer not found in dictionary for task ID: " + taskId);
+            }
         }
 
         public bool haveError { get; set; } = false; // if errors during parsing args
