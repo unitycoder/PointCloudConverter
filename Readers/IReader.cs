@@ -22,5 +22,6 @@ namespace PointCloudConverter.Readers
         void Close();
         Color GetIntensity();
         LasHeader GetMetaData(ImportSettings importSettings, int fileIndex);
+        void Dispose();
     }
 }

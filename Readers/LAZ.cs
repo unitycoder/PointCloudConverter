@@ -15,10 +15,12 @@ using PointCloudConverter.Structs.VariableLengthRecords;
 using Free.Ports.LibGeoTiff;
 using System.Text;
 using Color = PointCloudConverter.Structs.Color;
+using System.Xml.Linq;
+using Windows.Data.Xml.Dom;
 
 namespace PointCloudConverter.Readers
 {
-    public class LAZ : IReader
+    public class LAZ : IReader, IDisposable
     {
         //laszip_dll lazReader = new laszip_dll();
         laszip lazReader = new laszip();
@@ -390,5 +392,27 @@ namespace PointCloudConverter.Readers
             lazReader.close_reader();
         }
 
+        public void Dispose()
+        {
+            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            Log.WriteLine("*** LAZ reader disposed for task: " + taskID);
+            Dispose(true);
+            GC.SuppressFinalize(this);
+            GC.Collect();
+            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                lazReader = null;
+            }
+        }
+
+        ~LAZ()
+        {
+            Dispose(false);
+        }
     } // class
 } // namespace

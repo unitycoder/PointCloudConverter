@@ -61,7 +61,7 @@ namespace PointCloudConverter
             Main();
         }
 
-        private void Main()
+        private async void Main()
         {
             // check cmdline args
             string[] args = Environment.GetCommandLineArgs();
@@ -75,8 +75,12 @@ namespace PointCloudConverter
             // default code
             Environment.ExitCode = (int)ExitCode.Success;
 
+            // using from commandline
             if (args.Length > 1)
             {
+                // hide window
+                this.Visibility = Visibility.Hidden;
+
                 AttachConsole(ATTACH_PARENT_PROCESS);
 
                 // check if have -jsonlog=true
@@ -107,7 +111,6 @@ namespace PointCloudConverter
                 // get elapsed time using time
                 var startTime = DateTime.Now;
 
-
                 // if have files, process them
                 if (importSettings.errors.Count == 0)
                 {
@@ -118,7 +121,7 @@ namespace PointCloudConverter
                         CancellationToken = _cancellationTokenSource.Token
                     };
 
-                    ProcessAllFiles(workerParams);
+                    await Task.Run(() => ProcessAllFiles(workerParams));
                 }
 
                 // print time
@@ -278,6 +281,8 @@ namespace PointCloudConverter
             maxThreads = Math.Min(maxThreads, importSettings.maxFiles - 1); // FIXME: -1 because otherwise keynotfindexception in last file or after it?
             // clamp to min 1
             maxThreads = Math.Max(maxThreads, 1);
+            Log.WriteLine("Max threads: " + maxThreads);
+
 
             var semaphore = new SemaphoreSlim(maxThreads);
 
@@ -287,28 +292,28 @@ namespace PointCloudConverter
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    //break; // Exit the loop if cancellation is requested
                     return;
                 }
 
-                await semaphore.WaitAsync(); // Wait for an available slot in the semaphore
+                Log.WriteLine("before waitasync sema: " + i);
+                await semaphore.WaitAsync(cancellationToken);
                 int? taskId = Task.CurrentId; // Get the current task ID
 
                 progressFile = i;
                 Log.WriteLine("task:" + taskId + " is reading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")\n");
 
-                bool isLastTask = (i == len - 1); // Check if this is the last task
+                //bool isLastTask = (i == len - 1); // Check if this is the last task
 
                 int index = i; // Capture the current index in the loop
-                //tasks.Add(Task.Run(() => ParseAndReleaseSemaphore(importSettings, i, semaphore, taskId)));
                 tasks.Add(Task.Run(async () =>
                 {
                     int? taskId = Task.CurrentId; // Get the current task ID
+                    Log.WriteLine("task started: " + taskId + " fileindex: " + index);
 
                     try
                     {
                         // Do actual point cloud parsing for this file and pass taskId
-                        var res = ParseFile(importSettings, index, taskId, isLastTask);
+                        var res = ParseFile(importSettings, index, taskId);
                         if (!res)
                         {
                             Interlocked.Increment(ref errorCounter); // thread-safe error counter increment
@@ -322,6 +327,14 @@ namespace PointCloudConverter
                             }
                         }
                     }
+                    catch (TaskCanceledException ex)
+                    {
+                        Log.WriteLine("Task was canceled: " + ex.Message, LogEvent.Error);
+                    }
+                    catch (TimeoutException ex)
+                    {
+                        Log.WriteLine("Timeout occurred: " + ex.Message, LogEvent.Error);
+                    }
                     catch (Exception ex)
                     {
                         Log.WriteLine("Exception> " + ex.Message, LogEvent.Error);
@@ -329,38 +342,14 @@ namespace PointCloudConverter
                     }
                     finally
                     {
+                        Log.WriteLine("before release: " + taskId);
                         semaphore.Release(); // Release the semaphore slot when the task is done
+                        Log.WriteLine("after release: " + taskId);
                     }
                 }));
-
-                //tasks.Add(Task.Run(async () =>
-                //{
-                //    int? taskId = Task.CurrentId; // Get the current task ID
-
-                //    try
-                //    {
-                //        // Do actual point cloud parsing for this file and pass taskId
-                //        var res = ParseFile(importSettings, i, taskId);
-                //        if (!res)
-                //        {
-                //            Interlocked.Increment(ref errorCounter); // thread-safe error counter increment
-                //            if (importSettings.useJSONLog)
-                //            {
-                //                Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
-                //            }
-                //            else
-                //            {
-                //                Log.WriteLine("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
-                //            }
-                //        }
-                //    }
-                //    finally
-                //    {
-                //        semaphore.Release(); // Release the semaphore slot when the task is done
-                //    }
-                //}));
             } // for all files
 
+            Log.WriteLine("before waitall");
             await Task.WhenAll(tasks); // Wait for all tasks to complete
 
             Trace.WriteLine(" ---------------------- all finished -------------------- ");
@@ -484,7 +473,7 @@ namespace PointCloudConverter
         }
 
         // process single file
-        static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId, bool isLastTask)
+        static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId)
         {
             Log.WriteLine("parsefile, taskid: " + taskId + " fileindex: " + fileIndex);
 
@@ -567,9 +556,14 @@ namespace PointCloudConverter
                     importSettings.offsetZ = 0;
                 }
 
+                Log.WriteLine("before create writer");
                 var taskWriter = importSettings.GetOrCreateWriter(taskId);
+                Log.WriteLine("after create writer");
+
                 //var writerRes = importSettings.writer.InitWriter(importSettings, pointCount);
+                Log.WriteLine("before init writer");
                 var writerRes = taskWriter.InitWriter(importSettings, pointCount);
+                Log.WriteLine("after init writer");
                 if (writerRes == false)
                 {
                     Log.WriteLine("Error> Failed to initialize Writer, fileindex: " + fileIndex + " taskid:" + taskId);
@@ -593,6 +587,7 @@ namespace PointCloudConverter
 
                 // Loop all points
                 for (int i = 0; i < fullPointCount; i++)
+                //for (int i = 0; i < 1000; i++)
                 {
                     // stop at limit count
                     if (importSettings.useLimit == true && i > pointCount) break;
@@ -677,13 +672,13 @@ namespace PointCloudConverter
 
                 lastStatusMessage = "Saving files..";
                 //importSettings.writer.Save(fileIndex);
-                taskWriter.Save(fileIndex, isLastTask);
+                taskWriter.Save(fileIndex);
                 lastStatusMessage = "Finished saving..";
-                taskReader.Close();
-
+                //taskReader.Close();
 
                 Log.WriteLine("------------ release reader and writer ------------");
                 importSettings.ReleaseReader(taskId);
+                //taskReader.Dispose();
                 importSettings.ReleaseWriter(taskId);
                 Log.WriteLine("------------ reader and writer released ------------");
             } // if importMetadataOnly == false
@@ -798,9 +793,12 @@ namespace PointCloudConverter
             if (importSettings.errors.Count == 0)
             {
                 // show output settings for commandline
-                var cl = string.Join(" ", args);
-                txtConsole.Text = cl;
-                Console.WriteLine(cl);
+                var commandLineString = string.Join(" ", args);
+                // add executable name at front (exe only, no path, keep extension
+                commandLineString = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name + ".exe " + commandLineString;
+
+                txtConsole.Text = commandLineString;
+                Console.WriteLine(commandLineString);
 
                 if (doProcess == true)
                 {

@@ -17,7 +17,7 @@ namespace PointCloudConverter.Writers
         // optional: randomizes points (to use dynamic resolution/tile LOD in Unity)
         void Randomize();
         // called after all points have been looped through
-        void Save(int fileIndex, bool isLastFile); // saves and closes, TODO but have separate close also.., FIXME remove index, not used?
+        void Save(int fileIndex);
         // optional: cleanup temporary files
         void Cleanup(int fileIndex);
         // close filestream

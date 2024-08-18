@@ -44,20 +44,13 @@ namespace PointCloudConverter.Writers
 
         int? taskID;
 
-        // Implement IDisposable to clean up resources
         public void Dispose()
         {
-            // print used memory
             Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
-
-
-
             Log.WriteLine("*** PCROOT writer disposed for task: " + taskID);
-            // Dispose of managed resources
             Dispose(true);
             GC.SuppressFinalize(this);
             GC.Collect();
-
             Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
         }
 
@@ -68,9 +61,9 @@ namespace PointCloudConverter.Writers
             {
                 foreach (var key in dictionary.Keys)
                 {
-                    dictionary[key]?.Clear();  // Clear the lists to free up memory
+                    dictionary[key]?.Clear();
                 }
-                dictionary.Clear();  // Clear the dictionary itself
+                dictionary.Clear();
             }
         }        
         
@@ -80,9 +73,9 @@ namespace PointCloudConverter.Writers
             {
                 foreach (var key in dictionary.Keys)
                 {
-                    dictionary[key]?.Clear();  // Clear the lists to free up memory
+                    dictionary[key]?.Clear();
                 }
-                dictionary.Clear();  // Clear the dictionary itself
+                dictionary.Clear(); 
             }
         }
 
@@ -90,11 +83,9 @@ namespace PointCloudConverter.Writers
         {
             if (disposing)
             {
-                // Dispose managed resources here
                 bsPoints?.Dispose();
                 writerPoints?.Dispose();
 
-                // Clear and nullify collections
                 keyCache.Clear();
                 keyCache = null;
 
@@ -121,15 +112,11 @@ namespace PointCloudConverter.Writers
 
                 ClearDictionary(nodeTime);
                 nodeTime = null;
-
-                // Clear static collections
-                //nodeBounds.Clear();
             }
         }
 
         ~PCROOT()
         {
-            // Finalizer to ensure resources are released
             Dispose(false);
         }
 
@@ -445,7 +432,7 @@ namespace PointCloudConverter.Writers
         static int skippedPointsCounter = 0;
         static bool useLossyFiltering = false; //not used, for testing only
 
-        void IWriter.Save(int fileIndex, bool isLastTask)
+        void IWriter.Save(int fileIndex)
         {
             if (useLossyFiltering == true)
             {
