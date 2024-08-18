@@ -15,27 +15,48 @@ using PointCloudConverter.Structs.VariableLengthRecords;
 using Free.Ports.LibGeoTiff;
 using System.Text;
 using Color = PointCloudConverter.Structs.Color;
+using System.Xml.Linq;
+using Windows.Data.Xml.Dom;
 
 namespace PointCloudConverter.Readers
 {
-    public class LAZ : IReader
+    public class LAZ : IReader, IDisposable
     {
         //laszip_dll lazReader = new laszip_dll();
-        LASzip.Net.laszip lazReader = new LASzip.Net.laszip();
+        laszip lazReader = new laszip();
 
         bool compressedLAZ = false;
         //bool importRGB = true;
         //bool importIntensity = false;
         bool customIntensityRange = false;
 
+        int? taskID;
+
+        // add constructor
+        public LAZ(int? _taskID)
+        {
+            //Log.WriteLine("*** LAZ reader created for task: " + _taskID);
+            taskID = _taskID;
+        }
+
         bool IReader.InitReader(ImportSettings importSettings, int fileIndex)
         {
-            // TODO check errors
-            var file = importSettings.inputFiles[fileIndex];
-            //importRGB = importSettings.importRGB;
-            //importIntensity = importSettings.importIntensity;
-            customIntensityRange = importSettings.useCustomIntensityRange;
-            var res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
+            int res = 1;
+            //try
+            //{
+                //Log.WriteLine("--------------------- initreader: " + fileIndex + " taskID: " + taskID);
+                // TODO check errors
+                var file = importSettings.inputFiles[fileIndex];
+                //importRGB = importSettings.importRGB;
+                //importIntensity = importSettings.importIntensity;
+                customIntensityRange = importSettings.useCustomIntensityRange;
+                res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
+            //}
+            //catch (Exception e)
+            //{
+            //    Log.WriteLine("Error in LAZ.InitReader: " + e.Message);
+            //    throw;
+            //}
             return (res == 0);
         }
 
@@ -371,5 +392,27 @@ namespace PointCloudConverter.Readers
             lazReader.close_reader();
         }
 
+        public void Dispose()
+        {
+            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            //Log.WriteLine("*** LAZ reader disposed for task: " + taskID);
+            Dispose(true);
+            GC.SuppressFinalize(this);
+            GC.Collect();
+            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                lazReader = null;
+            }
+        }
+
+        ~LAZ()
+        {
+            Dispose(false);
+        }
     } // class
 } // namespace

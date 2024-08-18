@@ -550,5 +550,17 @@ namespace PointCloudConverter.Properties {
                 this["calculateOverlappingTiles"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        public string maxThreads {
+            get {
+                return ((string)(this["maxThreads"]));
+            }
+            set {
+                this["maxThreads"] = value;
+            }
+        }
     }
 }

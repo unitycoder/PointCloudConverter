@@ -1,8 +1,10 @@
 ﻿// values from commandline arguments
 
+using PointCloudConverter.Logger;
 using PointCloudConverter.Readers;
 using PointCloudConverter.Structs;
 using PointCloudConverter.Writers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -13,12 +15,105 @@ namespace PointCloudConverter
     {
         // filled in by program (so that json serializer is easier)
         public string version { get; set; } = "0.0.0";
-        
+
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public Logger.LogEvent @event { get; set; }
 
-        public IReader reader = new LAZ();
+        public IReader reader = new LAZ(null); // single threaded reader
+        //public Dictionary<int?, IReader> Readers { get; set; } = new Dictionary<int?, IReader>();
+        public ConcurrentDictionary<int?, IReader> Readers { get; set; } = new ConcurrentDictionary<int?, IReader>();
         public IWriter writer = new UCPC();
+        //public Dictionary<int?, IWriter> Writers { get; set; } = new Dictionary<int?, IWriter>();
+        public ConcurrentDictionary<int?, IWriter> Writers { get; set; } = new ConcurrentDictionary<int?, IWriter>();
+
+
+        // Method to get or create a reader for a specific task ID
+        public IReader GetOrCreateReader(int? taskId)
+        {
+            if (!Readers.ContainsKey(taskId))
+            {
+                Readers[taskId] = new LAZ(taskId);
+            }
+
+            //Log.WriteLine(">>>>> Total Readers in dictionary: " + Readers.Count);
+
+            return Readers[taskId];
+        }
+
+        public IWriter GetOrCreateWriter(int? taskId)
+        {
+            if (!Writers.ContainsKey(taskId))
+            {
+                Writers[taskId] = new PCROOT(taskId);
+            }
+
+            //Log.WriteLine(">>>>> Total Writers in dictionary: " + Writers.Count);
+
+            return Writers[taskId];
+        }
+
+        //public void ReleaseReader(int? taskId)
+        //{
+        //    //Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
+        //    if (Readers.ContainsKey(taskId))
+        //    {
+        //        Readers[taskId]?.Close();
+        //        //Readers[taskId]?.Dispose(); // FIXME causes exceptions
+        //        Readers.Remove(taskId);
+        //    }
+        //}
+
+        public void ReleaseReader(int? taskId)
+        {
+            // Log the release of the reader for the specified task ID
+            // Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
+
+            if (taskId.HasValue)
+            {
+                if (Readers.TryRemove(taskId, out var reader))
+                {
+                    reader?.Close();
+                    // reader?.Dispose();
+                }
+                else
+                {
+                    Log.WriteLine($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
+                }
+            }
+        }
+
+        public void ReleaseWriter(int? taskId)
+        {
+            // Log the release of the reader for the specified task ID
+            // Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
+
+            if (taskId.HasValue)
+            {
+                if (Writers.TryRemove(taskId, out var writer))
+                {
+                    writer?.Cleanup(0);
+                    // reader?.Dispose();
+                }
+                else
+                {
+                    Log.WriteLine($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
+                }
+            }
+        }
+
+        //public void ReleaseWriter(int? taskId)
+        //{
+        //    //Log.WriteLine(">>>>> Releasing writer for task ID: " + taskId);
+        //    if (Writers.ContainsKey(taskId))
+        //    {
+        //        Writers[taskId]?.Cleanup(0);
+        //        Writers.Remove(taskId);
+        //    }
+        //    else
+        //    {
+        //        //Log.WriteLine("----->>>>> Writer not found in dictionary for task ID: " + taskId);
+        //    }
+        //}
 
         public bool haveError { get; set; } = false; // if errors during parsing args
         //public string[] errorMessages = null; // last error message(s)
@@ -26,7 +121,7 @@ namespace PointCloudConverter
         public bool useScale { get; set; } = false;
         public float scale { get; set; } = 1f;
 
-        [JsonConverter(typeof(JsonStringEnumConverter))] 
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public ImportFormat importFormat { get; set; } = ImportFormat.LAS; //default to las for now
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ExportFormat exportFormat { get; set; } = ExportFormat.UCPC; // defaults to UCPC (v2)
@@ -48,7 +143,7 @@ namespace PointCloudConverter
         public float offsetX { get; set; } = 0;
         public float offsetY { get; set; } = 0;
         public float offsetZ { get; set; } = 0;
-        public bool useLimit { get; set; }  = false;
+        public bool useLimit { get; set; } = false;
         public int limit { get; set; } = 0;
         public bool randomize { get; set; } = false;
         public float gridSize { get; set; } = 25;
@@ -67,6 +162,7 @@ namespace PointCloudConverter
         public float manualOffsetZ { get; set; } = 0;
         public bool useCustomIntensityRange { get; set; } = false; // if false, 0-255 range is used, if ture: 0-65535
         public int seed { get; set; } = -1; // random seed for shuffling
+        public int maxThreads { get; set; }
 
         public bool useJSONLog = false;
         public bool importMetadata = false;

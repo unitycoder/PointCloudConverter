@@ -138,7 +138,7 @@ namespace PointCloudConverter
                                 else
                                 {
                                     importSettings.importFormat = ImportFormat.LAS;
-                                    importSettings.reader = new LAZ();
+                                    importSettings.reader = new LAZ(null);
                                 }
                                 break;
                             case "-exportformat":
@@ -159,7 +159,7 @@ namespace PointCloudConverter
                                     {
                                         // TODO check enum names or interfaces
                                         case "PCROOT":
-                                            importSettings.writer = new PCROOT();
+                                            importSettings.writer = new PCROOT(null);
                                             importSettings.exportFormat = ExportFormat.PCROOT;
                                             importSettings.randomize = true; // required for V3
                                             break;
@@ -442,6 +442,37 @@ namespace PointCloudConverter
                                 else // got value
                                 {
                                     importSettings.maxFiles = tempInt;
+                                }
+                                break;
+
+                            case "-maxthreads":
+                                Log.WriteLine("maxthreads = " + param);
+                                string cleanParam = param.Trim().TrimEnd('%');
+                                bool maxThreadsParsed = int.TryParse(cleanParam, out tempInt);
+                                if (maxThreadsParsed == false)
+                                {
+                                    importSettings.errors.Add("Invalid maxthreads parameter: " + param);
+                                }
+                                else // got value (integer or int with percentage)
+                                {
+                                    if (param.IndexOf("%") > -1)
+                                    {
+                                        importSettings.maxThreads = (int)Math.Ceiling(Environment.ProcessorCount * (tempInt / 100f));
+                                    }
+                                    else
+                                    {
+                                        importSettings.maxThreads = tempInt;
+                                    }
+
+                                    if (importSettings.maxThreads < 1)
+                                    {
+                                        importSettings.errors.Add("Invalid maxthreads parameter, must be greater than 0: " + param);
+                                    }
+
+                                    if (importSettings.maxThreads > Environment.ProcessorCount)
+                                    {
+                                        importSettings.errors.Add("Maxthreads cannot be more than available processors: " + param);
+                                    }
                                 }
                                 break;
 
@@ -759,7 +790,7 @@ namespace PointCloudConverter
             if (importSettings.importFormat == ImportFormat.Unknown)
             {
                 importSettings.importFormat = ImportFormat.LAS;
-                importSettings.reader = new LAZ();
+                importSettings.reader = new LAZ(null);
                 Log.WriteLine("No import format defined, using Default: " + importSettings.importFormat.ToString());
             }
 
