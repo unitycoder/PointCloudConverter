@@ -294,18 +294,19 @@ namespace PointCloudConverter
                 }
 
                 await semaphore.WaitAsync(cancellationToken);
-                int? taskId = Task.CurrentId; // Get the current task ID
+                //int? taskId = Task.CurrentId; // Get the current task ID
 
                 progressFile = i;
-                Log.WriteLine("task:" + taskId + ", reading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")\n");
 
                 //bool isLastTask = (i == len - 1); // Check if this is the last task
 
                 int index = i; // Capture the current index in the loop
+                int len2 = len;
                 tasks.Add(Task.Run(async () =>
                 {
                     int? taskId = Task.CurrentId; // Get the current task ID
-                    //Log.WriteLine("task started: " + taskId + " fileindex: " + index);
+                                                  //Log.WriteLine("task started: " + taskId + " fileindex: " + index);
+                    Log.WriteLine("task:" + taskId + ", reading file (" + (index + 1) + "/" + len2 + ") : " + importSettings.inputFiles[index] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[index]).Length) + ")\n");
 
                     try
                     {

@@ -1,8 +1,10 @@
 ﻿// values from commandline arguments
 
+using PointCloudConverter.Logger;
 using PointCloudConverter.Readers;
 using PointCloudConverter.Structs;
 using PointCloudConverter.Writers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -18,9 +20,11 @@ namespace PointCloudConverter
         public Logger.LogEvent @event { get; set; }
 
         public IReader reader = new LAZ(null); // single threaded reader
-        public Dictionary<int?, IReader> Readers { get; set; } = new Dictionary<int?, IReader>();
+        //public Dictionary<int?, IReader> Readers { get; set; } = new Dictionary<int?, IReader>();
+        public ConcurrentDictionary<int?, IReader> Readers { get; set; } = new ConcurrentDictionary<int?, IReader>();
         public IWriter writer = new UCPC();
-        public Dictionary<int?, IWriter> Writers { get; set; } = new Dictionary<int?, IWriter>();
+        //public Dictionary<int?, IWriter> Writers { get; set; } = new Dictionary<int?, IWriter>();
+        public ConcurrentDictionary<int?, IWriter> Writers { get; set; } = new ConcurrentDictionary<int?, IWriter>();
 
 
         // Method to get or create a reader for a specific task ID
@@ -48,29 +52,68 @@ namespace PointCloudConverter
             return Writers[taskId];
         }
 
+        //public void ReleaseReader(int? taskId)
+        //{
+        //    //Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
+        //    if (Readers.ContainsKey(taskId))
+        //    {
+        //        Readers[taskId]?.Close();
+        //        //Readers[taskId]?.Dispose(); // FIXME causes exceptions
+        //        Readers.Remove(taskId);
+        //    }
+        //}
+
         public void ReleaseReader(int? taskId)
         {
-            if (Readers.ContainsKey(taskId))
+            // Log the release of the reader for the specified task ID
+            // Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
+
+            if (taskId.HasValue)
             {
-                Readers[taskId]?.Close();
-                Readers[taskId]?.Dispose();
-                Readers.Remove(taskId);
+                if (Readers.TryRemove(taskId, out var reader))
+                {
+                    reader?.Close();
+                    // reader?.Dispose();
+                }
+                else
+                {
+                    Log.WriteLine($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
+                }
             }
         }
 
-        // Method to release (close) the writer for a specific task ID
         public void ReleaseWriter(int? taskId)
         {
-            if (Writers.ContainsKey(taskId))
+            // Log the release of the reader for the specified task ID
+            // Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
+
+            if (taskId.HasValue)
             {
-                Writers[taskId]?.Cleanup(0);
-                Writers.Remove(taskId);
-            }
-            else
-            {
-                //Log.WriteLine("----->>>>> Writer not found in dictionary for task ID: " + taskId);
+                if (Writers.TryRemove(taskId, out var writer))
+                {
+                    writer?.Cleanup(0);
+                    // reader?.Dispose();
+                }
+                else
+                {
+                    Log.WriteLine($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
+                }
             }
         }
+
+        //public void ReleaseWriter(int? taskId)
+        //{
+        //    //Log.WriteLine(">>>>> Releasing writer for task ID: " + taskId);
+        //    if (Writers.ContainsKey(taskId))
+        //    {
+        //        Writers[taskId]?.Cleanup(0);
+        //        Writers.Remove(taskId);
+        //    }
+        //    else
+        //    {
+        //        //Log.WriteLine("----->>>>> Writer not found in dictionary for task ID: " + taskId);
+        //    }
+        //}
 
         public bool haveError { get; set; } = false; // if errors during parsing args
         //public string[] errorMessages = null; // last error message(s)
