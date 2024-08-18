@@ -24,7 +24,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "13.08.2024";
+        static readonly string version = "18.08.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -275,16 +275,14 @@ namespace PointCloudConverter
             //// hack to fix progress bar not updating on last file
             //progressFile++;
 
-            int maxThreads = 8;
-
             // clamp to max of inputfiles (otherwise errors in threading)
-            maxThreads = Math.Min(maxThreads, importSettings.maxFiles - 1); // FIXME: -1 because otherwise keynotfindexception in last file or after it?
+            int maxThreads = Math.Min(importSettings.maxThreads, importSettings.maxFiles - 1); // FIXME: -1 because otherwise keynotfindexception in last file or after it?
             // clamp to min 1
-            maxThreads = Math.Max(maxThreads, 1);
-            Log.WriteLine("Max threads: " + maxThreads);
+            maxThreads = Math.Max(importSettings.maxThreads, 1);
+            Log.WriteLine("Using MaxThreads: " + maxThreads);
 
 
-            var semaphore = new SemaphoreSlim(maxThreads);
+            var semaphore = new SemaphoreSlim(importSettings.maxThreads);
 
             var tasks = new List<Task>();
 
@@ -295,12 +293,11 @@ namespace PointCloudConverter
                     return;
                 }
 
-                Log.WriteLine("before waitasync sema: " + i);
                 await semaphore.WaitAsync(cancellationToken);
                 int? taskId = Task.CurrentId; // Get the current task ID
 
                 progressFile = i;
-                Log.WriteLine("task:" + taskId + " is reading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")\n");
+                Log.WriteLine("task:" + taskId + ", reading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")\n");
 
                 //bool isLastTask = (i == len - 1); // Check if this is the last task
 
@@ -308,7 +305,7 @@ namespace PointCloudConverter
                 tasks.Add(Task.Run(async () =>
                 {
                     int? taskId = Task.CurrentId; // Get the current task ID
-                    Log.WriteLine("task started: " + taskId + " fileindex: " + index);
+                    //Log.WriteLine("task started: " + taskId + " fileindex: " + index);
 
                     try
                     {
@@ -342,17 +339,14 @@ namespace PointCloudConverter
                     }
                     finally
                     {
-                        Log.WriteLine("before release: " + taskId);
                         semaphore.Release(); // Release the semaphore slot when the task is done
-                        Log.WriteLine("after release: " + taskId);
                     }
                 }));
             } // for all files
 
-            Log.WriteLine("before waitall");
             await Task.WhenAll(tasks); // Wait for all tasks to complete
 
-            Trace.WriteLine(" ---------------------- all finished -------------------- ");
+            //Trace.WriteLine(" ---------------------- all finished -------------------- ");
 
             // now write header for for pcroot (using main writer)
             importSettings.writer.Close();
@@ -475,7 +469,7 @@ namespace PointCloudConverter
         // process single file
         static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId)
         {
-            Log.WriteLine("parsefile, taskid: " + taskId + " fileindex: " + fileIndex);
+            //Log.WriteLine("parsefile, taskid: " + taskId + " fileindex: " + fileIndex);
 
             // each thread needs its own reader
             bool res;
@@ -556,14 +550,10 @@ namespace PointCloudConverter
                     importSettings.offsetZ = 0;
                 }
 
-                Log.WriteLine("before create writer");
                 var taskWriter = importSettings.GetOrCreateWriter(taskId);
-                Log.WriteLine("after create writer");
 
                 //var writerRes = importSettings.writer.InitWriter(importSettings, pointCount);
-                Log.WriteLine("before init writer");
                 var writerRes = taskWriter.InitWriter(importSettings, pointCount);
-                Log.WriteLine("after init writer");
                 if (writerRes == false)
                 {
                     Log.WriteLine("Error> Failed to initialize Writer, fileindex: " + fileIndex + " taskid:" + taskId);
@@ -676,15 +666,14 @@ namespace PointCloudConverter
                 lastStatusMessage = "Finished saving..";
                 //taskReader.Close();
 
-                Log.WriteLine("------------ release reader and writer ------------");
+                //Log.WriteLine("------------ release reader and writer ------------");
                 importSettings.ReleaseReader(taskId);
                 //taskReader.Dispose();
                 importSettings.ReleaseWriter(taskId);
-                Log.WriteLine("------------ reader and writer released ------------");
+                //Log.WriteLine("------------ reader and writer released ------------");
             } // if importMetadataOnly == false
 
-            // TODO here need to check if all tasks are done (they are not in order)
-            Log.WriteLine("taskid: " + taskId + " done");
+            //Log.WriteLine("taskid: " + taskId + " done");
             return true;
         } // ParseFile
 
@@ -782,7 +771,7 @@ namespace PointCloudConverter
             if ((bool)chkMetaDataOnly.IsChecked) args.Add("-metadataonly=true");
             if ((bool)chkGetAvgTileTimestamp.IsChecked) args.Add("-averagetimestamp=true");
             if ((bool)chkCalculateOverlappingTiles.IsChecked) args.Add("-checkoverlap=true");
-
+            args.Add("-maxthreads=" + txtMaxThreads.Text);
 
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
 
@@ -1007,6 +996,7 @@ namespace PointCloudConverter
             chkMetaDataOnly.IsChecked = Properties.Settings.Default.metadataOnly;
             chkGetAvgTileTimestamp.IsChecked = Properties.Settings.Default.getAvgTileTimestamp;
             chkCalculateOverlappingTiles.IsChecked = Properties.Settings.Default.calculateOverlappingTiles;
+            txtMaxThreads.Text = Properties.Settings.Default.maxThreads;
             isInitialiazing = false;
         }
 
@@ -1055,6 +1045,7 @@ namespace PointCloudConverter
             Properties.Settings.Default.metadataOnly = (bool)chkMetaDataOnly.IsChecked;
             Properties.Settings.Default.getAvgTileTimestamp = (bool)chkGetAvgTileTimestamp.IsChecked;
             Properties.Settings.Default.calculateOverlappingTiles = (bool)chkCalculateOverlappingTiles.IsChecked;
+            Properties.Settings.Default.maxThreads = txtMaxThreads.Text;
             Properties.Settings.Default.Save();
         }
 

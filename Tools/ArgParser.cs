@@ -445,6 +445,37 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-maxthreads":
+                                Log.WriteLine("maxthreads = " + param);
+                                string cleanParam = param.Trim().TrimEnd('%');
+                                bool maxThreadsParsed = int.TryParse(cleanParam, out tempInt);
+                                if (maxThreadsParsed == false)
+                                {
+                                    importSettings.errors.Add("Invalid maxthreads parameter: " + param);
+                                }
+                                else // got value (integer or int with percentage)
+                                {
+                                    if (param.IndexOf("%") > -1)
+                                    {
+                                        importSettings.maxThreads = (int)Math.Ceiling(Environment.ProcessorCount * (tempInt / 100f));
+                                    }
+                                    else
+                                    {
+                                        importSettings.maxThreads = tempInt;
+                                    }
+
+                                    if (importSettings.maxThreads < 1)
+                                    {
+                                        importSettings.errors.Add("Invalid maxthreads parameter, must be greater than 0: " + param);
+                                    }
+
+                                    if (importSettings.maxThreads > Environment.ProcessorCount)
+                                    {
+                                        importSettings.errors.Add("Maxthreads cannot be more than available processors: " + param);
+                                    }
+                                }
+                                break;
+
                             case "-metadata":
                                 Log.WriteLine("metadata = " + param);
                                 if (param != "true" && param != "false")

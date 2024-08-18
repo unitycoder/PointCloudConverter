@@ -35,7 +35,7 @@ namespace PointCloudConverter.Readers
         // add constructor
         public LAZ(int? _taskID)
         {
-            Log.WriteLine("*** LAZ reader created for task: " + _taskID);
+            //Log.WriteLine("*** LAZ reader created for task: " + _taskID);
             taskID = _taskID;
         }
 
@@ -44,7 +44,7 @@ namespace PointCloudConverter.Readers
             int res = 1;
             //try
             //{
-                Log.WriteLine("--------------------- initreader: " + fileIndex + " taskID: " + taskID);
+                //Log.WriteLine("--------------------- initreader: " + fileIndex + " taskID: " + taskID);
                 // TODO check errors
                 var file = importSettings.inputFiles[fileIndex];
                 //importRGB = importSettings.importRGB;
@@ -394,12 +394,12 @@ namespace PointCloudConverter.Readers
 
         public void Dispose()
         {
-            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
-            Log.WriteLine("*** LAZ reader disposed for task: " + taskID);
+            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            //Log.WriteLine("*** LAZ reader disposed for task: " + taskID);
             Dispose(true);
             GC.SuppressFinalize(this);
             GC.Collect();
-            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
         }
 
         protected virtual void Dispose(bool disposing)

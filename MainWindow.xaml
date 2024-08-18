@@ -92,7 +92,15 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Margin="0,4,0,0">
-                    <CheckBox x:Name="chkUseJSONLog" Content="Use JSON log *Used in commandline only" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Log messages are written in JSON format. Experimental, V3 format is better supported."/>
+                    <StackPanel Grid.Column="1" Margin="0,4,0,0">
+                        <CheckBox x:Name="chkUseJSONLog" Content="Use JSON log *Used in commandline only" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Log messages are written in JSON format. Experimental, V3 format is better supported."/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1"  Margin="0,4,0,0" Orientation="Horizontal">
+                        <Label x:Name="label_Copy112" Content="Max Threads:" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+                        <TextBox x:Name="txtMaxThreads" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="4" ToolTip="How many threads for processing (example: 4 or 50%)"/>
+                        <Label x:Name="label_Copy123" Content="(count or #%)" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
+                    </StackPanel>
                 </StackPanel>
 
             </Grid>

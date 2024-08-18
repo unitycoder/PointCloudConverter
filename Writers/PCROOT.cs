@@ -46,12 +46,12 @@ namespace PointCloudConverter.Writers
 
         public void Dispose()
         {
-            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
-            Log.WriteLine("*** PCROOT writer disposed for task: " + taskID);
+            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            //Log.WriteLine("*** PCROOT writer disposed for task: " + taskID);
             Dispose(true);
             GC.SuppressFinalize(this);
             GC.Collect();
-            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
         }
 
 
@@ -123,13 +123,13 @@ namespace PointCloudConverter.Writers
         // add constructor
         public PCROOT(int? _taskID)
         {
-            Log.WriteLine("*** PCROOT writer created for task: " + _taskID);
+            //Log.WriteLine("*** PCROOT writer created for task: " + _taskID);
             taskID = _taskID;
         }
 
         bool IWriter.InitWriter(ImportSettings _importSettings, int _pointCount)
         {
-            Log.WriteLine("--------------------- initwriter for taskID: " + taskID);
+            //Log.WriteLine("--------------------- initwriter for taskID: " + taskID);
 
             var res = true;
 
@@ -174,7 +174,7 @@ namespace PointCloudConverter.Writers
             // if (isLastTask == true)
             //if (fileIndex == (importSettings.maxFiles - 1))
             // {
-            Log.WriteLine(" *****************************  save this only after last file from all threads ***************************** ");
+            //Log.WriteLine(" *****************************  save this only after last file from all threads ***************************** ");
             // check if any tile overlaps with other tiles
             if (importSettings.checkoverlap == true)
             {

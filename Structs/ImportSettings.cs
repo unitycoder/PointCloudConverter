@@ -31,11 +31,11 @@ namespace PointCloudConverter
                 Readers[taskId] = new LAZ(taskId);
             }
 
-            Log.WriteLine(">>>>> Total Readers in dictionary: " + Readers.Count);
+            //Log.WriteLine(">>>>> Total Readers in dictionary: " + Readers.Count);
 
             return Readers[taskId];
-        }        
-        
+        }
+
         public IWriter GetOrCreateWriter(int? taskId)
         {
             if (!Writers.ContainsKey(taskId))
@@ -43,7 +43,7 @@ namespace PointCloudConverter
                 Writers[taskId] = new PCROOT(taskId);
             }
 
-            Log.WriteLine(">>>>> Total Writers in dictionary: " + Writers.Count);
+            //Log.WriteLine(">>>>> Total Writers in dictionary: " + Writers.Count);
 
             return Writers[taskId];
         }
@@ -52,7 +52,8 @@ namespace PointCloudConverter
         {
             if (Readers.ContainsKey(taskId))
             {
-                Readers[taskId]?.Close(); 
+                Readers[taskId]?.Close();
+                Readers[taskId]?.Dispose();
                 Readers.Remove(taskId);
             }
         }
@@ -67,7 +68,7 @@ namespace PointCloudConverter
             }
             else
             {
-                Log.WriteLine("----->>>>> Writer not found in dictionary for task ID: " + taskId);
+                //Log.WriteLine("----->>>>> Writer not found in dictionary for task ID: " + taskId);
             }
         }
 
@@ -118,6 +119,7 @@ namespace PointCloudConverter
         public float manualOffsetZ { get; set; } = 0;
         public bool useCustomIntensityRange { get; set; } = false; // if false, 0-255 range is used, if ture: 0-65535
         public int seed { get; set; } = -1; // random seed for shuffling
+        public int maxThreads { get; set; }
 
         public bool useJSONLog = false;
         public bool importMetadata = false;
