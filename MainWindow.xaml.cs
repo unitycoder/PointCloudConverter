@@ -24,7 +24,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "18.08.2024";
+        static readonly string version = "19.08.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -275,7 +275,7 @@ namespace PointCloudConverter
             //// hack to fix progress bar not updating on last file
             //progressFile++;
 
-            // clamp to max of inputfiles (otherwise errors in threading)
+            // clamp to max of inputfiles-1 (otherwise errors in threading)
             int maxThreads = Math.Min(importSettings.maxThreads, importSettings.maxFiles - 1); // FIXME: -1 because otherwise keynotfindexception in last file or after it?
             // clamp to min 1
             maxThreads = Math.Max(importSettings.maxThreads, 1);

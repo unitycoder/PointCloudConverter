@@ -343,5 +343,10 @@ namespace PointCloudConverter.Writers
             writerColorsV2.Close();
             bsColorsV2.Dispose();
         }
+
+        void IWriter.Dispose()
+        {
+            // TODO ?
+        }
     }
 }

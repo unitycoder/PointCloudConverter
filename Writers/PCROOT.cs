@@ -15,11 +15,17 @@ namespace PointCloudConverter.Writers
         const string tileExtension = ".pct";
         const string sep = "|";
 
-        static ImportSettings importSettings;
         BufferedStream bsPoints = null;
         BinaryWriter writerPoints = null;
 
+        ImportSettings importSettings;
         static List<PointCloudTile> nodeBounds = new List<PointCloudTile>(); // for all tiles
+        static float cloudMinX = float.PositiveInfinity;
+        static float cloudMinY = float.PositiveInfinity;
+        static float cloudMinZ = float.PositiveInfinity;
+        static float cloudMaxX = float.NegativeInfinity;
+        static float cloudMaxY = float.NegativeInfinity;
+        static float cloudMaxZ = float.NegativeInfinity;
 
         Dictionary<string, (int, int, int)> keyCache = new Dictionary<string, (int, int, int)>();
 
@@ -35,23 +41,17 @@ namespace PointCloudConverter.Writers
         Dictionary<string, List<float>> nodeIntensity = new Dictionary<string, List<float>>();
         Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
 
-        static float cloudMinX = float.PositiveInfinity;
-        static float cloudMinY = float.PositiveInfinity;
-        static float cloudMinZ = float.PositiveInfinity;
-        static float cloudMaxX = float.NegativeInfinity;
-        static float cloudMaxY = float.NegativeInfinity;
-        static float cloudMaxZ = float.NegativeInfinity;
 
         int? taskID;
 
         public void Dispose()
         {
-            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
-            //Log.WriteLine("*** PCROOT writer disposed for task: " + taskID);
+            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            Log.WriteLine("*** PCROOT writer disposed for task: " + taskID);
             Dispose(true);
             GC.SuppressFinalize(this);
             GC.Collect();
-            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
         }
 
 
@@ -59,23 +59,25 @@ namespace PointCloudConverter.Writers
         {
             if (dictionary != null)
             {
-                foreach (var key in dictionary.Keys)
+                foreach (var list in dictionary.Values)
                 {
-                    dictionary[key]?.Clear();
+                    list.Clear(); // Clear the list to free up memory
                 }
-                dictionary.Clear();
+                dictionary.Clear(); // Clear the dictionary itself
+                dictionary = null; // Help GC by removing reference
             }
-        }        
-        
+        }
+
         private void ClearDictionary(Dictionary<string, List<double>> dictionary)
         {
             if (dictionary != null)
             {
-                foreach (var key in dictionary.Keys)
+                foreach (var list in dictionary.Values)
                 {
-                    dictionary[key]?.Clear();
+                    list.Clear(); // Clear the list to free up memory
                 }
-                dictionary.Clear(); 
+                dictionary.Clear(); // Clear the dictionary itself
+                dictionary = null; // Help GC by removing reference
             }
         }
 
@@ -83,40 +85,30 @@ namespace PointCloudConverter.Writers
         {
             if (disposing)
             {
+                // Dispose managed resources here
                 bsPoints?.Dispose();
                 writerPoints?.Dispose();
 
+                // Clear and dispose instance dictionaries
+                ClearDictionary(nodeX);
+                ClearDictionary(nodeY);
+                ClearDictionary(nodeZ);
+                ClearDictionary(nodeR);
+                ClearDictionary(nodeG);
+                ClearDictionary(nodeB);
+                ClearDictionary(nodeIntensity);
+                ClearDictionary(nodeTime);
+
                 keyCache.Clear();
                 keyCache = null;
-
-                ClearDictionary(nodeX);
-                nodeX = null;
-
-                ClearDictionary(nodeY);
-                nodeY = null;
-
-                ClearDictionary(nodeZ);
-                nodeZ = null;
-
-                ClearDictionary(nodeR);
-                nodeR = null;
-
-                ClearDictionary(nodeG);
-                nodeG = null;
-
-                ClearDictionary(nodeB);
-                nodeB = null;
-
-                ClearDictionary(nodeIntensity);
-                nodeIntensity = null;
-
-                ClearDictionary(nodeTime);
-                nodeTime = null;
             }
+
+            // If there were unmanaged resources, you'd clean them up here
         }
 
         ~PCROOT()
         {
+            Log.WriteLine("pcroot writer finalized for task: " + taskID);
             Dispose(false);
         }
 
@@ -313,15 +305,15 @@ namespace PointCloudConverter.Writers
             //   } // if last file
 
             // clear all lists
-            keyCache.Clear();
-            nodeX.Clear();
-            nodeY.Clear();
-            nodeZ.Clear();
-            nodeR.Clear();
-            nodeG.Clear();
-            nodeB.Clear();
-            nodeIntensity.Clear();
-            nodeTime.Clear();
+            //keyCache.Clear();
+            //nodeX.Clear();
+            //nodeY.Clear();
+            //nodeZ.Clear();
+            //nodeR.Clear();
+            //nodeG.Clear();
+            //nodeB.Clear();
+            //nodeIntensity.Clear();
+            //nodeTime.Clear();
 
             // dispose
             bsPoints?.Dispose();
@@ -331,7 +323,7 @@ namespace PointCloudConverter.Writers
 
         void IWriter.Cleanup(int fileIndex)
         {
-            Dispose();
+            //Dispose();
         }
 
         void IWriter.Randomize()

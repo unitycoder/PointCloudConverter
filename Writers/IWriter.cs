@@ -22,6 +22,7 @@ namespace PointCloudConverter.Writers
         void Cleanup(int fileIndex);
         // close filestream
         void Close();
+        void Dispose();
     }
 }
 

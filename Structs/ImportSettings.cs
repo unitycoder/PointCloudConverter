@@ -24,7 +24,7 @@ namespace PointCloudConverter
         public ConcurrentDictionary<int?, IReader> Readers { get; set; } = new ConcurrentDictionary<int?, IReader>();
         public IWriter writer = new UCPC();
         //public Dictionary<int?, IWriter> Writers { get; set; } = new Dictionary<int?, IWriter>();
-        public ConcurrentDictionary<int?, IWriter> Writers { get; set; } = new ConcurrentDictionary<int?, IWriter>();
+        public ConcurrentDictionary<int?, WeakReference<IWriter>> Writers { get; set; } = new ConcurrentDictionary<int?, WeakReference<IWriter>>();
 
 
         // Method to get or create a reader for a specific task ID
@@ -40,17 +40,17 @@ namespace PointCloudConverter
             return Readers[taskId];
         }
 
-        public IWriter GetOrCreateWriter(int? taskId)
-        {
-            if (!Writers.ContainsKey(taskId))
-            {
-                Writers[taskId] = new PCROOT(taskId);
-            }
+        //public IWriter GetOrCreateWriter(int? taskId)
+        //{
+        //    if (!Writers.ContainsKey(taskId))
+        //    {
+        //        Writers[taskId] = new PCROOT(taskId);
+        //    }
 
-            //Log.WriteLine(">>>>> Total Writers in dictionary: " + Writers.Count);
+        //    //Log.WriteLine(">>>>> Total Writers in dictionary: " + Writers.Count);
 
-            return Writers[taskId];
-        }
+        //    return Writers[taskId];
+        //}
 
         //public void ReleaseReader(int? taskId)
         //{
@@ -62,6 +62,32 @@ namespace PointCloudConverter
         //        Readers.Remove(taskId);
         //    }
         //}
+
+        public IWriter GetOrCreateWriter(int? taskId)
+        {
+            if (!Writers.TryGetValue(taskId, out var weakWriter) || !weakWriter.TryGetTarget(out var writer))
+            {
+                writer = new PCROOT(taskId);
+                Writers[taskId] = new WeakReference<IWriter>(writer);
+            }
+
+            return writer;
+        }
+
+        public void ReleaseWriter(int? taskId)
+        {
+            if (taskId.HasValue && Writers.TryRemove(taskId, out var weakWriter))
+            {
+                if (weakWriter.TryGetTarget(out var writer))
+                {
+                    Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
+                    //Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
+                    writer?.Cleanup(0);
+                    writer?.Dispose();
+                    Log.WriteLine("ReleaseWriter <<< Memory used: " + GC.GetTotalMemory(false));
+                }
+            }
+        }
 
         public void ReleaseReader(int? taskId)
         {
@@ -82,24 +108,31 @@ namespace PointCloudConverter
             }
         }
 
-        public void ReleaseWriter(int? taskId)
-        {
-            // Log the release of the reader for the specified task ID
-            // Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
+        //public void ReleaseWriter(int? taskId)
+        //{
+        //    // Log the release of the reader for the specified task ID
+        //    // Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
 
-            if (taskId.HasValue)
-            {
-                if (Writers.TryRemove(taskId, out var writer))
-                {
-                    writer?.Cleanup(0);
-                    // reader?.Dispose();
-                }
-                else
-                {
-                    Log.WriteLine($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
-                }
-            }
-        }
+        //    if (taskId.HasValue)
+        //    {
+        //        if (Writers.TryRemove(taskId, out var writer))
+        //        {
+        //            Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
+        //            writer?.Cleanup(0);
+        //            writer?.Dispose();
+        //            //writer = null;
+        //            // clear gc
+        //            System.GC.Collect();
+        //            //GC.SuppressFinalize(writer);
+        //            System.GC.WaitForPendingFinalizers();
+        //            Log.WriteLine("ReleaseWriter <<< Memory used: " + GC.GetTotalMemory(false));
+        //        }
+        //        else
+        //        {
+        //            Log.WriteLine($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
+        //        }
+        //    }
+        //}
 
         //public void ReleaseWriter(int? taskId)
         //{
