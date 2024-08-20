@@ -46,12 +46,11 @@ namespace PointCloudConverter.Writers
 
         public void Dispose()
         {
-            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
-            Log.WriteLine("*** PCROOT writer disposed for task: " + taskID);
+            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
             Dispose(true);
             GC.SuppressFinalize(this);
             GC.Collect();
-            Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
         }
 
 
@@ -108,7 +107,7 @@ namespace PointCloudConverter.Writers
 
         ~PCROOT()
         {
-            Log.WriteLine("pcroot writer finalized for task: " + taskID);
+            //Log.WriteLine("pcroot writer finalized for task: " + taskID);
             Dispose(false);
         }
 

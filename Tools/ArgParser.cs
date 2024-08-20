@@ -782,7 +782,6 @@ namespace PointCloudConverter
             //    //if (importSettings.gridSize)
             //}
 
-            Log.WriteLine(importSettings.outputFile);
             if (importSettings.batch == true && importSettings.exportFormat == ExportFormat.UCPC && Path.GetExtension(importSettings.outputFile).ToLower() == ".ucpc")
             {
                 importSettings.errors.Add("With UCPC batching, do not set output filename - set ONLY output folder (each ucpc file will be saved separately)");

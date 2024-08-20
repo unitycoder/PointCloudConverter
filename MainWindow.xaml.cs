@@ -350,10 +350,8 @@ namespace PointCloudConverter
             //Trace.WriteLine(" ---------------------- all finished -------------------- ");
 
             // now write header for for pcroot (using main writer)
-            Log.WriteLine("close writer");
             if (importSettings.exportFormat == ExportFormat.PCROOT)
             {
-                Log.WriteLine(importSettings.writer.ToString());
                 importSettings.writer.Close();
                 // UCPC calls close in Save() itself
             }
@@ -560,13 +558,15 @@ namespace PointCloudConverter
                 var taskWriter = importSettings.GetOrCreateWriter(taskId);
 
                 //// for saving pcroot header, we need this writer
-                var mainWriterRes = importSettings.writer.InitWriter(importSettings, pointCount);
-                if (mainWriterRes == false)
+                if (importSettings.exportFormat == ExportFormat.PCROOT)
                 {
-                    Log.WriteLine("Error> Failed to initialize main Writer, fileindex: " + fileIndex + " taskid:" + taskId);
-                    return false;
+                    var mainWriterRes = importSettings.writer.InitWriter(importSettings, pointCount);
+                    if (mainWriterRes == false)
+                    {
+                        Log.WriteLine("Error> Failed to initialize main Writer, fileindex: " + fileIndex + " taskid:" + taskId);
+                        return false;
+                    }
                 }
-                Log.WriteLine("*************"+importSettings.writer.ToString());
 
                 var writerRes = taskWriter.InitWriter(importSettings, pointCount);
                 if (writerRes == false)

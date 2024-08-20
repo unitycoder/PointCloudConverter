@@ -20,7 +20,7 @@ namespace PointCloudConverter.Writers
         {
             get { return __importSettings; }
             set { __importSettings = value;
-                Log.WriteLine("set importsettings");
+                //Log.WriteLine("set importsettings");
                     }
         }
 
@@ -46,7 +46,6 @@ namespace PointCloudConverter.Writers
 
         bool IWriter.InitWriter(ImportSettings _importSettings, int _pointCount)
         {
-            Log.WriteLine("Initializing UCPC writer..");
             importSettings = _importSettings;
             pointCount = _pointCount;
 
@@ -76,7 +75,7 @@ namespace PointCloudConverter.Writers
             }
             catch (Exception e)
             {
-                Log.WriteLine(e.Message);
+                Log.WriteLine(e.Message, LogEvent.Error);
                 return false;
             }
 
@@ -276,7 +275,6 @@ namespace PointCloudConverter.Writers
             //if (importSettings.randomize == true) importSettings.writer.Randomize();
             if (importSettings.randomize == true) ((IWriter)this).Randomize();
             //importSettings.writer.Close();
-            Log.WriteLine("----------*-*-*-*-*-*-*-*-*- in UCPC Save");
             ((IWriter)this).Close();
             //importSettings.writer.Cleanup(fileIndex);
             ((IWriter)this).Cleanup(fileIndex);

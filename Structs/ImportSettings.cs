@@ -69,12 +69,10 @@ namespace PointCloudConverter
             {
                 if (exportFormat == ExportFormat.UCPC)
                 {
-                    Log.WriteLine("Creating UCPC writer for task ID: " + taskId);
                     writer = new UCPC();
                 }
                 else if (exportFormat == ExportFormat.PCROOT)
                 {
-                    Log.WriteLine("Creating PCROOT writer for task ID: " + taskId);
                     writer = new PCROOT(taskId);
                 }
                 else
@@ -95,11 +93,11 @@ namespace PointCloudConverter
             {
                 if (weakWriter.TryGetTarget(out var writer))
                 {
-                    Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
+                    //Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
                     //Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
                     writer?.Cleanup(0);
                     writer?.Dispose();
-                    Log.WriteLine("ReleaseWriter <<< Memory used: " + GC.GetTotalMemory(false));
+                    //Log.WriteLine("ReleaseWriter <<< Memory used: " + GC.GetTotalMemory(false));
                 }
             }
         }
