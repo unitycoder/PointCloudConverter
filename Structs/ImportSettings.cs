@@ -67,7 +67,22 @@ namespace PointCloudConverter
         {
             if (!Writers.TryGetValue(taskId, out var weakWriter) || !weakWriter.TryGetTarget(out var writer))
             {
-                writer = new PCROOT(taskId);
+                if (exportFormat == ExportFormat.UCPC)
+                {
+                    Log.WriteLine("Creating UCPC writer for task ID: " + taskId);
+                    writer = new UCPC();
+                }
+                else if (exportFormat == ExportFormat.PCROOT)
+                {
+                    Log.WriteLine("Creating PCROOT writer for task ID: " + taskId);
+                    writer = new PCROOT(taskId);
+                }
+                else
+                {
+                    Log.WriteLine("Writer format not supported: " + exportFormat, LogEvent.Error);
+                    writer = null;
+                }
+
                 Writers[taskId] = new WeakReference<IWriter>(writer);
             }
 

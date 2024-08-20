@@ -13,7 +13,17 @@ namespace PointCloudConverter.Writers
 {
     public class UCPC : IWriter
     {
-        ImportSettings importSettings;
+        //ImportSettings importSettings;
+        private ImportSettings __importSettings;
+
+        public ImportSettings importSettings
+        {
+            get { return __importSettings; }
+            set { __importSettings = value;
+                Log.WriteLine("set importsettings");
+                    }
+        }
+
         int pointCount;
 
         BufferedStream bsPoints = null;
@@ -36,6 +46,7 @@ namespace PointCloudConverter.Writers
 
         bool IWriter.InitWriter(ImportSettings _importSettings, int _pointCount)
         {
+            Log.WriteLine("Initializing UCPC writer..");
             importSettings = _importSettings;
             pointCount = _pointCount;
 
@@ -65,7 +76,7 @@ namespace PointCloudConverter.Writers
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Log.WriteLine(e.Message);
                 return false;
             }
 
@@ -252,16 +263,23 @@ namespace PointCloudConverter.Writers
             if (z < cloudMinZ) cloudMinZ = z;
             if (z > cloudMaxZ) cloudMaxZ = z;
 
-            importSettings.writer.WriteXYZ(x, y, z);
-            importSettings.writer.WriteRGB(r, g, b);
+            //importSettings.writer.WriteXYZ(x, y, z);
+            //importSettings.writer.WriteRGB(r, g, b);
+            ((IWriter)this).WriteXYZ(x, y, z);
+            ((IWriter)this).WriteRGB(r, g, b);
         }
 
         void IWriter.Save(int fileIndex)
         {
-            importSettings.writer.CreateHeader(pointCount);
-            if (importSettings.randomize == true) importSettings.writer.Randomize();
-            importSettings.writer.Close();
-            importSettings.writer.Cleanup(fileIndex);
+            //importSettings.writer.CreateHeader(pointCount);
+            ((IWriter)this).CreateHeader(pointCount);
+            //if (importSettings.randomize == true) importSettings.writer.Randomize();
+            if (importSettings.randomize == true) ((IWriter)this).Randomize();
+            //importSettings.writer.Close();
+            Log.WriteLine("----------*-*-*-*-*-*-*-*-*- in UCPC Save");
+            ((IWriter)this).Close();
+            //importSettings.writer.Cleanup(fileIndex);
+            ((IWriter)this).Cleanup(fileIndex);
         }
 
         void IWriter.Cleanup(int fileIndex)

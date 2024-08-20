@@ -771,16 +771,22 @@ namespace PointCloudConverter
                 importSettings.errors.Add("Must have -rgb OR -intensity enabled");
             }
 
+            if (importSettings.exportFormat == ExportFormat.UCPC && importSettings.maxThreads > 1)
+            {
+                importSettings.errors.Add("UCPC format doesnt support multi-threading yet, use 1 thread only (or remove -maxthreads param)");
+            }
+
             //// check mismatching settings for v2 vs v3
             //if (importSettings.exportFormat == ExportFormat.UCPC)
             //{
             //    //if (importSettings.gridSize)
             //}
 
-            //if (importSettings.batch == true && importSettings.exportFormat != ExportFormat.PCROOT)
-            //{
-            //    importSettings.errors.Add("Folder batch is only supported for PCROOT (v3) version: -exportformat=pcroot");
-            //}
+            Log.WriteLine(importSettings.outputFile);
+            if (importSettings.batch == true && importSettings.exportFormat == ExportFormat.UCPC && Path.GetExtension(importSettings.outputFile).ToLower() == ".ucpc")
+            {
+                importSettings.errors.Add("With UCPC batching, do not set output filename - set ONLY output folder (each ucpc file will be saved separately)");
+            }
 
             if (importSettings.skipPoints == true && importSettings.keepPoints == true)
             {

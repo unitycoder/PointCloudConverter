@@ -350,7 +350,13 @@ namespace PointCloudConverter
             //Trace.WriteLine(" ---------------------- all finished -------------------- ");
 
             // now write header for for pcroot (using main writer)
-            importSettings.writer.Close();
+            Log.WriteLine("close writer");
+            if (importSettings.exportFormat == ExportFormat.PCROOT)
+            {
+                Log.WriteLine(importSettings.writer.ToString());
+                importSettings.writer.Close();
+                // UCPC calls close in Save() itself
+            }
 
             // if this was last file
             //if (fileIndex == (importSettings.maxFiles - 1))
@@ -553,7 +559,15 @@ namespace PointCloudConverter
 
                 var taskWriter = importSettings.GetOrCreateWriter(taskId);
 
-                //var writerRes = importSettings.writer.InitWriter(importSettings, pointCount);
+                //// for saving pcroot header, we need this writer
+                var mainWriterRes = importSettings.writer.InitWriter(importSettings, pointCount);
+                if (mainWriterRes == false)
+                {
+                    Log.WriteLine("Error> Failed to initialize main Writer, fileindex: " + fileIndex + " taskid:" + taskId);
+                    return false;
+                }
+                Log.WriteLine("*************"+importSettings.writer.ToString());
+
                 var writerRes = taskWriter.InitWriter(importSettings, pointCount);
                 if (writerRes == false)
                 {
@@ -582,6 +596,8 @@ namespace PointCloudConverter
                 {
                     // stop at limit count
                     if (importSettings.useLimit == true && i > pointCount) break;
+
+                    // FIXME: need to add skip and keep point skipper here, to make skipping faster!
 
                     // get point XYZ
                     Float3 point = taskReader.GetXYZ();
@@ -657,6 +673,7 @@ namespace PointCloudConverter
 
                     // collect this point XYZ and RGB into node, optionally intensity also
                     //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
+                    // TODO can remove importsettings, its already passed on init
                     taskWriter.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     progressPoint = i;
                 } // for all points
