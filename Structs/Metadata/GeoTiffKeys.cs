@@ -16,7 +16,7 @@
 
 using System;
 using System.Collections.Generic;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
+//using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace Free.Ports.LibGeoTiff
 {

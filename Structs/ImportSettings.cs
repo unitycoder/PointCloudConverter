@@ -24,8 +24,21 @@ namespace PointCloudConverter
         public ConcurrentDictionary<int?, IReader> Readers { get; set; } = new ConcurrentDictionary<int?, IReader>();
         public IWriter writer = new UCPC();
         //public Dictionary<int?, IWriter> Writers { get; set; } = new Dictionary<int?, IWriter>();
-        public ConcurrentDictionary<int?, WeakReference<IWriter>> Writers { get; set; } = new ConcurrentDictionary<int?, WeakReference<IWriter>>();
+        //public ConcurrentDictionary<int?, WeakReference<IWriter>> Writers { get; set; } = new ConcurrentDictionary<int?, WeakReference<IWriter>>();
+        private readonly ConcurrentBag<IWriter> _writerPool = new ConcurrentBag<IWriter>();
+        private readonly ConcurrentDictionary<int?, IWriter> _allocatedWriters = new ConcurrentDictionary<int?, IWriter>();
+        private int _maxWriters = 16;
 
+        public void InitWriterPool(int maxThreads, ExportFormat export)
+        {
+            //exportFormat = export;
+            _maxWriters = maxThreads;
+            // Initialize the pool with the maximum number of writers
+            for (int i = 0; i < _maxWriters; i++)
+            {
+                _writerPool.Add(CreateNewWriter()); // Create and add writers to the pool
+            }
+        }
 
         // Method to get or create a reader for a specific task ID
         public IReader GetOrCreateReader(int? taskId)
@@ -38,6 +51,60 @@ namespace PointCloudConverter
             //Log.WriteLine(">>>>> Total Readers in dictionary: " + Readers.Count);
 
             return Readers[taskId];
+        }
+
+        private IWriter CreateNewWriter()
+        {
+            Log.WriteLine(">>>>> Creating new writer: "+exportFormat);
+            if (exportFormat == ExportFormat.UCPC)
+            {
+                return new UCPC();
+            }
+            else if (exportFormat == ExportFormat.PCROOT)
+            {
+                return new PCROOT(null); // No taskId when creating the pool, it's assigned later
+            }
+            else
+            {
+                Log.WriteLine("Writer format not supported: " + exportFormat, LogEvent.Error);
+                return null;
+            }
+        }
+
+        public IWriter GetOrCreateWriter(int? taskId)
+        {
+            if (!_allocatedWriters.TryGetValue(taskId, out var writer))
+            {
+                // Try to get a writer from the pool
+                if (_writerPool.TryTake(out writer))
+                {
+                    // Assign the writer to the task
+                    _allocatedWriters[taskId] = writer;
+                }
+                else
+                {
+                    // If no writers are available, create a new one (this should rarely happen if the pool is well-sized)
+                    writer = CreateNewWriter();
+                    _allocatedWriters[taskId] = writer;
+                }
+            }
+
+            return writer;
+        }
+
+        public void ReleaseWriter(int? taskId)
+        {
+            if (taskId.HasValue && _allocatedWriters.TryRemove(taskId, out var writer))
+            {
+              //  Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
+                // Clean up the writer if necessary
+                writer?.Cleanup(0);
+                //writer?.Dispose();
+                // Return the writer to the pool for reuse
+                _writerPool.Add(writer);
+               // Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
+
+            }
         }
 
         //public IWriter GetOrCreateWriter(int? taskId)
@@ -63,44 +130,44 @@ namespace PointCloudConverter
         //    }
         //}
 
-        public IWriter GetOrCreateWriter(int? taskId)
-        {
-            if (!Writers.TryGetValue(taskId, out var weakWriter) || !weakWriter.TryGetTarget(out var writer))
-            {
-                if (exportFormat == ExportFormat.UCPC)
-                {
-                    writer = new UCPC();
-                }
-                else if (exportFormat == ExportFormat.PCROOT)
-                {
-                    writer = new PCROOT(taskId);
-                }
-                else
-                {
-                    Log.WriteLine("Writer format not supported: " + exportFormat, LogEvent.Error);
-                    writer = null;
-                }
+        //public IWriter GetOrCreateWriter(int? taskId)
+        //{
+        //    if (!Writers.TryGetValue(taskId, out var weakWriter) || !weakWriter.TryGetTarget(out var writer))
+        //    {
+        //        if (exportFormat == ExportFormat.UCPC)
+        //        {
+        //            writer = new UCPC();
+        //        }
+        //        else if (exportFormat == ExportFormat.PCROOT)
+        //        {
+        //            writer = new PCROOT(taskId);
+        //        }
+        //        else
+        //        {
+        //            Log.WriteLine("Writer format not supported: " + exportFormat, LogEvent.Error);
+        //            writer = null;
+        //        }
 
-                Writers[taskId] = new WeakReference<IWriter>(writer);
-            }
+        //        Writers[taskId] = new WeakReference<IWriter>(writer);
+        //    }
 
-            return writer;
-        }
+        //    return writer;
+        //}
 
-        public void ReleaseWriter(int? taskId)
-        {
-            if (taskId.HasValue && Writers.TryRemove(taskId, out var weakWriter))
-            {
-                if (weakWriter.TryGetTarget(out var writer))
-                {
-                    //Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
-                    //Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
-                    writer?.Cleanup(0);
-                    writer?.Dispose();
-                    //Log.WriteLine("ReleaseWriter <<< Memory used: " + GC.GetTotalMemory(false));
-                }
-            }
-        }
+        //public void ReleaseWriter(int? taskId)
+        //{
+        //    if (taskId.HasValue && Writers.TryRemove(taskId, out var weakWriter))
+        //    {
+        //        if (weakWriter.TryGetTarget(out var writer))
+        //        {
+        //            Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
+        //            //Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
+        //            writer?.Cleanup(0);
+        //            writer?.Dispose();
+        //            Log.WriteLine("ReleaseWriter <<< Memory used: " + GC.GetTotalMemory(false));
+        //        }
+        //    }
+        //}
 
         public void ReleaseReader(int? taskId)
         {
@@ -170,7 +237,7 @@ namespace PointCloudConverter
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ImportFormat importFormat { get; set; } = ImportFormat.LAS; //default to las for now
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public ExportFormat exportFormat { get; set; } = ExportFormat.UCPC; // defaults to UCPC (v2)
+        public ExportFormat exportFormat { get; set; } = ExportFormat.PCROOT; // defaults to PCROOT (v3) now
 
         public List<string> inputFiles { get; set; } = new List<string>();
         public string outputFile { get; set; } = null;

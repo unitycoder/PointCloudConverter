@@ -37,6 +37,16 @@ namespace PointCloudConverter
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool FreeConsole();
 
+        const uint WM_CHAR = 0x0102;
+        const int VK_ENTER = 0x0D;
+
+        [DllImport("kernel32.dll")]
+        static extern IntPtr GetConsoleWindow();
+
+        [DllImport("user32.dll")]
+        static extern int SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+
         Thread workerThread;
         static bool abort = false;
         public static MainWindow mainWindowStatic;
@@ -96,6 +106,7 @@ namespace PointCloudConverter
                 Log.WriteLine("\n::: " + appname + " :::\n");
                 //Console.WriteLine("\n::: " + appname + " :::\n");
                 Console.ForegroundColor = ConsoleColor.White;
+                IntPtr cw = GetConsoleWindow();
 
                 // check args, null here because we get the args later
                 var importSettings = ArgParser.Parse(null, rootFolder);
@@ -135,8 +146,10 @@ namespace PointCloudConverter
                 {
                     Log.WriteLine("{\"event\": \"" + LogEvent.End + "\", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + ",\"errors\":" + errorCounter + "}", LogEvent.End);
                 }
-                // hack for console exit https://stackoverflow.com/a/67940480/5452781
-                SendKeys.SendWait("{ENTER}");
+
+                // https://stackoverflow.com/a/45620138/5452781
+                SendMessage(cw, WM_CHAR, (IntPtr)VK_ENTER, IntPtr.Zero);
+
                 FreeConsole();
                 Environment.Exit(Environment.ExitCode);
             }
@@ -149,6 +162,7 @@ namespace PointCloudConverter
 
             LoadSettings();
         }
+
 
 
         // main processing loop
@@ -281,6 +295,8 @@ namespace PointCloudConverter
             maxThreads = Math.Max(importSettings.maxThreads, 1);
             Log.WriteLine("Using MaxThreads: " + maxThreads);
 
+            // init pool
+            importSettings.InitWriterPool(maxThreads,importSettings.exportFormat);
 
             var semaphore = new SemaphoreSlim(importSettings.maxThreads);
 

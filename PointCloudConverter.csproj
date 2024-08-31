@@ -10,7 +10,7 @@
     <RootNamespace>PointCloudConverter</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
-    <UseWindowsForms>True</UseWindowsForms>
+    <UseWindowsForms>False</UseWindowsForms>
     <AssemblyName>PointCloudConverter</AssemblyName>
     <StartupObject>PointCloudConverter.App</StartupObject>
     <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>

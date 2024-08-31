@@ -48,8 +48,12 @@ namespace PointCloudConverter.Writers
         {
             //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
             Dispose(true);
-            GC.SuppressFinalize(this);
             GC.Collect();
+//            GC.SuppressFinalize(this);
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            //GC.Collect();
             //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
         }
 
@@ -76,7 +80,7 @@ namespace PointCloudConverter.Writers
                     list.Clear(); // Clear the list to free up memory
                 }
                 dictionary.Clear(); // Clear the dictionary itself
-                dictionary = null; // Help GC by removing reference
+                //dictionary = null; // Help GC by removing reference
             }
         }
 
@@ -322,7 +326,24 @@ namespace PointCloudConverter.Writers
 
         void IWriter.Cleanup(int fileIndex)
         {
+            //Log.WriteLine("Cleanup: this doesnt do anything yet..");
             //Dispose();
+            bsPoints?.Dispose();
+            writerPoints?.Dispose();
+
+            // Clear and dispose instance dictionaries
+            ClearDictionary(nodeX);
+            ClearDictionary(nodeY);
+            ClearDictionary(nodeZ);
+            ClearDictionary(nodeR);
+            ClearDictionary(nodeG);
+            ClearDictionary(nodeB);
+            ClearDictionary(nodeIntensity);
+            ClearDictionary(nodeTime);
+
+            keyCache.Clear();
+
+
         }
 
         void IWriter.Randomize()
