@@ -146,8 +146,16 @@
             <StatusBarItem>
                 <ProgressBar x:Name="progressBarFiles" Height="10" Width="190" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Files to process"/>
             </StatusBarItem>
-            <StatusBarItem>
+            <!--<StatusBarItem>
                 <ProgressBar x:Name="progressBarPoints" Height="10" Width="490" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Points to process (in current file)"/>
+            </StatusBarItem>-->
+            <StatusBarItem>
+                <!-- StackPanel to hold dynamically created ProgressBars -->
+                <StackPanel x:Name="ProgressBarsContainer" Orientation="Horizontal" Height="10" HorizontalAlignment="Left">
+                    <!-- Initially empty; progress bars will be added here dynamically -->
+                    <!--<ProgressBar x:Name="progressBarPoints" Height="10" Width="100" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Points to process (in current file)"/>
+                    <ProgressBar x:Name="progressBarPoints2" Height="10" Width="100" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Points to process (in current file)"/>-->
+                </StackPanel>
             </StatusBarItem>
             <StatusBarItem>
                 <Label x:Name="lblStatus" Foreground="{DynamicResource MainText}">Status</Label>

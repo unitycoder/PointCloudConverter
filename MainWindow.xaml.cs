@@ -19,6 +19,7 @@ using Newtonsoft.Json;
 using Brushes = System.Windows.Media.Brushes;
 using System.Threading.Tasks;
 using PointCloudConverter.Readers;
+using System.Collections.Concurrent;
 
 namespace PointCloudConverter
 {
@@ -302,6 +303,7 @@ namespace PointCloudConverter
 
             var tasks = new List<Task>();
 
+
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -318,7 +320,7 @@ namespace PointCloudConverter
 
                 //bool isLastTask = (i == len - 1); // Check if this is the last task
 
-                int index = i; // Capture the current index in the loop
+                int index = i; // Capture the current file index in the loop
                 int len2 = len;
                 tasks.Add(Task.Run(async () =>
                 {
@@ -429,7 +431,7 @@ namespace PointCloudConverter
                 // clear timer
                 progressTimerThread.Stop();
                 mainWindowStatic.progressBarFiles.Foreground = Brushes.Green;
-                mainWindowStatic.progressBarPoints.Foreground = Brushes.Green;
+                //mainWindowStatic.progressBarPoints.Foreground = Brushes.Green;
             }));
         } // ProcessAllFiles
 
@@ -441,6 +443,7 @@ namespace PointCloudConverter
 
         static void StartProgressTimer()
         {
+            Log.WriteLine("Starting progress timer..*-*************************");
             progressTimerThread = new DispatcherTimer(DispatcherPriority.Background, Application.Current.Dispatcher);
             progressTimerThread.Tick += ProgressTick;
             progressTimerThread.Interval = TimeSpan.FromSeconds(1);
@@ -449,28 +452,129 @@ namespace PointCloudConverter
             Application.Current.Dispatcher.Invoke(new Action(() =>
             {
                 mainWindowStatic.progressBarFiles.Foreground = Brushes.Red;
-                mainWindowStatic.progressBarPoints.Foreground = Brushes.Red;
+                //mainWindowStatic.progressBarPoints.Foreground = Brushes.Red;
                 mainWindowStatic.lblStatus.Content = "";
             }));
         }
 
-        static void ProgressTick(object sender, EventArgs e)
+        private static List<ProgressInfo> progressInfos = new List<ProgressInfo>();
+        private static object lockObject = new object();
+
+        public class ProgressInfo
         {
-            if (progressTotalPoints > 0)
+            public int Index { get; set; }        // Index of the ProgressBar in the UI
+            public int CurrentValue { get; set; } // Current progress value
+            public int MaxValue { get; set; }     // Maximum value for the progress
+        }
+
+        static void InitProgressBars(int threadCount)
+        {
+            ClearProgressBars();
+
+            Log.WriteLine("Creating progress bars: " + threadCount);
+            progressInfos.Clear();
+
+            for (int i = 0; i < threadCount; i++)
             {
-                //mainWindowStatic.progressBarFiles.Value = ((float)((progressFile+1) / (float)(progressTotalFiles+1)));
-                mainWindowStatic.progressBarFiles.Value = progressFile;
-                mainWindowStatic.progressBarFiles.Maximum = progressTotalFiles + 1;
-                mainWindowStatic.progressBarPoints.Value = progressPoint / (float)progressTotalPoints;
-                mainWindowStatic.lblStatus.Content = lastStatusMessage;
-            }
-            else
-            {
-                mainWindowStatic.progressBarFiles.Value = 0;
-                mainWindowStatic.progressBarPoints.Value = 0;
-                mainWindowStatic.lblStatus.Content = "";
+                ProgressBar newProgressBar = new ProgressBar
+                {
+                    Height = 10,
+                    Width = 490 / threadCount,
+                    Value = 0,
+                    Maximum = 100, // TODO set value in parsefile?
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Margin = new Thickness(1, 0, 1, 0),
+                    Foreground = Brushes.Lime,
+                    Background = null,
+                    //BorderBrush = Brushes.Red,
+                    //ToolTip = $"Thread {i}"
+                };
+
+                // Initialize ProgressInfo for each ProgressBar
+                var progressInfo = new ProgressInfo
+                {
+                    Index = i,           // Index in the StackPanel
+                    CurrentValue = 0,    // Initial value
+                    MaxValue = 100       // Example max value
+                };
+
+                progressInfos.Add(progressInfo);
+
+                mainWindowStatic.ProgressBarsContainer.Children.Add(newProgressBar);
             }
         }
+
+        static void ClearProgressBars()
+        {
+            mainWindowStatic.ProgressBarsContainer.Children.Clear();
+        }
+
+        //static void ProgressTick(object sender, EventArgs e)
+        //{
+        //    if (progressTotalPoints > 0)
+        //    {
+        //        //mainWindowStatic.progressBarFiles.Value = ((float)((progressFile+1) / (float)(progressTotalFiles+1)));
+        //        mainWindowStatic.progressBarFiles.Value = progressFile;
+        //        mainWindowStatic.progressBarFiles.Maximum = progressTotalFiles + 1;
+        //        //mainWindowStatic.progressBarPoints.Value = progressPoint / (float)progressTotalPoints;
+        //        mainWindowStatic.lblStatus.Content = lastStatusMessage;
+        //    }
+        //    else
+        //    {
+        //        mainWindowStatic.progressBarFiles.Value = 0;
+        //        //mainWindowStatic.progressBarPoints.Value = 0;
+        //        mainWindowStatic.lblStatus.Content = "";
+        //    }
+        //}
+
+        static void ProgressTick(object sender, EventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (progressTotalPoints > 0)
+                {
+                    mainWindowStatic.progressBarFiles.Value = progressFile;
+                    mainWindowStatic.progressBarFiles.Maximum = progressTotalFiles + 1;
+                    mainWindowStatic.lblStatus.Content = lastStatusMessage;
+
+                    // Update all progress bars based on the current values in the List
+                    lock (lockObject) // Lock to safely read progressInfos
+                    {
+                        foreach (var progressInfo in progressInfos)
+                        {
+                            int index = progressInfo.Index;
+                            int currentValue = progressInfo.CurrentValue;
+                            int maxValue = progressInfo.MaxValue;
+
+                            // Access ProgressBar directly from the StackPanel.Children using its index
+                            if (index >= 0 && index < mainWindowStatic.ProgressBarsContainer.Children.Count)
+                            {
+                                if (mainWindowStatic.ProgressBarsContainer.Children[index] is ProgressBar progressBar)
+                                {
+                                    progressBar.Maximum = maxValue;
+                                    progressBar.Value = currentValue; // Update ProgressBar value
+                                    //progressBar.ToolTip = $"Thread {index} - {currentValue} / {maxValue}"; // not visible, because modal dialog
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    mainWindowStatic.progressBarFiles.Value = 0;
+                    mainWindowStatic.lblStatus.Content = "";
+
+                    foreach (UIElement element in mainWindowStatic.ProgressBarsContainer.Children)
+                    {
+                        if (element is ProgressBar progressBar)
+                        {
+                            progressBar.Value = 0;
+                        }
+                    }
+                }
+            });
+        }
+
 
         static (bool, float, float, float) GetBounds(ImportSettings importSettings, int fileIndex)
         {
@@ -492,6 +596,8 @@ namespace PointCloudConverter
         // process single file
         static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId)
         {
+            progressTotalPoints = 1; // FIXME dummy for progress bar
+
             Log.WriteLine("Started processing file: " + importSettings.inputFiles[fileIndex]);
 
             // each thread needs its own reader
@@ -499,6 +605,12 @@ namespace PointCloudConverter
 
             //importSettings.reader = new LAZ(taskId);
             IReader taskReader = importSettings.GetOrCreateReader(taskId);
+
+            ProgressInfo progressInfo = null;
+            lock (lockObject)
+            {
+                progressInfo = progressInfos[fileIndex % progressInfos.Count]; // Example of cyclic assignment
+            }
 
             try
             {
@@ -593,8 +705,10 @@ namespace PointCloudConverter
                     return false;
                 }
 
-                progressPoint = 0;
-                progressTotalPoints = importSettings.useLimit ? pointCount : fullPointCount;
+                //progressPoint = 0;
+                progressInfo.CurrentValue = 0;
+                progressInfo.MaxValue = importSettings.useLimit ? pointCount : fullPointCount;
+                //progressTotalPoints = importSettings.useLimit ? pointCount : fullPointCount;
 
                 lastStatusMessage = "Processing points..";
 
@@ -693,7 +807,8 @@ namespace PointCloudConverter
                     //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     // TODO can remove importsettings, its already passed on init
                     taskWriter.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
-                    progressPoint = i;
+                    //progressPoint = i;
+                    progressInfo.CurrentValue = i;
                 } // for all points
 
                 lastStatusMessage = "Saving files..";
@@ -720,7 +835,6 @@ namespace PointCloudConverter
                 //Log.WriteLine(jsonString, LogEvent.File);
 
             } // if importMetadataOnly == false
-
 
             //Log.WriteLine("taskid: " + taskId + " done");
             return true;
@@ -862,6 +976,9 @@ namespace PointCloudConverter
                         ImportSettings = importSettings,
                         CancellationToken = _cancellationTokenSource.Token
                     };
+
+                    InitProgressBars(importSettings.maxThreads);
+
 
                     Task.Run(() => ProcessAllFiles(workerParams));
                 }
