@@ -296,7 +296,7 @@ namespace PointCloudConverter
             Log.WriteLine("Using MaxThreads: " + maxThreads);
 
             // init pool
-            importSettings.InitWriterPool(maxThreads,importSettings.exportFormat);
+            importSettings.InitWriterPool(maxThreads, importSettings.exportFormat);
 
             var semaphore = new SemaphoreSlim(importSettings.maxThreads);
 
@@ -490,7 +490,7 @@ namespace PointCloudConverter
         // process single file
         static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId)
         {
-            //Log.WriteLine("parsefile, taskid: " + taskId + " fileindex: " + fileIndex);
+            Log.WriteLine("Started processing file: " + importSettings.inputFiles[fileIndex]);
 
             // each thread needs its own reader
             bool res;
@@ -705,7 +705,20 @@ namespace PointCloudConverter
                 //taskReader.Dispose();
                 importSettings.ReleaseWriter(taskId);
                 //Log.WriteLine("------------ reader and writer released ------------");
+
+                // TODO add event for finished writing this file, and return list of output files
+                //jsonString = "{" +
+                //    "\"event\": \"" + LogEvent.File + "\"," +
+                //    "\"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+                //    //"\"size\": " + new FileInfo(importSettings.inputFiles[fileIndex]).Length + "," +
+                //    //"\"points\": " + pointCount + "," +
+                //    "\"status\": \"" + LogStatus.Complete + "\"" +
+                //    "}";
+
+                //Log.WriteLine(jsonString, LogEvent.File);
+
             } // if importMetadataOnly == false
+
 
             //Log.WriteLine("taskid: " + taskId + " done");
             return true;

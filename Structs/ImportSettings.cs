@@ -55,7 +55,7 @@ namespace PointCloudConverter
 
         private IWriter CreateNewWriter()
         {
-            Log.WriteLine(">>>>> Creating new writer: "+exportFormat);
+            ///Log.WriteLine(">>>>> Creating new writer: "+exportFormat);
             if (exportFormat == ExportFormat.UCPC)
             {
                 return new UCPC();

@@ -49,7 +49,7 @@ namespace PointCloudConverter.Writers
             //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
             Dispose(true);
             GC.Collect();
-//            GC.SuppressFinalize(this);
+            //            GC.SuppressFinalize(this);
             GC.WaitForPendingFinalizers();
             GC.Collect();
 
@@ -444,6 +444,7 @@ namespace PointCloudConverter.Writers
         static int skippedPointsCounter = 0;
         static bool useLossyFiltering = false; //not used, for testing only
 
+        // returns list of saved files
         void IWriter.Save(int fileIndex)
         {
             if (useLossyFiltering == true)
@@ -451,24 +452,12 @@ namespace PointCloudConverter.Writers
                 Console.WriteLine("************* useLossyFiltering ****************");
             }
 
-
             string fileOnly = Path.GetFileNameWithoutExtension(importSettings.outputFile);
             string baseFolder = Path.GetDirectoryName(importSettings.outputFile);
             // TODO no need colors for json.. could move this inside custom logger, so that it doesnt do anything, if json
             Console.ForegroundColor = ConsoleColor.Blue;
 
-            // TODO add enum for status
-
-            string jsonString = "{" +
-            "\"event\": \"" + LogEvent.File + "\"," +
-            "\"status\": \"" + LogStatus.Complete + "\"," +
-            "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
-            "\"tiles\": " + nodeX.Count + "," +
-            "\"folder\": " + JsonSerializer.Serialize(baseFolder) + "}";
-
-            // TODO combine 2 outputs.. only other one shows up now
             Log.WriteLine("Saving " + nodeX.Count + " tiles into: " + baseFolder);
-            Log.WriteLine(jsonString, LogEvent.End);
 
             Console.ForegroundColor = ConsoleColor.White;
 
@@ -482,6 +471,8 @@ namespace PointCloudConverter.Writers
 
             List<float> nodeTempIntensity = null;
             List<double> nodeTempTime = null;
+
+            List<string> outputFiles = new List<string>();
 
             // process all tiles
             //foreach (KeyValuePair<int, List<float>> nodeData in nodeX)
@@ -542,7 +533,7 @@ namespace PointCloudConverter.Writers
                             Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB);
                         }
                     }
-                }
+                } // randomize
 
                 // get this node bounds, TODO but we know node(grid cell) x,y,z values?
                 float minX = float.PositiveInfinity;
@@ -565,9 +556,13 @@ namespace PointCloudConverter.Writers
                     fullpathFileOnly = fileOnly + "_" + fileIndex + "_" + key + tileExtension;
                 }
 
-                // prepare file
+                // save this tile
+                //Log.WriteLine("*** Saving tile: " + fullpathFileOnly + " (" + nodeTempX.Count + " points)");
                 bsPoints = new BufferedStream(new FileStream(fullpath, FileMode.Create));
                 writerPoints = new BinaryWriter(bsPoints);
+
+                // collect list of saved files
+                outputFiles.Add(fullpath);
 
                 int cellX = 0;
                 int cellY = 0;
@@ -773,7 +768,6 @@ namespace PointCloudConverter.Writers
                     totalPointsWritten++;
                 } // loop all points in tile (node)
 
-
                 // close tile file
                 writerPoints.Close();
                 bsPoints.Dispose();
@@ -879,6 +873,16 @@ namespace PointCloudConverter.Writers
 
                 nodeBounds.Add(cb);
             } // loop all nodes/tiles foreach
+
+            // finished this file
+            string jsonString = "{" +
+                                "\"event\": \"" + LogEvent.File + "\"," +
+                                "\"status\": \"" + LogStatus.Complete + "\"," +
+                                "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+                                "\"tiles\": " + nodeX.Count + "," +
+                                "\"folder\": " + JsonSerializer.Serialize(baseFolder) + "}" +
+                                "\"filenames\": " + JsonSerializer.Serialize(outputFiles);
+            Log.WriteLine(jsonString, LogEvent.End);
 
         } // Save()
 
