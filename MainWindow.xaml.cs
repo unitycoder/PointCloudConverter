@@ -312,7 +312,9 @@ namespace PointCloudConverter
                 await semaphore.WaitAsync(cancellationToken);
                 //int? taskId = Task.CurrentId; // Get the current task ID
 
-                progressFile = i;
+                //progressFile = i;
+                Interlocked.Increment(ref progressFile);
+
 
                 //bool isLastTask = (i == len - 1); // Check if this is the last task
 
