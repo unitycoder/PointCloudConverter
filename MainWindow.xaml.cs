@@ -25,7 +25,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "19.08.2024";
+        static readonly string version = "02.09.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -133,7 +133,7 @@ namespace PointCloudConverter
                         CancellationToken = _cancellationTokenSource.Token
                     };
 
-                    InitProgressBars(importSettings.maxThreads, importSettings.useJSONLog);
+                    InitProgressBars(importSettings);
 
                     await Task.Run(() => ProcessAllFiles(workerParams));
                 }
@@ -291,10 +291,9 @@ namespace PointCloudConverter
             //// hack to fix progress bar not updating on last file
             //progressFile++;
 
-            // clamp to max of inputfiles-1 (otherwise errors in threading)
-            int maxThreads = Math.Min(importSettings.maxThreads, importSettings.maxFiles - 1); // FIXME: -1 because otherwise keynotfindexception in last file or after it?
+            int maxThreads = Math.Min(importSettings.maxThreads, importSettings.maxFiles);
             // clamp to min 1
-            maxThreads = Math.Max(importSettings.maxThreads, 1);
+            maxThreads = Math.Max(maxThreads, 1);
             Log.WriteLine("Using MaxThreads: " + maxThreads);
 
             // init pool
@@ -470,9 +469,18 @@ namespace PointCloudConverter
             public bool UseJsonLog { get; internal set; }
         }
 
-        static void InitProgressBars(int threadCount, bool useJsonLog)
+        static void InitProgressBars(ImportSettings importSettings)
         {
             ClearProgressBars();
+
+            int threadCount = importSettings.maxThreads;
+            // clamp to max files
+            threadCount = Math.Min(threadCount, importSettings.maxFiles);
+            threadCount = Math.Max(threadCount, 1);
+
+            Log.WriteLine("Creating progress bars: " + threadCount);
+
+            bool useJsonLog = importSettings.useJSONLog;
 
             Log.WriteLine("Creating progress bars: " + threadCount);
             progressInfos.Clear();
@@ -980,7 +988,7 @@ namespace PointCloudConverter
                         CancellationToken = _cancellationTokenSource.Token
                     };
 
-                    InitProgressBars(importSettings.maxThreads, importSettings.useJSONLog);
+                    InitProgressBars(importSettings);
 
                     Task.Run(() => ProcessAllFiles(workerParams));
                 }
