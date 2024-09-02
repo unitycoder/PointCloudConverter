@@ -13,6 +13,7 @@ namespace PointCloudConverter.Logger
         Error,
         Warning,
         Info,
+        Progress,
         Debug
     }
 

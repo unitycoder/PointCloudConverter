@@ -133,6 +133,8 @@ namespace PointCloudConverter
                         CancellationToken = _cancellationTokenSource.Token
                     };
 
+                    InitProgressBars(importSettings.maxThreads, importSettings.useJSONLog);
+
                     await Task.Run(() => ProcessAllFiles(workerParams));
                 }
 
@@ -173,7 +175,6 @@ namespace PointCloudConverter
             var workerParams = (WorkerParams)workerParamsObject;
             var importSettings = workerParams.ImportSettings;
             var cancellationToken = workerParams.CancellationToken;
-
             // Use cancellationToken to check for cancellation
             if (cancellationToken.IsCancellationRequested)
             {
@@ -462,12 +463,14 @@ namespace PointCloudConverter
 
         public class ProgressInfo
         {
-            public int Index { get; set; }        // Index of the ProgressBar in the UI
-            public int CurrentValue { get; set; } // Current progress value
-            public int MaxValue { get; set; }     // Maximum value for the progress
+            public int Index { get; internal set; }        // Index of the ProgressBar in the UI
+            public int CurrentValue { get; internal set; } // Current progress value
+            public int MaxValue { get; internal set; }     // Maximum value for the progress
+            public string FilePath { get; internal set; }
+            public bool UseJsonLog { get; internal set; }
         }
 
-        static void InitProgressBars(int threadCount)
+        static void InitProgressBars(int threadCount, bool useJsonLog)
         {
             ClearProgressBars();
 
@@ -495,7 +498,8 @@ namespace PointCloudConverter
                 {
                     Index = i,           // Index in the StackPanel
                     CurrentValue = 0,    // Initial value
-                    MaxValue = 100       // Example max value
+                    MaxValue = 100,
+                    UseJsonLog = useJsonLog
                 };
 
                 progressInfos.Add(progressInfo);
@@ -508,24 +512,6 @@ namespace PointCloudConverter
         {
             mainWindowStatic.ProgressBarsContainer.Children.Clear();
         }
-
-        //static void ProgressTick(object sender, EventArgs e)
-        //{
-        //    if (progressTotalPoints > 0)
-        //    {
-        //        //mainWindowStatic.progressBarFiles.Value = ((float)((progressFile+1) / (float)(progressTotalFiles+1)));
-        //        mainWindowStatic.progressBarFiles.Value = progressFile;
-        //        mainWindowStatic.progressBarFiles.Maximum = progressTotalFiles + 1;
-        //        //mainWindowStatic.progressBarPoints.Value = progressPoint / (float)progressTotalPoints;
-        //        mainWindowStatic.lblStatus.Content = lastStatusMessage;
-        //    }
-        //    else
-        //    {
-        //        mainWindowStatic.progressBarFiles.Value = 0;
-        //        //mainWindowStatic.progressBarPoints.Value = 0;
-        //        mainWindowStatic.lblStatus.Content = "";
-        //    }
-        //}
 
         static void ProgressTick(object sender, EventArgs e)
         {
@@ -554,6 +540,20 @@ namespace PointCloudConverter
                                     progressBar.Maximum = maxValue;
                                     progressBar.Value = currentValue; // Update ProgressBar value
                                     //progressBar.ToolTip = $"Thread {index} - {currentValue} / {maxValue}"; // not visible, because modal dialog
+
+                                    // print json progress
+                                    if (progressInfo.UseJsonLog) // TODO now same bool value is for each progressinfo..
+                                    {
+                                        string jsonString = "{" +
+                                            "\"event\": \"" + LogEvent.Progress + "\"," +
+                                            "\"thread\": " + index + "," +
+                                            "\"currentPoint\": " + currentValue + "," +
+                                            "\"totalPoints\": " + maxValue + "," +
+                                            "\"percentage\": " + (int)((currentValue / (float)maxValue) * 100) + "%," +
+                                            "\"file\": " + System.Text.Json.JsonSerializer.Serialize(progressInfo.FilePath) +
+                                            "}";
+                                        Log.WriteLine(jsonString, LogEvent.Progress);
+                                    }
                                 }
                             }
                         }
@@ -609,7 +609,8 @@ namespace PointCloudConverter
             ProgressInfo progressInfo = null;
             lock (lockObject)
             {
-                progressInfo = progressInfos[fileIndex % progressInfos.Count]; // Example of cyclic assignment
+                Log.WriteLine(progressInfos.Count + " : " + fileIndex, LogEvent.Info);
+                progressInfo = progressInfos[fileIndex % progressInfos.Count];
             }
 
             try
@@ -709,6 +710,8 @@ namespace PointCloudConverter
                 progressInfo.CurrentValue = 0;
                 progressInfo.MaxValue = importSettings.useLimit ? pointCount : fullPointCount;
                 //progressTotalPoints = importSettings.useLimit ? pointCount : fullPointCount;
+
+                progressInfo.FilePath = importSettings.inputFiles[fileIndex];
 
                 lastStatusMessage = "Processing points..";
 
@@ -977,8 +980,7 @@ namespace PointCloudConverter
                         CancellationToken = _cancellationTokenSource.Token
                     };
 
-                    InitProgressBars(importSettings.maxThreads);
-
+                    InitProgressBars(importSettings.maxThreads, importSettings.useJSONLog);
 
                     Task.Run(() => ProcessAllFiles(workerParams));
                 }
