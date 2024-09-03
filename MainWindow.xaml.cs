@@ -48,7 +48,6 @@ namespace PointCloudConverter
         static extern int SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
 
-        Thread workerThread;
         static bool abort = false;
         public static MainWindow mainWindowStatic;
         bool isInitialiazing = true;
@@ -331,7 +330,7 @@ namespace PointCloudConverter
                     try
                     {
                         // Do actual point cloud parsing for this file and pass taskId
-                        var res = ParseFile(importSettings, index, taskId);
+                        var res = ParseFile(importSettings, index, taskId, cancellationToken);
                         if (!res)
                         {
                             Interlocked.Increment(ref errorCounter); // thread-safe error counter increment
@@ -495,7 +494,7 @@ namespace PointCloudConverter
                     Maximum = 100, // TODO set value in parsefile?
                     HorizontalAlignment = HorizontalAlignment.Left,
                     Margin = new Thickness(1, 0, 1, 0),
-                    Foreground = Brushes.Lime,
+                    Foreground = Brushes.Red,
                     Background = null,
                     //BorderBrush = Brushes.Red,
                     //ToolTip = $"Thread {i}"
@@ -525,63 +524,67 @@ namespace PointCloudConverter
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                if (progressTotalPoints > 0)
+                //if (progressTotalPoints > 0)
+                //{
+                mainWindowStatic.progressBarFiles.Value = progressFile;
+                mainWindowStatic.progressBarFiles.Maximum = progressTotalFiles + 1;
+                mainWindowStatic.lblStatus.Content = lastStatusMessage;
+
+                // Update all progress bars based on the current values in the List
+                lock (lockObject) // Lock to safely read progressInfos
                 {
-                    mainWindowStatic.progressBarFiles.Value = progressFile;
-                    mainWindowStatic.progressBarFiles.Maximum = progressTotalFiles + 1;
-                    mainWindowStatic.lblStatus.Content = lastStatusMessage;
-
-                    // Update all progress bars based on the current values in the List
-                    lock (lockObject) // Lock to safely read progressInfos
+                    foreach (var progressInfo in progressInfos)
                     {
-                        foreach (var progressInfo in progressInfos)
+                        int index = progressInfo.Index;
+                        int currentValue = progressInfo.CurrentValue;
+                        int maxValue = progressInfo.MaxValue;
+
+                        // Access ProgressBar directly from the StackPanel.Children using its index
+                        if (index >= 0 && index < mainWindowStatic.ProgressBarsContainer.Children.Count)
                         {
-                            int index = progressInfo.Index;
-                            int currentValue = progressInfo.CurrentValue;
-                            int maxValue = progressInfo.MaxValue;
-
-                            // Access ProgressBar directly from the StackPanel.Children using its index
-                            if (index >= 0 && index < mainWindowStatic.ProgressBarsContainer.Children.Count)
+                            if (mainWindowStatic.ProgressBarsContainer.Children[index] is ProgressBar progressBar)
                             {
-                                if (mainWindowStatic.ProgressBarsContainer.Children[index] is ProgressBar progressBar)
-                                {
-                                    progressBar.Maximum = maxValue;
-                                    progressBar.Value = currentValue; // Update ProgressBar value
-                                    //progressBar.ToolTip = $"Thread {index} - {currentValue} / {maxValue}"; // not visible, because modal dialog
+                                progressBar.Maximum = maxValue;
+                                progressBar.Value = currentValue;
+                                progressBar.Foreground = (currentValue + 1 >= maxValue ? Brushes.Lime : Brushes.Red); //+1 hack fix
+                                //progressBar.ToolTip = $"Thread {index} - {currentValue} / {maxValue}"; // not visible, because modal dialog
+                                //Log.WriteLine("ProgressTick: " + index + " " + currentValue + " / " + maxValue);
 
-                                    // print json progress
-                                    if (progressInfo.UseJsonLog) // TODO now same bool value is for each progressinfo..
-                                    {
-                                        string jsonString = "{" +
-                                            "\"event\": \"" + LogEvent.Progress + "\"," +
-                                            "\"thread\": " + index + "," +
-                                            "\"currentPoint\": " + currentValue + "," +
-                                            "\"totalPoints\": " + maxValue + "," +
-                                            "\"percentage\": " + (int)((currentValue / (float)maxValue) * 100) + "%," +
-                                            "\"file\": " + System.Text.Json.JsonSerializer.Serialize(progressInfo.FilePath) +
-                                            "}";
-                                        Log.WriteLine(jsonString, LogEvent.Progress);
-                                    }
+                                // print json progress
+                                if (progressInfo.UseJsonLog) // TODO now same bool value is for each progressinfo..
+                                {
+                                    string jsonString = "{" +
+                                        "\"event\": \"" + LogEvent.Progress + "\"," +
+                                        "\"thread\": " + index + "," +
+                                        "\"currentPoint\": " + currentValue + "," +
+                                        "\"totalPoints\": " + maxValue + "," +
+                                        "\"percentage\": " + (int)((currentValue / (float)maxValue) * 100) + "%," +
+                                        "\"file\": " + System.Text.Json.JsonSerializer.Serialize(progressInfo.FilePath) +
+                                        "}";
+                                    Log.WriteLine(jsonString, LogEvent.Progress);
                                 }
                             }
                         }
-                    }
-                }
-                else
-                {
-                    mainWindowStatic.progressBarFiles.Value = 0;
-                    mainWindowStatic.lblStatus.Content = "";
+                    } // foreach progressinfo
+                } // lock
+                //}
+                //else //  finished ?
+                //{
+                //    Log.WriteLine("*************** ProgressTick: progressTotalPoints is 0, finishing..");
+                //    mainWindowStatic.progressBarFiles.Value = 0;
+                //    mainWindowStatic.lblStatus.Content = "";
 
-                    foreach (UIElement element in mainWindowStatic.ProgressBarsContainer.Children)
-                    {
-                        if (element is ProgressBar progressBar)
-                        {
-                            progressBar.Value = 0;
-                        }
-                    }
-                }
+                //    foreach (UIElement element in mainWindowStatic.ProgressBarsContainer.Children)
+                //    {
+                //        if (element is ProgressBar progressBar)
+                //        {
+                //            progressBar.Value = 0;
+                //            progressBar.Foreground = Brushes.Lime;
+                //        }
+                //    }
+                //}
             });
-        }
+        } // ProgressTick()
 
 
         static (bool, float, float, float) GetBounds(ImportSettings importSettings, int fileIndex)
@@ -602,7 +605,7 @@ namespace PointCloudConverter
         }
 
         // process single file
-        static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId)
+        static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId, CancellationToken cancellationToken)
         {
             progressTotalPoints = 1; // FIXME dummy for progress bar
 
@@ -733,12 +736,24 @@ namespace PointCloudConverter
 
                 Log.WriteLine(jsonString, LogEvent.File);
 
+                int checkCancelEvery = fullPointCount / 100;
+
                 // Loop all points
                 for (int i = 0; i < fullPointCount; i++)
                 //for (int i = 0; i < 1000; i++)
                 {
                     // stop at limit count
                     if (importSettings.useLimit == true && i > pointCount) break;
+
+                    // check for cancel every 1% of points
+                    if (i % checkCancelEvery == 0)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            Log.WriteLine("Parse task was canceled.");
+                            return false;
+                        }
+                    }
 
                     // FIXME: need to add skip and keep point skipper here, to make skipping faster!
 
@@ -856,6 +871,12 @@ namespace PointCloudConverter
             // reset progress
             progressTotalFiles = 0;
             progressTotalPoints = 0;
+
+            // reset cancel token
+            _cancellationTokenSource = new CancellationTokenSource();
+            abort = false;
+
+
             if (ValidateSettings() == true)
             {
                 ProgressTick(null, null);
@@ -1008,15 +1029,6 @@ namespace PointCloudConverter
 
             // Signal the cancellation to the worker thread
             _cancellationTokenSource.Cancel();
-
-            if (workerThread != null)
-            {
-                // Wait for the worker thread to finish
-                workerThread.Join();
-
-                // Optionally exit the application
-                Environment.Exit((int)ExitCode.Cancelled);
-            }
         }
 
         private void btnBrowseInput_Click(object sender, RoutedEventArgs e)
@@ -1236,14 +1248,9 @@ namespace PointCloudConverter
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
-            abort = true;
+            Log.WriteLine("Aborting - Please wait..");
             _cancellationTokenSource.Cancel();
-
-            if (workerThread != null)
-            {
-                workerThread.Join();
-                Environment.Exit((int)ExitCode.Cancelled);
-            }
+            abort = true;
         }
 
         private void cmbExportFormat_SelectionChanged(object sender, SelectionChangedEventArgs e)
