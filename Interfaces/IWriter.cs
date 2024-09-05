@@ -1,11 +1,9 @@
-﻿using PointCloudConverter.Structs;
-
-namespace PointCloudConverter.Writers
+﻿namespace PointCloudConverter.Writers
 {
     public interface IWriter
     {
         // create output filestream, called before looping through points
-        bool InitWriter(ImportSettings importSettings, int pointCount);
+        bool InitWriter<TSettings>(TSettings importSettings, int pointCount);
         // optional: if need to create special file header
         void CreateHeader(int pointCount);
         // output point X,Y,Z values to file

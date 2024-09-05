@@ -85,6 +85,10 @@ namespace PointCloudConverter
             // default code
             Environment.ExitCode = (int)ExitCode.Success;
 
+            // load plugins
+            //var testwriter = PointCloudConverter.Plugins.PluginLoader.LoadWriter("plugins/GLTFWriter.dll");
+            //testwriter.Close();
+
             // using from commandline
             if (args.Length > 1)
             {

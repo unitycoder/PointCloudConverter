@@ -44,9 +44,9 @@ namespace PointCloudConverter.Writers
         static float cloudMaxY = float.NegativeInfinity;
         static float cloudMaxZ = float.NegativeInfinity;
 
-        bool IWriter.InitWriter(ImportSettings _importSettings, int _pointCount)
+        bool IWriter.InitWriter<TSettings>(TSettings _importSettings, int _pointCount)
         {
-            importSettings = _importSettings;
+            importSettings = (ImportSettings)(object)_importSettings;
             pointCount = _pointCount;
 
             pointsTempFile = importSettings.outputFile + "_PointsTemp";
