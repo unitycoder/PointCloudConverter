@@ -25,7 +25,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "02.09.2024";
+        static readonly string version = "05.09.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -47,8 +47,6 @@ namespace PointCloudConverter
         [DllImport("user32.dll")]
         static extern int SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
-
-        static bool abort = false;
         public static MainWindow mainWindowStatic;
         bool isInitialiazing = true;
 
@@ -314,7 +312,24 @@ namespace PointCloudConverter
                     return;
                 }
 
-                await semaphore.WaitAsync(cancellationToken);
+                //await semaphore.WaitAsync(cancellationToken);
+                try
+                {
+                    await semaphore.WaitAsync(cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Handle the cancellation scenario here
+                    Log.WriteLine("Wait was canceled.");
+                }
+                finally
+                {
+                    // Ensure the semaphore is released, if needed
+                    if (semaphore.CurrentCount == 0) // Make sure we don't release more times than we acquire
+                    {
+                        semaphore.Release();
+                    }
+                }
                 //int? taskId = Task.CurrentId; // Get the current task ID
 
                 //progressFile = i;
@@ -356,10 +371,14 @@ namespace PointCloudConverter
                     {
                         Log.WriteLine("Timeout occurred: " + ex.Message, LogEvent.Error);
                     }
+                    catch (OperationCanceledException)
+                    {
+                        MessageBox.Show("Operation was canceled.");
+                    }
                     catch (Exception ex)
                     {
                         Log.WriteLine("Exception> " + ex.Message, LogEvent.Error);
-                        throw; // Rethrow to ensure Task.WhenAll sees the exception
+                        //throw; // Rethrow to ensure Task.WhenAll sees the exception
                     }
                     finally
                     {
@@ -754,7 +773,7 @@ namespace PointCloudConverter
                     {
                         if (cancellationToken.IsCancellationRequested)
                         {
-                            Log.WriteLine("Parse task was canceled.");
+                            //Log.WriteLine("Parse task (" + taskId + ") was canceled for: " + importSettings.inputFiles[fileIndex]);
                             return false;
                         }
                     }
@@ -878,8 +897,6 @@ namespace PointCloudConverter
 
             // reset cancel token
             _cancellationTokenSource = new CancellationTokenSource();
-            abort = false;
-
 
             if (ValidateSettings() == true)
             {
@@ -1027,6 +1044,7 @@ namespace PointCloudConverter
         }
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             SaveSettings();
@@ -1254,7 +1272,6 @@ namespace PointCloudConverter
         {
             Log.WriteLine("Aborting - Please wait..");
             _cancellationTokenSource.Cancel();
-            abort = true;
         }
 
         private void cmbExportFormat_SelectionChanged(object sender, SelectionChangedEventArgs e)
