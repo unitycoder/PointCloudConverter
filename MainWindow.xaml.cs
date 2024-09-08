@@ -25,7 +25,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "08.09.2024";
+        static readonly string version = "09.09.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -61,6 +61,7 @@ namespace PointCloudConverter
         static DispatcherTimer progressTimerThread;
         public static string lastStatusMessage = "";
         public static int errorCounter = 0; // how many errors when importing or reading files (single file could have multiple errors)
+        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
         public MainWindow()
         {
@@ -1043,7 +1044,134 @@ namespace PointCloudConverter
             }
         }
 
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        // set gui from commandline args
+        void ImportArgs(string rawArgs)
+        {
+            Log.WriteLine(rawArgs);
+            string[] args = ArgParser.SplitArgs(rawArgs);
+            bool isFirstArgExe = args[0].EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+            int startIndex = isFirstArgExe ? 1 : 0;
+
+            for (int i = startIndex; i < args.Length; i++)
+            {
+                string arg = args[i];
+                arg = arg.TrimStart('-');
+
+                if (i + 1 < args.Length)
+                {
+                    string[] parts = args[i].Split('=');
+
+                    if (parts.Length < 2)
+                    {
+                        Log.WriteLine($"Missing value for argument: {arg}");
+                        continue;
+                    }
+
+                    string key = parts[0].ToLower().TrimStart('-');
+                    string value = parts[1];
+
+                    // Apply the key-value pairs to the GUI elements
+                    switch (key)
+                    {
+                        case "input":
+                            txtInputFile.Text = value;
+                            break;
+                        case "importformat":
+                            cmbImportFormat.SelectedItem = value;
+                            break;
+                        case "exportformat":
+                            cmbExportFormat.SelectedItem = value;
+                            break;
+                        case "output":
+                            txtOutput.Text = value;
+                            break;
+                        case "offset":
+                            chkAutoOffset.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "rgb":
+                            chkImportRGB.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "intensity":
+                            chkImportIntensity.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "gridsize":
+                            txtGridSize.Text = value;
+                            break;
+                        case "minpoints":
+                            chkUseMinPointCount.IsChecked = true;
+                            txtMinPointCount.Text = value;
+                            break;
+                        case "scale":
+                            chkUseScale.IsChecked = true;
+                            txtScale.Text = value;
+                            break;
+                        case "swap":
+                            chkSwapYZ.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "invertx":
+                            chkInvertX.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "invertz":
+                            chkInvertZ.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "pack":
+                            chkPackColors.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "packmagic":
+                            chkUsePackMagic.IsChecked = true;
+                            txtPackMagic.Text = value;
+                            break;
+                        case "limit":
+                            chkUseMaxImportPointCount.IsChecked = true;
+                            txtMaxImportPointCount.Text = value;
+                            break;
+                        case "keep":
+                            chkUseKeep.IsChecked = true;
+                            txtKeepEvery.Text = value;
+                            break;
+                        case "maxfiles":
+                            chkUseMaxFileCount.IsChecked = true;
+                            txtMaxFileCount.Text = value;
+                            break;
+                        case "randomize":
+                            chkRandomize.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "seed":
+                            chkSetRandomSeed.IsChecked = true;
+                            txtRandomSeed.Text = value;
+                            break;
+                        case "json":
+                            chkUseJSONLog.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "metadata":
+                            chkReadMetaData.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "metadataonly":
+                            chkMetaDataOnly.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "averagetimestamp":
+                            chkGetAvgTileTimestamp.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "checkoverlap":
+                            chkCalculateOverlappingTiles.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "maxthreads":
+                            txtMaxThreads.Text = value;
+                            break;
+                        case "customintensityrange":
+                            chkCustomIntensityRange.IsChecked = value.ToLower() == "true";
+                            break;
+                        default:
+                            Console.WriteLine($"Unknown argument: {key}");
+                            break;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Missing value for argument: {arg}");
+                }
+            } // for all args
+        } // ImportArgs()
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -1391,5 +1519,36 @@ namespace PointCloudConverter
             txtConsole.SelectAll();
             e.Handled = true;
         }
+
+        private void btnImportSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog();
+            dialog.Title = "Select settings file";
+            dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+
+            if (dialog.ShowDialog() == true)
+            {
+                if (File.Exists(dialog.FileName))
+                {
+                    var contents = File.ReadAllText(dialog.FileName);
+                    ImportArgs(contents);
+                }
+            }
+        }
+
+        private void btnExportSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new SaveFileDialog();
+            dialog.Title = "Save settings file";
+            dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+
+            if (dialog.ShowDialog() == true)
+            {
+                StartProcess(false);
+                File.WriteAllText(dialog.FileName, txtConsole.Text);
+            }
+        }
+
+
     } // class
 } // namespace

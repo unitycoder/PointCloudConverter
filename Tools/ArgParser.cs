@@ -22,7 +22,7 @@ namespace PointCloudConverter
         [DllImport("kernel32.dll")]
         static extern IntPtr LocalFree(IntPtr hMem);
 
-        static string[] SplitArgs(string unsplitArgumentLine)
+        public static string[] SplitArgs(string unsplitArgumentLine)
         {
             int numberOfArgs;
             IntPtr ptrToSplitArgs;
@@ -673,6 +673,20 @@ namespace PointCloudConverter
                                     importSettings.importIntensity = (param == "true");
                                 }
                                 break;
+
+                                // TODO load whole commandline args list from text file
+                            //case "-config":
+                            //    Log.WriteLine("config = " + param);
+                            //    // minimal validation only
+                            //    if (param.IndexOf("-") < 0)
+                            //    {
+                            //        importSettings.errors.Add("Invalid config parameter: " + param);
+                            //    }
+                            //    else // got value
+                            //    {
+                            //        //importSettings.config = param;
+                            //    }
+                            //    break;
 
                             case "?":
                             case "/?":
