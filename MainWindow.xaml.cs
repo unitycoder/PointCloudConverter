@@ -1346,7 +1346,19 @@ namespace PointCloudConverter
 
         private void btnHelp_Click(object sender, RoutedEventArgs e)
         {
-            Process.Start("https://github.com/unitycoder/PointCloudConverter/wiki");
+            try
+            {
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = "https://github.com/unitycoder/PointCloudConverter/wiki",
+                    UseShellExecute = true
+                };
+                Process.Start(processStartInfo);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Unable to open the link. Error: {ex.Message}");
+            }
         }
 
         private void chkAutoOffset_Checked(object sender, RoutedEventArgs e)
