@@ -22,7 +22,7 @@ namespace PointCloudConverter
         [DllImport("kernel32.dll")]
         static extern IntPtr LocalFree(IntPtr hMem);
 
-        static string[] SplitArgs(string unsplitArgumentLine)
+        public static string[] SplitArgs(string unsplitArgumentLine)
         {
             int numberOfArgs;
             IntPtr ptrToSplitArgs;
@@ -91,8 +91,25 @@ namespace PointCloudConverter
             // if there are any errors, they are added to this list, then importing is aborted after parsing arguments
             //List<string> errors = new List<string>();
 
-            // handle manual args (null is default args, not used)
-            if (args == null) args = SplitArgs(GetEscapedCommandLine()).Skip(1).ToArray();
+            // handle commandline args (null is default args, not used)
+            if (args == null)
+            {
+                args = SplitArgs(GetEscapedCommandLine()).Skip(1).ToArray();
+
+                // if only single arg, -config=filename.txt, then read file and split args
+                if (args.Length == 1 && args[0].ToLower().Contains("-config="))
+                {
+                    var configFile = args[0].Split(argValueSeparator)[1];
+                    if (File.Exists(configFile) == true)
+                    {
+                        args = SplitArgs(File.ReadAllText(configFile).Trim()).Skip(1).ToArray();
+                    }
+                    else
+                    {
+                        importSettings.errors.Add("Config file not found: " + configFile);
+                    }
+                }
+            }
 
             // parse commandline arguments
             if (args != null && args.Length > 0)
@@ -674,6 +691,20 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            // TODO load whole commandline args list from text file
+                            case "-config":
+                                Log.WriteLine("config = " + param);
+                                // we dont do anything, config is checked at start of Parse()
+                                //if (File.Exists(param) == false)
+                                //{
+                                //    importSettings.errors.Add("Config file not found: " + param);
+                                //}
+                                //else // got value, 
+                                //{
+                                //    //importSettings.config = param;
+                                //}
+                                break;
+
                             case "?":
                             case "/?":
                             case "help":
@@ -702,7 +733,7 @@ namespace PointCloudConverter
             // check that we had input
             if (importSettings.inputFiles.Count == 0 || string.IsNullOrEmpty(importSettings.inputFiles[0]) == true)
             {
-                importSettings.errors.Add("No input file(s) defined (use -input" + argValueSeparator + "yourfile.las)");
+                importSettings.errors.Add("No input file(s) defined OR input folder is empty (use -input" + argValueSeparator + "yourfile.las or -input" + argValueSeparator + "yourfolder/)");
             }
             else // have input
             {
@@ -710,7 +741,7 @@ namespace PointCloudConverter
                 {
                     Log.WriteLine("Found " + importSettings.inputFiles.Count + " files..");
 
-                    // if no output folder given
+                    // if no output folder given at all
                     if (string.IsNullOrEmpty(importSettings.outputFile) == true)
                     {
                         if (importSettings.exportFormat == ExportFormat.UCPC)
@@ -730,6 +761,17 @@ namespace PointCloudConverter
                         {
                             // we should ask for export folder, otherwise source folder is filled with files
                             importSettings.errors.Add("(C) -output file or folder not defined (its required for V3 PCROOT format)");
+                        }
+                    }
+                    else // have something in output field
+                    {
+                        // check if output is folder
+                        if (Directory.Exists(importSettings.outputFile) == true)
+                        {
+                            if (importSettings.exportFormat == ExportFormat.PCROOT)
+                            {
+                                importSettings.errors.Add("(E) PCROOT Requires some output filename (example: output.pcroot)");
+                            }
                         }
                     }
 

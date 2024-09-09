@@ -22,8 +22,11 @@
         <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,603,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="877" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
 
         <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="10,577,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
-        <Button x:Name="btnCopyToClipboard" Content="Copy" HorizontalAlignment="Left" VerticalAlignment="Top" Width="40" Height="20" ToolTip="Browse for output file" Margin="234,580,0,0" Click="btnCopyToClipboard_Click"/>
+        <Button x:Name="btnCopyToClipboard" Content="Copy" HorizontalAlignment="Left" VerticalAlignment="Top" Width="40" Height="20" ToolTip="Browse for output file" Margin="239,580,0,0" Click="btnCopyToClipboard_Click"/>
 
+        <Button x:Name="btnImportSettings" Content="Import Settings" ToolTip="Import settings from text file" HorizontalAlignment="Left" Margin="239,514,0,0" VerticalAlignment="Top" Width="104" Height="29" Click="btnImportSettings_Click"/>
+        <Button x:Name="btnExportSettings" Content="Export Settings" ToolTip="Export settings to text file" HorizontalAlignment="Left" Margin="345,514,0,0" VerticalAlignment="Top" Width="104" Height="29" Click="btnExportSettings_Click"/>
+        
         <Button x:Name="btnGetParams" Content="Get Commandline params" HorizontalAlignment="Left" Margin="12,514,0,0" VerticalAlignment="Top" Width="214" Height="58" Click="btnGetParams_Click"/>
         <!--global options-->
         <GroupBox x:Name="groupBoxGlobal" HorizontalAlignment="Left" Header="Global Options" Margin="16,153,0,0" VerticalAlignment="Top" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">

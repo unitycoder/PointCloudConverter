@@ -122,9 +122,10 @@ namespace PointCloudConverter.Writers
             taskID = _taskID;
         }
 
-        bool IWriter.InitWriter(ImportSettings _importSettings, int _pointCount)
+        public bool InitWriter<TSettings>(TSettings _importSettings, int pointCount)
         {
             //Log.WriteLine("--------------------- initwriter for taskID: " + taskID);
+
 
             var res = true;
 
@@ -141,7 +142,7 @@ namespace PointCloudConverter.Writers
 
             bsPoints = null;
             writerPoints = null;
-            importSettings = _importSettings;
+            importSettings = (ImportSettings)(object)_importSettings;
 
             return res;
         }

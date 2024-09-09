@@ -25,7 +25,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "02.09.2024";
+        static readonly string version = "09.09.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -47,8 +47,6 @@ namespace PointCloudConverter
         [DllImport("user32.dll")]
         static extern int SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
-
-        static bool abort = false;
         public static MainWindow mainWindowStatic;
         bool isInitialiazing = true;
 
@@ -63,6 +61,7 @@ namespace PointCloudConverter
         static DispatcherTimer progressTimerThread;
         public static string lastStatusMessage = "";
         public static int errorCounter = 0; // how many errors when importing or reading files (single file could have multiple errors)
+        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
         public MainWindow()
         {
@@ -84,6 +83,10 @@ namespace PointCloudConverter
 
             // default code
             Environment.ExitCode = (int)ExitCode.Success;
+
+            // load plugins
+            //var testwriter = PointCloudConverter.Plugins.PluginLoader.LoadWriter("plugins/GLTFWriter.dll");
+            //testwriter.Close();
 
             // using from commandline
             if (args.Length > 1)
@@ -310,7 +313,24 @@ namespace PointCloudConverter
                     return;
                 }
 
-                await semaphore.WaitAsync(cancellationToken);
+                //await semaphore.WaitAsync(cancellationToken);
+                try
+                {
+                    await semaphore.WaitAsync(cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Handle the cancellation scenario here
+                    Log.WriteLine("Wait was canceled.");
+                }
+                finally
+                {
+                    // Ensure the semaphore is released, if needed
+                    if (semaphore.CurrentCount == 0) // Make sure we don't release more times than we acquire
+                    {
+                        semaphore.Release();
+                    }
+                }
                 //int? taskId = Task.CurrentId; // Get the current task ID
 
                 //progressFile = i;
@@ -352,10 +372,14 @@ namespace PointCloudConverter
                     {
                         Log.WriteLine("Timeout occurred: " + ex.Message, LogEvent.Error);
                     }
+                    catch (OperationCanceledException)
+                    {
+                        MessageBox.Show("Operation was canceled.");
+                    }
                     catch (Exception ex)
                     {
                         Log.WriteLine("Exception> " + ex.Message, LogEvent.Error);
-                        throw; // Rethrow to ensure Task.WhenAll sees the exception
+                        //throw; // Rethrow to ensure Task.WhenAll sees the exception
                     }
                     finally
                     {
@@ -442,7 +466,7 @@ namespace PointCloudConverter
 
         static void StartProgressTimer()
         {
-            Log.WriteLine("Starting progress timer..*-*************************");
+            //Log.WriteLine("Starting progress timer..*-*************************");
             progressTimerThread = new DispatcherTimer(DispatcherPriority.Background, Application.Current.Dispatcher);
             progressTimerThread.Tick += ProgressTick;
             progressTimerThread.Interval = TimeSpan.FromSeconds(1);
@@ -477,11 +501,11 @@ namespace PointCloudConverter
             threadCount = Math.Min(threadCount, importSettings.maxFiles);
             threadCount = Math.Max(threadCount, 1);
 
-            Log.WriteLine("Creating progress bars: " + threadCount);
+            //Log.WriteLine("Creating progress bars: " + threadCount);
 
             bool useJsonLog = importSettings.useJSONLog;
 
-            Log.WriteLine("Creating progress bars: " + threadCount);
+            //Log.WriteLine("Creating progress bars: " + threadCount);
             progressInfos.Clear();
 
             for (int i = 0; i < threadCount; i++)
@@ -750,7 +774,7 @@ namespace PointCloudConverter
                     {
                         if (cancellationToken.IsCancellationRequested)
                         {
-                            Log.WriteLine("Parse task was canceled.");
+                            //Log.WriteLine("Parse task (" + taskId + ") was canceled for: " + importSettings.inputFiles[fileIndex]);
                             return false;
                         }
                     }
@@ -874,8 +898,6 @@ namespace PointCloudConverter
 
             // reset cancel token
             _cancellationTokenSource = new CancellationTokenSource();
-            abort = false;
-
 
             if (ValidateSettings() == true)
             {
@@ -1022,7 +1044,135 @@ namespace PointCloudConverter
             }
         }
 
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        // set gui from commandline args
+        void ImportArgs(string rawArgs)
+        {
+            Log.WriteLine(rawArgs);
+            string[] args = ArgParser.SplitArgs(rawArgs);
+            bool isFirstArgExe = args[0].EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+            int startIndex = isFirstArgExe ? 1 : 0;
+
+            for (int i = startIndex; i < args.Length; i++)
+            {
+                string arg = args[i];
+                arg = arg.TrimStart('-');
+
+                if (i + 1 < args.Length)
+                {
+                    string[] parts = args[i].Split('=');
+
+                    if (parts.Length < 2)
+                    {
+                        Log.WriteLine($"Missing value for argument: {arg}");
+                        continue;
+                    }
+
+                    string key = parts[0].ToLower().TrimStart('-');
+                    string value = parts[1];
+
+                    // Apply the key-value pairs to the GUI elements
+                    switch (key)
+                    {
+                        case "input":
+                            txtInputFile.Text = value;
+                            break;
+                        case "importformat":
+                            cmbImportFormat.SelectedItem = value;
+                            break;
+                        case "exportformat":
+                            cmbExportFormat.SelectedItem = value;
+                            break;
+                        case "output":
+                            txtOutput.Text = value;
+                            break;
+                        case "offset":
+                            chkAutoOffset.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "rgb":
+                            chkImportRGB.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "intensity":
+                            chkImportIntensity.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "gridsize":
+                            txtGridSize.Text = value;
+                            break;
+                        case "minpoints":
+                            chkUseMinPointCount.IsChecked = true;
+                            txtMinPointCount.Text = value;
+                            break;
+                        case "scale":
+                            chkUseScale.IsChecked = true;
+                            txtScale.Text = value;
+                            break;
+                        case "swap":
+                            chkSwapYZ.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "invertx":
+                            chkInvertX.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "invertz":
+                            chkInvertZ.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "pack":
+                            chkPackColors.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "packmagic":
+                            chkUsePackMagic.IsChecked = true;
+                            txtPackMagic.Text = value;
+                            break;
+                        case "limit":
+                            chkUseMaxImportPointCount.IsChecked = true;
+                            txtMaxImportPointCount.Text = value;
+                            break;
+                        case "keep":
+                            chkUseKeep.IsChecked = true;
+                            txtKeepEvery.Text = value;
+                            break;
+                        case "maxfiles":
+                            chkUseMaxFileCount.IsChecked = true;
+                            txtMaxFileCount.Text = value;
+                            break;
+                        case "randomize":
+                            chkRandomize.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "seed":
+                            chkSetRandomSeed.IsChecked = true;
+                            txtRandomSeed.Text = value;
+                            break;
+                        case "json":
+                            chkUseJSONLog.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "metadata":
+                            chkReadMetaData.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "metadataonly":
+                            chkMetaDataOnly.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "averagetimestamp":
+                            chkGetAvgTileTimestamp.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "checkoverlap":
+                            chkCalculateOverlappingTiles.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "maxthreads":
+                            txtMaxThreads.Text = value;
+                            break;
+                        case "customintensityrange":
+                            chkCustomIntensityRange.IsChecked = value.ToLower() == "true";
+                            break;
+                        default:
+                            Console.WriteLine($"Unknown argument: {key}");
+                            break;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Missing value for argument: {arg}");
+                }
+            } // for all args
+        } // ImportArgs()
+
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             SaveSettings();
@@ -1250,13 +1400,48 @@ namespace PointCloudConverter
         {
             Log.WriteLine("Aborting - Please wait..");
             _cancellationTokenSource.Cancel();
-            abort = true;
         }
 
         private void cmbExportFormat_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // updatae file extension, if set
-            txtOutput.Text = Path.ChangeExtension(txtOutput.Text, "." + cmbExportFormat.SelectedValue.ToString().ToLower());
+            if (isInitialiazing == true) return;
+
+            // get current output path
+            var currentOutput = txtOutput.Text;
+
+            // check if output is file or directory
+            if (Directory.Exists(currentOutput) == true) // its directory
+            {
+                // if PCROOT then filename is required, use default output.pcroot then
+                if (cmbExportFormat.SelectedValue.ToString().ToUpper().Contains("PCROOT"))
+                {
+                    string sourceName= Path.GetFileNameWithoutExtension(txtInputFile.Text);
+                    if (string.IsNullOrEmpty(sourceName)) sourceName = "output";
+
+                    txtOutput.Text = Path.Combine(currentOutput,  sourceName +".pcroot");
+                }
+                return;
+            }
+
+            // check if file has extension already
+            if (string.IsNullOrEmpty(Path.GetExtension(currentOutput)) == false)
+            {
+                // add extension based on selected format
+                txtOutput.Text = Path.ChangeExtension(currentOutput, "." + cmbExportFormat.SelectedValue.ToString().ToLower());
+            }
+            else // no extension, set default filename
+            {
+                // check if have filename
+                if (string.IsNullOrEmpty(Path.GetFileName(currentOutput)) == false)
+                {
+                    // add extension based on selected format
+                    txtOutput.Text = Path.Combine(Path.GetDirectoryName(currentOutput), Path.GetFileName(currentOutput) + "." + cmbExportFormat.SelectedValue.ToString().ToLower());
+                }
+                else // no filename, set default
+                {
+                    txtOutput.Text = Path.Combine(Path.GetDirectoryName(currentOutput), "output." + cmbExportFormat.SelectedValue.ToString().ToLower());
+                }
+            }
         }
 
         private void chkImportRGB_Checked(object sender, RoutedEventArgs e)
@@ -1325,7 +1510,19 @@ namespace PointCloudConverter
 
         private void btnHelp_Click(object sender, RoutedEventArgs e)
         {
-            Process.Start("https://github.com/unitycoder/PointCloudConverter/wiki");
+            try
+            {
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = "https://github.com/unitycoder/PointCloudConverter/wiki",
+                    UseShellExecute = true
+                };
+                Process.Start(processStartInfo);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Unable to open the link. Error: {ex.Message}");
+            }
         }
 
         private void chkAutoOffset_Checked(object sender, RoutedEventArgs e)
@@ -1358,5 +1555,36 @@ namespace PointCloudConverter
             txtConsole.SelectAll();
             e.Handled = true;
         }
+
+        private void btnImportSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog();
+            dialog.Title = "Select settings file";
+            dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+
+            if (dialog.ShowDialog() == true)
+            {
+                if (File.Exists(dialog.FileName))
+                {
+                    var contents = File.ReadAllText(dialog.FileName);
+                    ImportArgs(contents);
+                }
+            }
+        }
+
+        private void btnExportSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new SaveFileDialog();
+            dialog.Title = "Save settings file";
+            dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+
+            if (dialog.ShowDialog() == true)
+            {
+                StartProcess(false);
+                File.WriteAllText(dialog.FileName, txtConsole.Text);
+            }
+        }
+
+
     } // class
 } // namespace
