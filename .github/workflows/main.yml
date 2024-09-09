@@ -52,7 +52,8 @@ jobs:
         run: call .\ArtifactBuild.cmd      
         
       - name: List directory contents for debugging
-        run: dir /s
+        run: Get-ChildItem -Recurse
+        shell: pwsh
         
       - name: Create Release
         id: create_release
