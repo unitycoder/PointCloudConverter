@@ -51,6 +51,9 @@ jobs:
         shell: cmd
         run: call .\ArtifactBuild.cmd      
         
+      - name: List directory contents for debugging
+        run: dir /s
+        
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
