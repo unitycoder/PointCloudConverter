@@ -50,11 +50,7 @@ jobs:
       - name: Build Artifact
         shell: cmd
         run: call .\ArtifactBuild.cmd      
-        
-      - name: List directory contents for debugging
-        run: Get-ChildItem -Recurse
-        shell: pwsh
-        
+       
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -69,6 +65,10 @@ jobs:
             ${{ join(github.event.commits.*.message, '\n') }}
           draft: false
           prerelease: false     
+        
+      - name: List directory contents for debugging
+        run: Get-ChildItem -Recurse
+        shell: pwsh
         
       - name: Upload Release Asset (x64)
         id: upload-release-asset-x64
