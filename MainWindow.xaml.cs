@@ -466,7 +466,7 @@ namespace PointCloudConverter
 
         static void StartProgressTimer()
         {
-            Log.WriteLine("Starting progress timer..*-*************************");
+            //Log.WriteLine("Starting progress timer..*-*************************");
             progressTimerThread = new DispatcherTimer(DispatcherPriority.Background, Application.Current.Dispatcher);
             progressTimerThread.Tick += ProgressTick;
             progressTimerThread.Interval = TimeSpan.FromSeconds(1);
@@ -501,11 +501,11 @@ namespace PointCloudConverter
             threadCount = Math.Min(threadCount, importSettings.maxFiles);
             threadCount = Math.Max(threadCount, 1);
 
-            Log.WriteLine("Creating progress bars: " + threadCount);
+            //Log.WriteLine("Creating progress bars: " + threadCount);
 
             bool useJsonLog = importSettings.useJSONLog;
 
-            Log.WriteLine("Creating progress bars: " + threadCount);
+            //Log.WriteLine("Creating progress bars: " + threadCount);
             progressInfos.Clear();
 
             for (int i = 0; i < threadCount; i++)
@@ -1404,8 +1404,44 @@ namespace PointCloudConverter
 
         private void cmbExportFormat_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // updatae file extension, if set
-            txtOutput.Text = Path.ChangeExtension(txtOutput.Text, "." + cmbExportFormat.SelectedValue.ToString().ToLower());
+            if (isInitialiazing == true) return;
+
+            // get current output path
+            var currentOutput = txtOutput.Text;
+
+            // check if output is file or directory
+            if (Directory.Exists(currentOutput) == true) // its directory
+            {
+                // if PCROOT then filename is required, use default output.pcroot then
+                if (cmbExportFormat.SelectedValue.ToString().ToUpper().Contains("PCROOT"))
+                {
+                    string sourceName= Path.GetFileNameWithoutExtension(txtInputFile.Text);
+                    if (string.IsNullOrEmpty(sourceName)) sourceName = "output";
+
+                    txtOutput.Text = Path.Combine(currentOutput,  sourceName +".pcroot");
+                }
+                return;
+            }
+
+            // check if file has extension already
+            if (string.IsNullOrEmpty(Path.GetExtension(currentOutput)) == false)
+            {
+                // add extension based on selected format
+                txtOutput.Text = Path.ChangeExtension(currentOutput, "." + cmbExportFormat.SelectedValue.ToString().ToLower());
+            }
+            else // no extension, set default filename
+            {
+                // check if have filename
+                if (string.IsNullOrEmpty(Path.GetFileName(currentOutput)) == false)
+                {
+                    // add extension based on selected format
+                    txtOutput.Text = Path.Combine(Path.GetDirectoryName(currentOutput), Path.GetFileName(currentOutput) + "." + cmbExportFormat.SelectedValue.ToString().ToLower());
+                }
+                else // no filename, set default
+                {
+                    txtOutput.Text = Path.Combine(Path.GetDirectoryName(currentOutput), "output." + cmbExportFormat.SelectedValue.ToString().ToLower());
+                }
+            }
         }
 
         private void chkImportRGB_Checked(object sender, RoutedEventArgs e)
