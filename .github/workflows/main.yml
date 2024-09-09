@@ -61,8 +61,11 @@ jobs:
           release_name: Release ${{github.run_number}}
           body: |
             Automated Release by GitHub Action CI
+
+            Commit Messages:
+            ${{ join(github.event.commits.*.message, '\n') }}
           draft: false
-          prerelease: false      
+          prerelease: false     
         
       - name: Upload Release Asset (x64)
         id: upload-release-asset-x64
