@@ -798,7 +798,7 @@ namespace PointCloudConverter
             // check required settings
             if (importSettings.exportFormat == ExportFormat.Unknown)
             {
-                importSettings.errors.Add("No export format defined (Example: -exportformat" + argValueSeparator + "UCPC)");
+                importSettings.errors.Add("No export format defined (Example: -exportformat" + argValueSeparator + "PCROOT)");
             }
 
             // cannot have both rgb & intensity

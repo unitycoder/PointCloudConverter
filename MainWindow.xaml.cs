@@ -25,7 +25,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "09.09.2024";
+        static readonly string version = "10.09.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -87,6 +87,10 @@ namespace PointCloudConverter
             // load plugins
             //var testwriter = PointCloudConverter.Plugins.PluginLoader.LoadWriter("plugins/GLTFWriter.dll");
             //testwriter.Close();
+
+            // for debug: print config file location in appdata local here directly
+            // string configFilePath = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.PerUserRoamingAndLocal).FilePath;
+            // Log.WriteLine("Config file: " + configFilePath);
 
             // using from commandline
             if (args.Length > 1)
@@ -168,10 +172,7 @@ namespace PointCloudConverter
             LoadSettings();
         }
 
-
-
         // main processing loop
-
         private static async Task ProcessAllFiles(object workerParamsObject)
         {
             var workerParams = (WorkerParams)workerParamsObject;
@@ -293,6 +294,7 @@ namespace PointCloudConverter
             //// hack to fix progress bar not updating on last file
             //progressFile++;
 
+            // clamp to maxfiles
             int maxThreads = Math.Min(importSettings.maxThreads, importSettings.maxFiles);
             // clamp to min 1
             maxThreads = Math.Max(maxThreads, 1);
@@ -301,7 +303,7 @@ namespace PointCloudConverter
             // init pool
             importSettings.InitWriterPool(maxThreads, importSettings.exportFormat);
 
-            var semaphore = new SemaphoreSlim(importSettings.maxThreads);
+            var semaphore = new SemaphoreSlim(maxThreads);
 
             var tasks = new List<Task>();
 
@@ -325,17 +327,16 @@ namespace PointCloudConverter
                 }
                 finally
                 {
-                    // Ensure the semaphore is released, if needed
-                    if (semaphore.CurrentCount == 0) // Make sure we don't release more times than we acquire
-                    {
-                        semaphore.Release();
-                    }
+                    //// Ensure the semaphore is released, if needed
+                    //if (semaphore.CurrentCount == 0) // Make sure we don't release more times than we acquire
+                    //{
+                    //    semaphore.Release();
+                    //}
                 }
                 //int? taskId = Task.CurrentId; // Get the current task ID
 
                 //progressFile = i;
                 Interlocked.Increment(ref progressFile);
-
 
                 //bool isLastTask = (i == len - 1); // Check if this is the last task
 
@@ -582,7 +583,7 @@ namespace PointCloudConverter
                                         "\"thread\": " + index + "," +
                                         "\"currentPoint\": " + currentValue + "," +
                                         "\"totalPoints\": " + maxValue + "," +
-                                        "\"percentage\": " + (int)((currentValue / (float)maxValue) * 100) + "%," +
+                                        "\"percentage\": " + (int)((currentValue / (float)maxValue) * 100) + "," +
                                         "\"file\": " + System.Text.Json.JsonSerializer.Serialize(progressInfo.FilePath) +
                                         "}";
                                     Log.WriteLine(jsonString, LogEvent.Progress);
@@ -698,7 +699,7 @@ namespace PointCloudConverter
                 }
                 else
                 {
-                    Log.WriteLine("Points: " + pointCount);
+                    Log.WriteLine("Points: " + pointCount + " (" + importSettings.inputFiles[fileIndex] + ")");
                 }
 
                 // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds?
@@ -967,7 +968,7 @@ namespace PointCloudConverter
             args.Add("-rgb=" + (bool)chkImportRGB.IsChecked);
             args.Add("-intensity=" + (bool)chkImportIntensity.IsChecked);
 
-            if (cmbExportFormat.SelectedItem.ToString().ToUpper().Contains("PCROOT")) args.Add("-gridsize=" + txtGridSize.Text);
+            if (cmbExportFormat.SelectedItem?.ToString()?.ToUpper()?.Contains("PCROOT") == true) args.Add("-gridsize=" + txtGridSize.Text);
 
             if ((bool)chkUseMinPointCount.IsChecked) args.Add("-minpoints=" + txtMinPointCount.Text);
             if ((bool)chkUseScale.IsChecked) args.Add("-scale=" + txtScale.Text);
@@ -1415,10 +1416,10 @@ namespace PointCloudConverter
                 // if PCROOT then filename is required, use default output.pcroot then
                 if (cmbExportFormat.SelectedValue.ToString().ToUpper().Contains("PCROOT"))
                 {
-                    string sourceName= Path.GetFileNameWithoutExtension(txtInputFile.Text);
+                    string sourceName = Path.GetFileNameWithoutExtension(txtInputFile.Text);
                     if (string.IsNullOrEmpty(sourceName)) sourceName = "output";
 
-                    txtOutput.Text = Path.Combine(currentOutput,  sourceName +".pcroot");
+                    txtOutput.Text = Path.Combine(currentOutput, sourceName + ".pcroot");
                 }
                 return;
             }

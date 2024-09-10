@@ -237,7 +237,7 @@ namespace PointCloudConverter
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ImportFormat importFormat { get; set; } = ImportFormat.LAS; //default to las for now
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public ExportFormat exportFormat { get; set; } = ExportFormat.PCROOT; // defaults to PCROOT (v3) now
+        public ExportFormat exportFormat { get; set; }// = ExportFormat.PCROOT; // defaults to PCROOT (v3) now
 
         public List<string> inputFiles { get; set; } = new List<string>();
         public string outputFile { get; set; } = null;
