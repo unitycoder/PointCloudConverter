@@ -645,7 +645,7 @@ namespace PointCloudConverter
             ProgressInfo progressInfo = null;
             lock (lockObject)
             {
-                Log.WriteLine(progressInfos.Count + " : " + fileIndex, LogEvent.Info);
+                //Log.WriteLine(progressInfos.Count + " : " + fileIndex, LogEvent.Info);
                 progressInfo = progressInfos[fileIndex % progressInfos.Count];
             }
 
