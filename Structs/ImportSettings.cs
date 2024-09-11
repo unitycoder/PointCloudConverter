@@ -96,13 +96,13 @@ namespace PointCloudConverter
         {
             if (taskId.HasValue && _allocatedWriters.TryRemove(taskId, out var writer))
             {
-              //  Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
+                //  Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
                 // Clean up the writer if necessary
                 writer?.Cleanup(0);
                 //writer?.Dispose();
                 // Return the writer to the pool for reuse
                 _writerPool.Add(writer);
-               // Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
+                // Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
 
             }
         }
@@ -237,7 +237,7 @@ namespace PointCloudConverter
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ImportFormat importFormat { get; set; } = ImportFormat.LAS; //default to las for now
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public ExportFormat exportFormat { get; set; }// = ExportFormat.PCROOT; // defaults to PCROOT (v3) now
+        public ExportFormat exportFormat { get; set; }
 
         public List<string> inputFiles { get; set; } = new List<string>();
         public string outputFile { get; set; } = null;
@@ -330,6 +330,52 @@ namespace PointCloudConverter
         internal string ToJSON()
         {
             return JsonSerializer.Serialize(this);
+        }
+
+    }
+
+    // TEST dynamic export formats
+    [JsonConverter(typeof(CustomExportFormatConverter))]
+    public class ExportFormatModel
+    {
+        public ExportFormat StaticExportFormat { get; set; } = ExportFormat.Unknown;
+
+        // This will store dynamic formats from plugins
+        public string DynamicExportFormat { get; set; }
+    }
+
+    public class CustomExportFormatConverter : JsonConverter<ExportFormatModel>
+    {
+        public override ExportFormatModel Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            string stringValue = reader.GetString();
+            var model = new ExportFormatModel();
+
+            // Try to parse it as a known static ExportFormat
+            if (Enum.TryParse(typeof(ExportFormat), stringValue, true, out var enumValue))
+            {
+                model.StaticExportFormat = (ExportFormat)enumValue;
+            }
+            else
+            {
+                // If it's not a known enum value, store it as a dynamic format
+                model.DynamicExportFormat = stringValue;
+            }
+
+            return model;
+        }
+
+        public override void Write(Utf8JsonWriter writer, ExportFormatModel value, JsonSerializerOptions options)
+        {
+            // Serialize based on whether it's a static enum or dynamic value
+            if (value.StaticExportFormat != ExportFormat.Unknown)
+            {
+                writer.WriteStringValue(value.StaticExportFormat.ToString());
+            }
+            else
+            {
+                writer.WriteStringValue(value.DynamicExportFormat);
+            }
         }
     }
 }

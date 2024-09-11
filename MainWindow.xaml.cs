@@ -20,6 +20,8 @@ using Brushes = System.Windows.Media.Brushes;
 using System.Threading.Tasks;
 using PointCloudConverter.Readers;
 using System.Collections.Concurrent;
+using PointCloudConverter.Writers;
+using System.Reflection;
 
 namespace PointCloudConverter
 {
@@ -70,6 +72,8 @@ namespace PointCloudConverter
             Main();
         }
 
+        public static Dictionary<string, Type> externalWriters = new Dictionary<string, Type>();
+
         private async void Main()
         {
             // check cmdline args
@@ -84,9 +88,55 @@ namespace PointCloudConverter
             // default code
             Environment.ExitCode = (int)ExitCode.Success;
 
-            // load plugins
+            // load all plugins from plugins folder
+
+
             //var testwriter = PointCloudConverter.Plugins.PluginLoader.LoadWriter("plugins/GLTFWriter.dll");
-            //testwriter.Close();
+            ////testwriter.Close();
+
+            //externalWriters = AppDomain.CurrentDomain.GetAssemblies().SelectMany(assembly => assembly.GetTypes()).Where(type => typeof(IWriter).IsAssignableFrom(type) && !type.IsInterface);
+
+            var pluginsDirectory = "plugins";
+
+            if (!Directory.Exists(pluginsDirectory))
+            {
+                Console.WriteLine("Plugins directory not found.");
+                return;
+            }
+
+            // Get all DLL files in the plugins directory
+            var pluginFiles = Directory.GetFiles(pluginsDirectory, "*.dll");
+
+            foreach (var pluginFile in pluginFiles)
+            {
+                try
+                {
+                    // Load the DLL file as an assembly
+                    var assembly = Assembly.LoadFrom(pluginFile);
+
+                    // Find all types in the assembly that implement IWriter
+                    var writerTypes = assembly.GetTypes()
+                        .Where(type => typeof(IWriter).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract);
+
+                    foreach (var writerType in writerTypes)
+                    {
+                        // Derive a unique key for the writer (e.g., from its name or class name)
+                        string writerName = writerType.Name.Replace("Writer", ""); // Customize the key generation logic
+                        if (!externalWriters.ContainsKey(writerName))
+                        {
+                            // Add the writer type to the dictionary for later use
+                            externalWriters.Add(writerName, writerType);
+                            Console.WriteLine($"Found writer: {writerType.FullName} in {pluginFile}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading plugin {pluginFile}: {ex.Message}");
+                }
+            }
+
+            //return;
 
             // for debug: print config file location in appdata local here directly
             // string configFilePath = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.PerUserRoamingAndLocal).FilePath;
@@ -1279,16 +1329,29 @@ namespace PointCloudConverter
 
         private void LoadSettings()
         {
+            // add importer formats
             foreach (var item in Enum.GetValues(typeof(ImportFormat)))
             {
                 if ((ImportFormat)item == ImportFormat.Unknown) continue;
                 cmbImportFormat.Items.Add(item);
             }
 
+            // add builtin exporter formats
             foreach (var item in Enum.GetValues(typeof(ExportFormat)))
             {
                 if ((ExportFormat)item == ExportFormat.Unknown) continue;
+                if ((ExportFormat)item == ExportFormat.External) continue;
                 cmbExportFormat.Items.Add(item);
+            }
+
+            // Add dynamic export formats discovered from plugins
+            foreach (var externalPlugin in externalWriters)
+            {
+                // Avoid adding duplicates if they already exist in the enum
+                if (!cmbExportFormat.Items.Contains(externalPlugin.Key))
+                {
+                    cmbExportFormat.Items.Add(externalPlugin.Key);
+                }
             }
 
             // TODO check if format is available in list..
@@ -1440,6 +1503,8 @@ namespace PointCloudConverter
                 }
                 else // no filename, set default
                 {
+                    //Log.WriteLine("cmbExportFormat.SelectedValue> " + cmbExportFormat.SelectedValue.ToString());
+                    if (string.IsNullOrEmpty(currentOutput)) return;
                     txtOutput.Text = Path.Combine(Path.GetDirectoryName(currentOutput), "output." + cmbExportFormat.SelectedValue.ToString().ToLower());
                 }
             }
