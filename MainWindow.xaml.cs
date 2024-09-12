@@ -65,6 +65,9 @@ namespace PointCloudConverter
         public static int errorCounter = 0; // how many errors when importing or reading files (single file could have multiple errors)
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
+        // plugins
+        string externalFileFormats = "";
+
         public MainWindow()
         {
             InitializeComponent();
@@ -98,41 +101,44 @@ namespace PointCloudConverter
 
             var pluginsDirectory = "plugins";
 
+
             if (!Directory.Exists(pluginsDirectory))
             {
-                Console.WriteLine("Plugins directory not found.");
+                Log.WriteLine("Plugins directory not found.");
                 return;
             }
 
             // Get all DLL files in the plugins directory
             var pluginFiles = Directory.GetFiles(pluginsDirectory, "*.dll");
 
-            foreach (var pluginFile in pluginFiles)
+            foreach (var pluginDLL in pluginFiles)
             {
                 try
                 {
                     // Load the DLL file as an assembly
-                    var assembly = Assembly.LoadFrom(pluginFile);
+                    var assembly = Assembly.LoadFrom(pluginDLL);
 
                     // Find all types in the assembly that implement IWriter
-                    var writerTypes = assembly.GetTypes()
-                        .Where(type => typeof(IWriter).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract);
+                    var writerTypes = assembly.GetTypes().Where(type => typeof(IWriter).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract);
 
                     foreach (var writerType in writerTypes)
                     {
                         // Derive a unique key for the writer (e.g., from its name or class name)
-                        string writerName = writerType.Name.Replace("Writer", ""); // Customize the key generation logic
+                        string writerName = writerType.Name;//.Replace("Writer", ""); // Customize the key generation logic
                         if (!externalWriters.ContainsKey(writerName))
                         {
                             // Add the writer type to the dictionary for later use
                             externalWriters.Add(writerName, writerType);
-                            Console.WriteLine($"Found writer: {writerType.FullName} in {pluginFile}");
+                            Log.WriteLine($"Found writer: {writerType.FullName} in {pluginDLL}");
+                            
+                            // TODO take extensions from plugin? has 2: .glb and .gltf
+                            externalFileFormats += "|" + writerName + " (" + writerType.FullName + ")|*." + writerName.ToLower();
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error loading plugin {pluginFile}: {ex.Message}");
+                    Log.WriteLine($"Error loading plugin {pluginDLL}: {ex.Message}");
                 }
             }
 
@@ -1285,7 +1291,7 @@ namespace PointCloudConverter
             // select single output filename
             var dialog = new SaveFileDialog();
             dialog.Title = "Set output folder and filename";
-            dialog.Filter = "UCPC (V2)|*.ucpc|PCROOT (V3)|*.pcroot";
+            dialog.Filter = "UCPC (V2)|*.ucpc|PCROOT (V3)|*.pcroot" + externalFileFormats;
 
             dialog.FilterIndex = cmbExportFormat.SelectedIndex + 1;
 

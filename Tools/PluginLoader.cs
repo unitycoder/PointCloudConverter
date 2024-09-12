@@ -12,11 +12,13 @@ namespace PointCloudConverter.Plugins
 {
     public static class PluginLoader
     {
+        static readonly string pluginDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Plugins");
 
-        public static IWriter LoadWriter(string pluginPath)
+        public static IWriter LoadWriter(string pluginName)
         {
-            if (!File.Exists(pluginPath))
-                throw new FileNotFoundException($"The plugin at {pluginPath} could not be found.");
+            string pluginPath = Path.Combine(pluginDirectory, pluginName + ".dll");
+            Log.WriteLine($"Loading plugin at {pluginPath}");
+            if (File.Exists(pluginPath) == false) throw new FileNotFoundException($"The plugin at {pluginPath} could not be found.");
 
             // Load the plugin assembly
             var pluginAssembly = Assembly.LoadFrom(pluginPath);

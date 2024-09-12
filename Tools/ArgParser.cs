@@ -1,4 +1,5 @@
-﻿using PointCloudConverter.Readers;
+﻿using PointCloudConverter.Plugins;
+using PointCloudConverter.Readers;
 using PointCloudConverter.Structs;
 using PointCloudConverter.Writers;
 using System;
@@ -164,25 +165,43 @@ namespace PointCloudConverter
                                 string exportFormatParsed = param.ToUpper();
 
                                 // TODO check what writer interfaces are available
-                                if (string.IsNullOrEmpty(exportFormatParsed) == true || (exportFormatParsed != "UCPC" && exportFormatParsed != "PCROOT"))
+                                if (string.IsNullOrEmpty(exportFormatParsed) == true)
                                 {
                                     importSettings.errors.Add("Unsupported export format: " + param);
                                     importSettings.exportFormat = ExportFormat.Unknown;
                                 }
-                                else
+                                else // have some value
                                 {
-                                    // TODO later needs more formats..
+                                    // check built-in formats first
                                     switch (exportFormatParsed)
                                     {
                                         // TODO check enum names or interfaces
                                         case "PCROOT":
                                             importSettings.writer = new PCROOT(null);
                                             importSettings.exportFormat = ExportFormat.PCROOT;
-                                            importSettings.randomize = true; // required for V3
+                                            //importSettings.randomize = true; // required for V3, but if user wants to use it, they can disable it..
                                             break;
-                                        default:
+                                        case "UCPC":
                                             importSettings.writer = new UCPC();
                                             importSettings.exportFormat = ExportFormat.UCPC;
+                                            break;
+                                        default:
+                                            //importSettings.errors.Add("Unknown export format: " + param);
+
+                                            // check external plugin formats
+                                            var writer = PluginLoader.LoadWriter(exportFormatParsed);
+                                            if (writer != null)
+                                            {
+                                                importSettings.writer = writer;
+                                                importSettings.exportFormat = ExportFormat.External; // For now?
+                                            }
+                                            else
+                                            {
+                                                // Format is unknown, add to errors
+                                                importSettings.errors.Add("Unknown export format: " + param);
+                                                importSettings.exportFormat = ExportFormat.Unknown;
+                                            }
+
                                             break;
                                     }
                                 }

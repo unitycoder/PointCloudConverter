@@ -56,18 +56,25 @@ namespace PointCloudConverter
         private IWriter CreateNewWriter()
         {
             ///Log.WriteLine(">>>>> Creating new writer: "+exportFormat);
-            if (exportFormat == ExportFormat.UCPC)
+            switch (exportFormat)
             {
-                return new UCPC();
-            }
-            else if (exportFormat == ExportFormat.PCROOT)
-            {
-                return new PCROOT(null); // No taskId when creating the pool, it's assigned later
-            }
-            else
-            {
-                Log.WriteLine("Writer format not supported: " + exportFormat, LogEvent.Error);
-                return null;
+                case ExportFormat.Unknown:
+                    Log.WriteLine("Writer format not specified", LogEvent.Error);
+                    return null;
+                    break;
+                case ExportFormat.UCPC:
+                    return new UCPC();
+                    break;
+                case ExportFormat.PCROOT:
+                    return new PCROOT(null); // No taskId when creating the pool, it's assigned later
+                    break;
+                case ExportFormat.External:
+                    return writer; // FIXME this should be loaded from a plugin inside argparser -exportformat code
+                    break;
+                default:
+                    Log.WriteLine("Writer format not supported: " + exportFormat, LogEvent.Error);
+                    return null;
+                    break;
             }
         }
 
