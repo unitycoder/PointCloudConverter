@@ -44,7 +44,7 @@ namespace PointCloudConverter.Writers
         static float cloudMaxY = float.NegativeInfinity;
         static float cloudMaxZ = float.NegativeInfinity;
 
-        bool IWriter.InitWriter<TSettings>(TSettings _importSettings, int _pointCount)
+        bool IWriter.InitWriter(dynamic _importSettings, int _pointCount)
         {
             importSettings = (ImportSettings)(object)_importSettings;
             pointCount = _pointCount;
@@ -321,7 +321,7 @@ namespace PointCloudConverter.Writers
                 {
                     outputFile = importSettings.outputFile;
                 }
-                else // its filename without extension
+                else // its filename without extension, add it
                 {
                     outputFile = importSettings.outputFile + ".ucpc";
                 }

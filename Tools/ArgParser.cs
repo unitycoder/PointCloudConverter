@@ -272,7 +272,7 @@ namespace PointCloudConverter
                                     param += Path.DirectorySeparatorChar;
                                 }
 
-                                // no filename, just output to folder with same name and new extension
+                                // no filename with extension, just output to folder with same name and new extension
                                 if (string.IsNullOrEmpty(Path.GetFileNameWithoutExtension(param)) == true)
                                 {
                                     string inputFileName = null;
@@ -297,10 +297,10 @@ namespace PointCloudConverter
                                         // leavy empty for batch
                                         //errors.Add("-input not defined before -output or Input file doesnt exist, failed to create target filename");
                                     }
-                                    else // have filename, create output filename from it
+                                    else // have filename, create output filename from it by adding extension
                                     {
-                                        param = Path.Combine(param, inputFileName + ".ucpc");
-
+                                        // TODO use extension from selected export format, but we dont know it here yet?
+                                        param = Path.Combine(param, inputFileName);// + ".ucpc");
                                     }
                                 }
                                 else // have output filename
@@ -797,22 +797,22 @@ namespace PointCloudConverter
                 }
                 else // not in batch
                 {
+                    // check if first file exists
                     if (File.Exists(importSettings.inputFiles[0]) == false)
                     {
                         importSettings.errors.Add("(B) Input file not found: " + importSettings.inputFiles[0]);
                     }
 
-                    // if no output file defined, put in same folder as source
+                    // if no output folder/file defined, put in same folder as source
                     if (string.IsNullOrEmpty(importSettings.outputFile) == true)
                     {
-                        // v2 output
+                        // FIXME handles v2 output only now
                         var outputFolder = Path.GetDirectoryName(importSettings.inputFiles[0]);
                         var outputFilename = Path.GetFileNameWithoutExtension(importSettings.inputFiles[0]);
                         importSettings.outputFile = Path.Combine(outputFolder, outputFilename + ".ucpc");
-
                     }
                 }
-            }
+            } // have input
 
             // check required settings
             if (importSettings.exportFormat == ExportFormat.Unknown)

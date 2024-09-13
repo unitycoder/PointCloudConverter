@@ -3,7 +3,8 @@
     public interface IWriter
     {
         // create output filestream, called before looping through points
-        bool InitWriter<TSettings>(TSettings importSettings, int pointCount);
+        //bool InitWriter<TSettings>(TSettings importSettings, int pointCount);
+        bool InitWriter(dynamic importSettings, int pointCount);
         // optional: if need to create special file header
         void CreateHeader(int pointCount);
         // output point X,Y,Z values to file

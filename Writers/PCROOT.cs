@@ -122,7 +122,7 @@ namespace PointCloudConverter.Writers
             taskID = _taskID;
         }
 
-        public bool InitWriter<TSettings>(TSettings _importSettings, int pointCount)
+        public bool InitWriter(dynamic _importSettings, int pointCount)
         {
             //Log.WriteLine("--------------------- initwriter for taskID: " + taskID);
 
