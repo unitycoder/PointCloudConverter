@@ -17,8 +17,8 @@ namespace PointCloudConverter.Writers
 
         BufferedStream bsPoints = null;
         BinaryWriter writerPoints = null;
-
         ImportSettings importSettings;
+
         static List<PointCloudTile> nodeBounds = new List<PointCloudTile>(); // for all tiles
         static float cloudMinX = float.PositiveInfinity;
         static float cloudMinY = float.PositiveInfinity;
@@ -27,22 +27,24 @@ namespace PointCloudConverter.Writers
         static float cloudMaxY = float.NegativeInfinity;
         static float cloudMaxZ = float.NegativeInfinity;
 
+        StringBuilder keyBuilder = new StringBuilder(32);
         Dictionary<string, (int, int, int)> keyCache = new Dictionary<string, (int, int, int)>();
 
         // our nodes (=tiles, =grid cells), string is tileID and float are X,Y,Z,R,G,B values
         Dictionary<string, List<float>> nodeX = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeY = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeZ = new Dictionary<string, List<float>>();
-
         Dictionary<string, List<float>> nodeR = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
-
         Dictionary<string, List<float>> nodeIntensity = new Dictionary<string, List<float>>();
         Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
 
+        //int? taskID;
 
-        int? taskID;
+        static int skippedNodesCounter = 0;
+        static int skippedPointsCounter = 0;
+        static bool useLossyFiltering = false; //not used, for testing only
 
         public void Dispose()
         {
@@ -52,7 +54,6 @@ namespace PointCloudConverter.Writers
             //            GC.SuppressFinalize(this);
             GC.WaitForPendingFinalizers();
             GC.Collect();
-
             //GC.Collect();
             //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
         }
@@ -119,14 +120,12 @@ namespace PointCloudConverter.Writers
         public PCROOT(int? _taskID)
         {
             //Log.WriteLine("*** PCROOT writer created for task: " + _taskID);
-            taskID = _taskID;
+            //taskID = _taskID;
         }
 
         public bool InitWriter(dynamic _importSettings, int pointCount)
         {
             //Log.WriteLine("--------------------- initwriter for taskID: " + taskID);
-
-
             var res = true;
 
             // clear old nodes
@@ -343,8 +342,6 @@ namespace PointCloudConverter.Writers
             ClearDictionary(nodeTime);
 
             keyCache.Clear();
-
-
         }
 
         void IWriter.Randomize()
@@ -352,17 +349,9 @@ namespace PointCloudConverter.Writers
 
         }
 
-        StringBuilder keyBuilder = new StringBuilder(32);
-
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i, bool hasTime, double time)
         {
             // get global all clouds bounds
-            //if (x < cloudMinX) cloudMinX = x;
-            //if (x > cloudMaxX) cloudMaxX = x;
-            //if (y < cloudMinY) cloudMinY = y;
-            //if (y > cloudMaxY) cloudMaxY = y;
-            //if (z < cloudMinZ) cloudMinZ = z;
-            //if (z > cloudMaxZ) cloudMaxZ = z;
             cloudMinX = Math.Min(cloudMinX, x);
             cloudMaxX = Math.Max(cloudMaxX, x);
             cloudMinY = Math.Min(cloudMinY, y);
@@ -421,7 +410,7 @@ namespace PointCloudConverter.Writers
                 if (hasIntensity == true) nodeIntensity[key] = new List<float> { i };
                 if (hasTime == true) nodeTime[key] = new List<double> { time };
             }
-        }
+        } // addpoint()
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void FloatToBytes(float value, byte[] buffer, int offset)
@@ -441,9 +430,6 @@ namespace PointCloudConverter.Writers
             }
         }
 
-        static int skippedNodesCounter = 0;
-        static int skippedPointsCounter = 0;
-        static bool useLossyFiltering = false; //not used, for testing only
 
         // returns list of saved files
         void IWriter.Save(int fileIndex)

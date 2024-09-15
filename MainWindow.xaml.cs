@@ -130,7 +130,7 @@ namespace PointCloudConverter
                             // Add the writer type to the dictionary for later use
                             externalWriters.Add(writerName, writerType);
                             Log.WriteLine($"Found writer: {writerType.FullName} in {pluginDLL}");
-                            
+
                             // TODO take extensions from plugin? has 2: .glb and .gltf
                             externalFileFormats += "|" + writerName + " (" + writerType.FullName + ")|*." + writerName.ToLower();
                         }
@@ -1024,7 +1024,11 @@ namespace PointCloudConverter
             args.Add("-rgb=" + (bool)chkImportRGB.IsChecked);
             args.Add("-intensity=" + (bool)chkImportIntensity.IsChecked);
 
-            if (cmbExportFormat.SelectedItem?.ToString()?.ToUpper()?.Contains("PCROOT") == true) args.Add("-gridsize=" + txtGridSize.Text);
+            bool isPCROOT = (cmbExportFormat.SelectedItem.ToString() == "PCROOT");
+            bool isGLTF = (cmbExportFormat.SelectedItem.ToString() == "GLTF");
+            // cmbExportFormat.SelectedItem?.ToString()?.ToUpper()?.Contains("PCROOT")
+
+            if (isPCROOT == true) args.Add("-gridsize=" + txtGridSize.Text);
 
             if ((bool)chkUseMinPointCount.IsChecked) args.Add("-minpoints=" + txtMinPointCount.Text);
             if ((bool)chkUseScale.IsChecked) args.Add("-scale=" + txtScale.Text);
@@ -1046,6 +1050,8 @@ namespace PointCloudConverter
             if ((bool)chkGetAvgTileTimestamp.IsChecked) args.Add("-averagetimestamp=true");
             if ((bool)chkCalculateOverlappingTiles.IsChecked) args.Add("-checkoverlap=true");
             args.Add("-maxthreads=" + txtMaxThreads.Text);
+
+            if (isGLTF == true) args.Add( ("-usegrid=" + (bool)chkUseGrid.IsChecked).ToLower() );
 
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
 
@@ -1405,6 +1411,7 @@ namespace PointCloudConverter
             chkGetAvgTileTimestamp.IsChecked = Properties.Settings.Default.getAvgTileTimestamp;
             chkCalculateOverlappingTiles.IsChecked = Properties.Settings.Default.calculateOverlappingTiles;
             txtMaxThreads.Text = Properties.Settings.Default.maxThreads;
+            chkUseGrid.IsChecked = Properties.Settings.Default.useGrid;
             isInitialiazing = false;
         }
 
@@ -1454,6 +1461,7 @@ namespace PointCloudConverter
             Properties.Settings.Default.getAvgTileTimestamp = (bool)chkGetAvgTileTimestamp.IsChecked;
             Properties.Settings.Default.calculateOverlappingTiles = (bool)chkCalculateOverlappingTiles.IsChecked;
             Properties.Settings.Default.maxThreads = txtMaxThreads.Text;
+            Properties.Settings.Default.useGrid = (bool)chkUseGrid.IsChecked;
             Properties.Settings.Default.Save();
         }
 

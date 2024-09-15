@@ -137,5 +137,8 @@
     <Setting Name="maxThreads" Type="System.String" Scope="User">
       <Value Profile="(Default)">4</Value>
     </Setting>
+    <Setting Name="useGrid" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -684,6 +684,19 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-usegrid":
+                                Log.WriteLine("usegrid = " + param);
+
+                                if (param != "false" && param != "true")
+                                {
+                                    importSettings.errors.Add("Invalid usegrid parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.useGrid = (param == "true");
+                                }
+                                break;
+
                             case "-rgb":
                                 Log.WriteLine("rgb = " + param);
 
@@ -859,6 +872,14 @@ namespace PointCloudConverter
                 importSettings.reader = new LAZ(null);
                 Log.WriteLine("No import format defined, using Default: " + importSettings.importFormat.ToString());
             }
+
+            if (importSettings.exportFormat == ExportFormat.PCROOT && importSettings.useGrid == false)
+            {
+                //importSettings.errors.Add("V3 pcroot export format requires -usegrid=true to use grid");
+                Log.WriteLine("V3 pcroot export format requires -usegrid=true to use grid, enabling it..");
+                importSettings.useGrid = true;
+            }
+
 
             // disable this error, if user really wants to use it
             //if (importSettings.randomize == false && importSettings.exportFormat == ExportFormat.PCROOT)

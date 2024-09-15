@@ -289,6 +289,7 @@ namespace PointCloudConverter
         public bool importMetadataOnly = false;
         public bool averageTimestamp = false; // calculate average timestamp for all points for this tile
         public bool checkoverlap = false; // check if tile overlaps with other tiles (save into pcroot)
+        public bool useGrid = true; // required for PCROOT format
 
         public override string ToString()
         {
