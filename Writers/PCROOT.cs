@@ -48,14 +48,14 @@ namespace PointCloudConverter.Writers
 
         public void Dispose()
         {
-            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            //Log.Write("Memory used: " + GC.GetTotalMemory(false));
             Dispose(true);
             GC.Collect();
             //            GC.SuppressFinalize(this);
             GC.WaitForPendingFinalizers();
             GC.Collect();
             //GC.Collect();
-            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            //Log.Write("Memory used: " + GC.GetTotalMemory(false));
         }
 
 
@@ -112,21 +112,25 @@ namespace PointCloudConverter.Writers
 
         ~PCROOT()
         {
-            //Log.WriteLine("pcroot writer finalized for task: " + taskID);
+            //Log.Write("pcroot writer finalized for task: " + taskID);
             Dispose(false);
         }
 
         // add constructor
         public PCROOT(int? _taskID)
         {
-            //Log.WriteLine("*** PCROOT writer created for task: " + _taskID);
+            //Log.Write("*** PCROOT writer created for task: " + _taskID);
             //taskID = _taskID;
         }
 
-        public bool InitWriter(dynamic _importSettings, int pointCount)
+        static ILogger Log;
+
+        public bool InitWriter(dynamic _importSettings, int pointCount, ILogger logger)
         {
-            //Log.WriteLine("--------------------- initwriter for taskID: " + taskID);
+            //Log.Write("--------------------- initwriter for taskID: " + taskID);
             var res = true;
+
+            Log = logger;
 
             // clear old nodes
             keyCache.Clear();
@@ -169,7 +173,7 @@ namespace PointCloudConverter.Writers
             // if (isLastTask == true)
             //if (fileIndex == (importSettings.maxFiles - 1))
             // {
-            //Log.WriteLine(" *****************************  save this only after last file from all threads ***************************** ");
+            //Log.Write(" *****************************  save this only after last file from all threads ***************************** ");
             // check if any tile overlaps with other tiles
             if (importSettings.checkoverlap == true)
             {
@@ -238,8 +242,8 @@ namespace PointCloudConverter.Writers
             "\"skippedPoints\": " + skippedPointsCounter + "" +
             "}";
 
-            Log.WriteLine(jsonString, LogEvent.End);
-            Log.WriteLine("\nSaving rootfile: " + outputFileRoot + "\n*Total points= " + Tools.HumanReadableCount(totalPointCount));
+            Log.Write(jsonString, LogEvent.End);
+            Log.Write("\nSaving rootfile: " + outputFileRoot + "\n*Total points= " + Tools.HumanReadableCount(totalPointCount));
 
             int versionID = importSettings.packColors ? 2 : 1; // (1 = original, 2 = packed v3 format)
             if (importSettings.packColors == true) versionID = 2;
@@ -276,23 +280,23 @@ namespace PointCloudConverter.Writers
             File.WriteAllLines(outputFileRoot, tilerootdata.ToArray());
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Log.WriteLine("Done saving v3 : " + outputFileRoot);
+            Log.Write("Done saving v3 : " + outputFileRoot);
             Console.ForegroundColor = ConsoleColor.White;
             if (skippedNodesCounter > 0)
             {
-                Log.WriteLine("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
+                Log.Write("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
             }
 
             if (useLossyFiltering == true && skippedPointsCounter > 0)
             {
-                Log.WriteLine("*Skipped " + skippedPointsCounter + " points due to bytepacked grid filtering");
+                Log.Write("*Skipped " + skippedPointsCounter + " points due to bytepacked grid filtering");
             }
 
             if ((tilerootdata.Count - 1) <= 0)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 // TODO add json error log
-                Log.WriteLine("Error> No tiles found! Try enable -scale (to make your cloud to smaller) Or make -gridsize bigger, or set -limit point count to smaller value");
+                Log.Write("Error> No tiles found! Try enable -scale (to make your cloud to smaller) Or make -gridsize bigger, or set -limit point count to smaller value");
                 Console.ForegroundColor = ConsoleColor.White;
             }
 
@@ -326,7 +330,7 @@ namespace PointCloudConverter.Writers
 
         void IWriter.Cleanup(int fileIndex)
         {
-            //Log.WriteLine("Cleanup: this doesnt do anything yet..");
+            //Log.Write("Cleanup: this doesnt do anything yet..");
             //Dispose();
             bsPoints?.Dispose();
             writerPoints?.Dispose();
@@ -444,7 +448,7 @@ namespace PointCloudConverter.Writers
             // TODO no need colors for json.. could move this inside custom logger, so that it doesnt do anything, if json
             Console.ForegroundColor = ConsoleColor.Blue;
 
-            Log.WriteLine("Saving " + nodeX.Count + " tiles into: " + baseFolder);
+            Log.Write("Saving " + nodeX.Count + " tiles into: " + baseFolder);
 
             Console.ForegroundColor = ConsoleColor.White;
 
@@ -544,7 +548,7 @@ namespace PointCloudConverter.Writers
                 }
 
                 // save this tile
-                //Log.WriteLine("*** Saving tile: " + fullpathFileOnly + " (" + nodeTempX.Count + " points)");
+                //Log.Write("*** Saving tile: " + fullpathFileOnly + " (" + nodeTempX.Count + " points)");
                 bsPoints = new BufferedStream(new FileStream(fullpath, FileMode.Create));
                 writerPoints = new BinaryWriter(bsPoints);
 
@@ -671,7 +675,7 @@ namespace PointCloudConverter.Writers
 
                         var reservedTileLocalCellIndex = packx + cellsInTile * (packy + cellsInTile * packz);
 
-                        //if (i < 10) Log.WriteLine("cellX:" + cellX + " cellY:" + cellY + " cellZ:" + cellZ + "  px: " + px + " py: " + py + " pz: " + pz + " localIndex: " + reservedTileLocalCellIndex + " packx: " + packx + " packy: " + packy + " packz: " + packz);
+                        //if (i < 10) Log.Write("cellX:" + cellX + " cellY:" + cellY + " cellZ:" + cellZ + "  px: " + px + " py: " + py + " pz: " + pz + " localIndex: " + reservedTileLocalCellIndex + " packx: " + packx + " packy: " + packy + " packz: " + packz);
 
                         // TODO could decide which point is more important or stronger color?
                         if (reservedGridCells[reservedTileLocalCellIndex] == true)
@@ -869,7 +873,7 @@ namespace PointCloudConverter.Writers
                                 "\"tiles\": " + nodeX.Count + "," +
                                 "\"folder\": " + JsonSerializer.Serialize(baseFolder) + "}" +
                                 "\"filenames\": " + JsonSerializer.Serialize(outputFiles);
-            Log.WriteLine(jsonString, LogEvent.End);
+            Log.Write(jsonString, LogEvent.End);
 
         } // Save()
 

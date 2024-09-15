@@ -1,11 +1,13 @@
 ﻿// values from commandline arguments
 
 using PointCloudConverter.Logger;
+using PointCloudConverter.Plugins;
 using PointCloudConverter.Readers;
 using PointCloudConverter.Structs;
 using PointCloudConverter.Writers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -29,6 +31,9 @@ namespace PointCloudConverter
         private readonly ConcurrentDictionary<int?, IWriter> _allocatedWriters = new ConcurrentDictionary<int?, IWriter>();
         private int _maxWriters = 16;
 
+        static ILogger Log;
+
+
         public void InitWriterPool(int maxThreads, ExportFormat export)
         {
             //exportFormat = export;
@@ -48,18 +53,18 @@ namespace PointCloudConverter
                 Readers[taskId] = new LAZ(taskId);
             }
 
-            //Log.WriteLine(">>>>> Total Readers in dictionary: " + Readers.Count);
+            //Log.Write(">>>>> Total Readers in dictionary: " + Readers.Count);
 
             return Readers[taskId];
         }
 
         private IWriter CreateNewWriter()
         {
-            ///Log.WriteLine(">>>>> Creating new writer: "+exportFormat);
+            ///Log.Write(">>>>> Creating new writer: "+exportFormat);
             switch (exportFormat)
             {
                 case ExportFormat.Unknown:
-                    Log.WriteLine("Writer format not specified", LogEvent.Error);
+                    Log.Write("Writer format not specified", LogEvent.Error);
                     return null;
                     break;
                 case ExportFormat.UCPC:
@@ -69,10 +74,26 @@ namespace PointCloudConverter
                     return new PCROOT(null); // No taskId when creating the pool, it's assigned later
                     break;
                 case ExportFormat.External:
+                    // get name from current writer type
+                    string dynamicWriterName = writer.GetType().Name.ToUpper();
+                    //Trace.WriteLine("Dynamic writer name: " + dynamicWriterName);
+
+                    var dynamicWriter = PluginLoader.LoadWriter(dynamicWriterName);
+
+                    if (dynamicWriter != null)
+                    {
+                        return dynamicWriter;
+                    }
+                    else
+                    {
+                        Log.Write("Dynamic writer not found: " + dynamicWriterName, LogEvent.Error);
+                        return null;
+                    }
+
                     return writer; // FIXME this should be loaded from a plugin inside argparser -exportformat code
                     break;
                 default:
-                    Log.WriteLine("Writer format not supported: " + exportFormat, LogEvent.Error);
+                    Log.Write("Writer format not supported: " + exportFormat, LogEvent.Error);
                     return null;
                     break;
             }
@@ -103,83 +124,21 @@ namespace PointCloudConverter
         {
             if (taskId.HasValue && _allocatedWriters.TryRemove(taskId, out var writer))
             {
-                //  Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
+                //  Log.Write("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
                 // Clean up the writer if necessary
                 writer?.Cleanup(0);
                 //writer?.Dispose();
                 // Return the writer to the pool for reuse
                 _writerPool.Add(writer);
-                // Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
+                // Log.Write("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
 
             }
         }
 
-        //public IWriter GetOrCreateWriter(int? taskId)
-        //{
-        //    if (!Writers.ContainsKey(taskId))
-        //    {
-        //        Writers[taskId] = new PCROOT(taskId);
-        //    }
-
-        //    //Log.WriteLine(">>>>> Total Writers in dictionary: " + Writers.Count);
-
-        //    return Writers[taskId];
-        //}
-
-        //public void ReleaseReader(int? taskId)
-        //{
-        //    //Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
-        //    if (Readers.ContainsKey(taskId))
-        //    {
-        //        Readers[taskId]?.Close();
-        //        //Readers[taskId]?.Dispose(); // FIXME causes exceptions
-        //        Readers.Remove(taskId);
-        //    }
-        //}
-
-        //public IWriter GetOrCreateWriter(int? taskId)
-        //{
-        //    if (!Writers.TryGetValue(taskId, out var weakWriter) || !weakWriter.TryGetTarget(out var writer))
-        //    {
-        //        if (exportFormat == ExportFormat.UCPC)
-        //        {
-        //            writer = new UCPC();
-        //        }
-        //        else if (exportFormat == ExportFormat.PCROOT)
-        //        {
-        //            writer = new PCROOT(taskId);
-        //        }
-        //        else
-        //        {
-        //            Log.WriteLine("Writer format not supported: " + exportFormat, LogEvent.Error);
-        //            writer = null;
-        //        }
-
-        //        Writers[taskId] = new WeakReference<IWriter>(writer);
-        //    }
-
-        //    return writer;
-        //}
-
-        //public void ReleaseWriter(int? taskId)
-        //{
-        //    if (taskId.HasValue && Writers.TryRemove(taskId, out var weakWriter))
-        //    {
-        //        if (weakWriter.TryGetTarget(out var writer))
-        //        {
-        //            Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
-        //            //Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
-        //            writer?.Cleanup(0);
-        //            writer?.Dispose();
-        //            Log.WriteLine("ReleaseWriter <<< Memory used: " + GC.GetTotalMemory(false));
-        //        }
-        //    }
-        //}
-
         public void ReleaseReader(int? taskId)
         {
             // Log the release of the reader for the specified task ID
-            // Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
+            // Log.Write(">>>>> Releasing reader for task ID: " + taskId);
 
             if (taskId.HasValue)
             {
@@ -190,50 +149,10 @@ namespace PointCloudConverter
                 }
                 else
                 {
-                    Log.WriteLine($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
+                    Log.Write($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
                 }
             }
         }
-
-        //public void ReleaseWriter(int? taskId)
-        //{
-        //    // Log the release of the reader for the specified task ID
-        //    // Log.WriteLine(">>>>> Releasing reader for task ID: " + taskId);
-
-        //    if (taskId.HasValue)
-        //    {
-        //        if (Writers.TryRemove(taskId, out var writer))
-        //        {
-        //            Log.WriteLine("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
-        //            writer?.Cleanup(0);
-        //            writer?.Dispose();
-        //            //writer = null;
-        //            // clear gc
-        //            System.GC.Collect();
-        //            //GC.SuppressFinalize(writer);
-        //            System.GC.WaitForPendingFinalizers();
-        //            Log.WriteLine("ReleaseWriter <<< Memory used: " + GC.GetTotalMemory(false));
-        //        }
-        //        else
-        //        {
-        //            Log.WriteLine($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
-        //        }
-        //    }
-        //}
-
-        //public void ReleaseWriter(int? taskId)
-        //{
-        //    //Log.WriteLine(">>>>> Releasing writer for task ID: " + taskId);
-        //    if (Writers.ContainsKey(taskId))
-        //    {
-        //        Writers[taskId]?.Cleanup(0);
-        //        Writers.Remove(taskId);
-        //    }
-        //    else
-        //    {
-        //        //Log.WriteLine("----->>>>> Writer not found in dictionary for task ID: " + taskId);
-        //    }
-        //}
 
         public bool haveError { get; set; } = false; // if errors during parsing args
         //public string[] errorMessages = null; // last error message(s)

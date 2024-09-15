@@ -1,4 +1,5 @@
-﻿using PointCloudConverter.Plugins;
+﻿using PointCloudConverter.Logger;
+using PointCloudConverter.Plugins;
 using PointCloudConverter.Readers;
 using PointCloudConverter.Structs;
 using PointCloudConverter.Writers;
@@ -85,9 +86,12 @@ namespace PointCloudConverter
             return Reverse(sb.ToString());
         }
 
-        public static ImportSettings Parse(string[] args, string rootFolder)
+        static ILogger Log;
+
+        public static ImportSettings Parse(string[] args, string rootFolder, ILogger logger)
         {
             ImportSettings importSettings = new ImportSettings();
+            Log = logger;
 
             // if there are any errors, they are added to this list, then importing is aborted after parsing arguments
             //List<string> errors = new List<string>();
@@ -143,7 +147,7 @@ namespace PointCloudConverter
                         switch (cmd)
                         {
                             case "-importformat":
-                                Log.WriteLine("importformat = " + param);
+                                Log.Write("importformat = " + param);
 
                                 string importFormatParsed = param.ToUpper();
 
@@ -160,7 +164,7 @@ namespace PointCloudConverter
                                 }
                                 break;
                             case "-exportformat":
-                                Log.WriteLine("exportformat = " + param);
+                                Log.Write("exportformat = " + param);
 
                                 string exportFormatParsed = param.ToUpper();
 
@@ -188,12 +192,13 @@ namespace PointCloudConverter
                                         default:
                                             //importSettings.errors.Add("Unknown export format: " + param);
 
+                                            // TODO do we need to load it, or just check if dll exists?
                                             // check external plugin formats
                                             var writer = PluginLoader.LoadWriter(exportFormatParsed);
                                             if (writer != null)
                                             {
                                                 importSettings.writer = writer;
-                                                importSettings.exportFormat = ExportFormat.External; // For now?
+                                                importSettings.exportFormat = ExportFormat.External; // For now, since its enum..
                                             }
                                             else
                                             {
@@ -208,7 +213,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-input":
-                                Log.WriteLine("input = " + param);
+                                Log.Write("input = " + param);
 
                                 // if relative folder, FIXME this fails on -input="C:\asdf\etryj\folder\" -importformat=las because backslash in \", apparently this https://stackoverflow.com/a/9288040/5452781
                                 if (Path.IsPathRooted(param) == false)
@@ -220,7 +225,7 @@ namespace PointCloudConverter
                                 if (Directory.Exists(param) == true)
                                 {
                                     Console.ForegroundColor = ConsoleColor.Gray;
-                                    Log.WriteLine("Batch mode enabled (import whole folder)");
+                                    Log.Write("Batch mode enabled (import whole folder)");
                                     Console.ForegroundColor = ConsoleColor.White;
 
                                     // TODO get file extension from commandline param? but then need to set -format before input.. for now only LAS/LAZ
@@ -231,7 +236,7 @@ namespace PointCloudConverter
                                     for (int j = 0; j < filePaths.Length; j++)
                                     {
                                         Console.ForegroundColor = ConsoleColor.Gray;
-                                        Log.WriteLine("Found file: " + filePaths[j]);
+                                        Log.Write("Found file: " + filePaths[j]);
                                         Console.ForegroundColor = ConsoleColor.White;
                                         importSettings.inputFiles.Add(filePaths[j]);
                                     }
@@ -251,14 +256,14 @@ namespace PointCloudConverter
 
                                         // TODO find better way to check all readers
                                         //if (ext == "las" ||ext == "laz")
-                                        Log.WriteLine("added " + param);
+                                        Log.Write("added " + param);
                                         importSettings.inputFiles.Add(param);
                                     }
                                 }
                                 break;
 
                             case "-output":
-                                Log.WriteLine("output = " + param);
+                                Log.Write("output = " + param);
 
                                 // check if relative or not
                                 if (Path.IsPathRooted(param) == false)
@@ -340,7 +345,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-scale":
-                                Log.WriteLine("scale = " + param);
+                                Log.Write("scale = " + param);
 
                                 bool parsedScale = float.TryParse(param, out tempFloat);
                                 if (parsedScale == false)
@@ -362,7 +367,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-swap":
-                                Log.WriteLine("swap = " + param);
+                                Log.Write("swap = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
@@ -375,7 +380,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-customintensityrange":
-                                Log.WriteLine("customintensityrange = " + param);
+                                Log.Write("customintensityrange = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
@@ -388,7 +393,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-invertx":
-                                Log.WriteLine("invertx = " + param);
+                                Log.Write("invertx = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
@@ -401,7 +406,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-invertz":
-                                Log.WriteLine("invertz = " + param);
+                                Log.Write("invertz = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
@@ -414,7 +419,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-pack":
-                                Log.WriteLine("pack = " + param);
+                                Log.Write("pack = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
@@ -427,7 +432,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-packmagic":
-                                Log.WriteLine("packmagic = " + param);
+                                Log.Write("packmagic = " + param);
                                 bool packMagicParsed = int.TryParse(param, out tempInt);
                                 if (packMagicParsed == false || tempInt < 1)
                                 {
@@ -441,7 +446,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-skip":
-                                Log.WriteLine("skip = " + param);
+                                Log.Write("skip = " + param);
                                 bool skipParsed = int.TryParse(param, out tempInt);
                                 if (skipParsed == false || tempInt < 2)
                                 {
@@ -455,7 +460,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-keep":
-                                Log.WriteLine("keep = " + param);
+                                Log.Write("keep = " + param);
                                 bool keepParsed = int.TryParse(param, out tempInt);
                                 if (keepParsed == false || tempInt < 2)
                                 {
@@ -469,7 +474,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-maxfiles":
-                                Log.WriteLine("maxfiles = " + param);
+                                Log.Write("maxfiles = " + param);
                                 bool maxFilesParsed = int.TryParse(param, out tempInt);
                                 if (maxFilesParsed == false)
                                 {
@@ -482,7 +487,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-maxthreads":
-                                Log.WriteLine("maxthreads = " + param);
+                                Log.Write("maxthreads = " + param);
                                 string cleanParam = param.Trim().TrimEnd('%');
                                 bool maxThreadsParsed = int.TryParse(cleanParam, out tempInt);
                                 if (maxThreadsParsed == false)
@@ -513,7 +518,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-metadata":
-                                Log.WriteLine("metadata = " + param);
+                                Log.Write("metadata = " + param);
                                 if (param != "true" && param != "false")
                                 {
                                     importSettings.errors.Add("Invalid metadata parameter: " + param);
@@ -525,7 +530,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-metadataonly":
-                                Log.WriteLine("metadataonly = " + param);
+                                Log.Write("metadataonly = " + param);
                                 if (param != "true" && param != "false")
                                 {
                                     importSettings.errors.Add("Invalid metadataonly parameter: " + param);
@@ -537,7 +542,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-averagetimestamp":
-                                Log.WriteLine("averagetimestamp = " + param);
+                                Log.Write("averagetimestamp = " + param);
                                 if (param != "true" && param != "false")
                                 {
                                     importSettings.errors.Add("Invalid averagetimestamp parameter: " + param);
@@ -549,7 +554,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-checkoverlap":
-                                Log.WriteLine("checkoverlap = " + param);
+                                Log.Write("checkoverlap = " + param);
                                 if (param != "true" && param != "false")
                                 {
                                     importSettings.errors.Add("Invalid checkoverlap parameter: " + param);
@@ -561,7 +566,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-json":
-                                Log.WriteLine("json = " + param);
+                                Log.Write("json = " + param);
 
                                 if (param != "true" && param != "false")
                                 {
@@ -574,7 +579,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-seed":
-                                Log.WriteLine("seed = " + param);
+                                Log.Write("seed = " + param);
                                 bool seedParsed = int.TryParse(param, out tempInt);
                                 if (seedParsed == false)
                                 {
@@ -587,7 +592,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-offset":
-                                Log.WriteLine("offset = " + param);
+                                Log.Write("offset = " + param);
 
                                 // check if its true or false
                                 if (param != "false" && param != "true")
@@ -631,7 +636,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-limit":
-                                Log.WriteLine("limit = " + param);
+                                Log.Write("limit = " + param);
                                 // TODO add option to use percentage
                                 bool limitParsed = int.TryParse(param, out tempInt);
                                 if (limitParsed == false || tempInt <= 0)
@@ -646,7 +651,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-gridsize":
-                                Log.WriteLine("gridsize = " + param);
+                                Log.Write("gridsize = " + param);
                                 bool gridSizeParsed = float.TryParse(param, out tempFloat);
                                 if (gridSizeParsed == false || tempFloat < 0.01f)
                                 {
@@ -659,7 +664,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-minpoints":
-                                Log.WriteLine("minPoints = " + param);
+                                Log.Write("minPoints = " + param);
                                 bool minpointsParsed = int.TryParse(param, out tempInt);
                                 if (minpointsParsed == false || tempInt < 1)
                                 {
@@ -672,7 +677,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-randomize":
-                                Log.WriteLine("randomize = " + param);
+                                Log.Write("randomize = " + param);
 
                                 if (param != "false" && param != "true")
                                 {
@@ -685,7 +690,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-usegrid":
-                                Log.WriteLine("usegrid = " + param);
+                                Log.Write("usegrid = " + param);
 
                                 if (param != "false" && param != "true")
                                 {
@@ -698,7 +703,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-rgb":
-                                Log.WriteLine("rgb = " + param);
+                                Log.Write("rgb = " + param);
 
                                 if (param != "false" && param != "true")
                                 {
@@ -711,7 +716,7 @@ namespace PointCloudConverter
                                 break;
 
                             case "-intensity":
-                                Log.WriteLine("intensity = " + param);
+                                Log.Write("intensity = " + param);
 
                                 if (param != "false" && param != "true")
                                 {
@@ -725,7 +730,7 @@ namespace PointCloudConverter
 
                             // TODO load whole commandline args list from text file
                             case "-config":
-                                Log.WriteLine("config = " + param);
+                                Log.Write("config = " + param);
                                 // we dont do anything, config is checked at start of Parse()
                                 //if (File.Exists(param) == false)
                                 //{
@@ -771,7 +776,7 @@ namespace PointCloudConverter
             {
                 if (importSettings.batch == true)
                 {
-                    Log.WriteLine("Found " + importSettings.inputFiles.Count + " files..");
+                    Log.Write("Found " + importSettings.inputFiles.Count + " files..");
 
                     // if no output folder given at all
                     if (string.IsNullOrEmpty(importSettings.outputFile) == true)
@@ -782,7 +787,7 @@ namespace PointCloudConverter
                             if (importSettings.inputFiles != null && importSettings.inputFiles.Count > 1)
                             {
                                 importSettings.outputFile = Path.GetDirectoryName(importSettings.inputFiles[0]) + Path.DirectorySeparatorChar;
-                                Log.WriteLine("importSettings.outputFile=" + importSettings.outputFile);
+                                Log.Write("importSettings.outputFile=" + importSettings.outputFile);
                             }
                             else
                             {
@@ -874,13 +879,13 @@ namespace PointCloudConverter
             {
                 importSettings.importFormat = ImportFormat.LAS;
                 importSettings.reader = new LAZ(null);
-                Log.WriteLine("No import format defined, using Default: " + importSettings.importFormat.ToString());
+                Log.Write("No import format defined, using Default: " + importSettings.importFormat.ToString());
             }
 
             if (importSettings.exportFormat == ExportFormat.PCROOT && importSettings.useGrid == false)
             {
                 //importSettings.errors.Add("V3 pcroot export format requires -usegrid=true to use grid");
-                Log.WriteLine("V3 pcroot export format requires -usegrid=true to use grid, enabling it..");
+                Log.Write("V3 pcroot export format requires -usegrid=true to use grid, enabling it..");
                 importSettings.useGrid = true;
             }
 
@@ -902,20 +907,20 @@ namespace PointCloudConverter
             if (importSettings.useJSONLog == true)
             {
                 // TODO workaround to get logevent in this json data (not used later)
-                importSettings.version = Log.version;
+                //importSettings.version = Log.version;
                 importSettings.@event = Logger.LogEvent.Settings;
-                Log.WriteLine(importSettings.ToJSON(), Logger.LogEvent.Settings);
+                Log.Write(importSettings.ToJSON(), Logger.LogEvent.Settings);
             }
 
             // show errors
             if (importSettings.errors.Count > 0)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Log.WriteLine("\nErrors found:");
+                Log.Write("\nErrors found:");
                 Console.ForegroundColor = ConsoleColor.Red;
                 for (int i = 0; i < importSettings.errors.Count; i++)
                 {
-                    Log.WriteLine(i + "> " + importSettings.errors[i]);
+                    Log.Write(i + "> " + importSettings.errors[i]);
                 }
                 Console.ForegroundColor = ConsoleColor.White;
 
