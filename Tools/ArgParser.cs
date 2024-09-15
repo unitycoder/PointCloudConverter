@@ -804,6 +804,10 @@ namespace PointCloudConverter
                             {
                                 importSettings.errors.Add("(E) PCROOT Requires some output filename (example: output.pcroot)");
                             }
+                            if (importSettings.exportFormat == ExportFormat.External)
+                            {
+                                importSettings.errors.Add("(E2) External formats require some output filename (example: basefilename)");
+                            }
                         }
                     }
 
