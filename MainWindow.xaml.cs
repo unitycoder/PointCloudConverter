@@ -557,14 +557,11 @@ namespace PointCloudConverter
 
             int threadCount = importSettings.maxThreads;
             // clamp to max files
-            threadCount = Math.Min(threadCount, importSettings.maxFiles);
+            threadCount = Math.Min(threadCount, importSettings.inputFiles.Count);
             threadCount = Math.Max(threadCount, 1);
 
-            //Log.Write("Creating progress bars: " + threadCount);
-
+            //Log.WriteLine("Creating progress bars: " + threadCount);
             bool useJsonLog = importSettings.useJSONLog;
-
-            //Log.Write("Creating progress bars: " + threadCount);
             progressInfos.Clear();
 
             for (int i = 0; i < threadCount; i++)
