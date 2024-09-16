@@ -225,8 +225,9 @@ namespace PointCloudConverter.Writers
             var tilerootdata = new List<string>();
             var outputFileRoot = Path.Combine(baseFolder, fileOnly) + ".pcroot";
 
-            // add to tileroot list
             long totalPointCount = 0;
+
+            // add to tileroot list
             for (int i = 0, len = nodeBounds.Count; i < len; i++)
             {
                 var tilerow = nodeBounds[i].fileName + sep + nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep + nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
@@ -301,7 +302,7 @@ namespace PointCloudConverter.Writers
             }
 
             // cleanup after last file
-            //nodeBounds.Clear();
+            nodeBounds.Clear();
 
             cloudMinX = float.PositiveInfinity;
             cloudMinY = float.PositiveInfinity;
@@ -321,6 +322,7 @@ namespace PointCloudConverter.Writers
             //nodeB.Clear();
             //nodeIntensity.Clear();
             //nodeTime.Clear();
+
 
             // dispose
             bsPoints?.Dispose();

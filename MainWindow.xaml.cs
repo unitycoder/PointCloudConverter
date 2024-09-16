@@ -22,6 +22,7 @@ using PointCloudConverter.Readers;
 using System.Collections.Concurrent;
 using PointCloudConverter.Writers;
 using System.Reflection;
+using System.Globalization;
 
 namespace PointCloudConverter
 {
@@ -452,9 +453,7 @@ namespace PointCloudConverter
             // now write header for for pcroot (using main writer)
             if (importSettings.exportFormat != ExportFormat.UCPC)
             {
-                Log.Write("Writing header, Calling CLOSE");
                 importSettings.writer.Close();
-                Log.Write("Header written, CLOSED");
                 // UCPC calls close in Save() itself
             }
 
@@ -791,7 +790,6 @@ namespace PointCloudConverter
                 }
 
                 // init writer for this file
-                Trace.WriteLine("InitWriter: " + taskId);
                 var writerRes = taskWriter.InitWriter(importSettings, pointCount, Log);
                 if (writerRes == false)
                 {
@@ -1448,13 +1446,13 @@ namespace PointCloudConverter
             Properties.Settings.Default.customintensityrange = (bool)chkCustomIntensityRange.IsChecked;
             Properties.Settings.Default.openOutputFolder = (bool)chkOpenOutputFolder.IsChecked;
             Properties.Settings.Default.useManualOffset = (bool)chkManualOffset.IsChecked;
-            float.TryParse(txtOffsetX.Text, out float offsetX);
+            float.TryParse(txtOffsetX.Text.Replace(",","."), NumberStyles.Float, CultureInfo.InvariantCulture, out float offsetX);
             Properties.Settings.Default.manualOffsetX = offsetX;
-            float.TryParse(txtOffsetY.Text, out float offsetY);
+            float.TryParse(txtOffsetY.Text.Replace(",", "."), NumberStyles.Float, CultureInfo.InvariantCulture, out float offsetY);
             Properties.Settings.Default.manualOffsetY = offsetY;
-            float.TryParse(txtOffsetZ.Text, out float offsetZ);
+            float.TryParse(txtOffsetZ.Text.Replace(",", "."), NumberStyles.Float, CultureInfo.InvariantCulture, out float offsetZ);
             int tempSeed = 42;
-            int.TryParse(txtRandomSeed.Text, out tempSeed);
+            int.TryParse(txtRandomSeed.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempSeed);
             Properties.Settings.Default.seed = tempSeed;
             Properties.Settings.Default.useJSON = (bool)chkUseJSONLog.IsChecked;
             Properties.Settings.Default.importMetadata = (bool)chkReadMetaData.IsChecked;

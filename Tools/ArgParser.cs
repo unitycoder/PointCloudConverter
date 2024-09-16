@@ -6,6 +6,7 @@ using PointCloudConverter.Writers;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -346,8 +347,8 @@ namespace PointCloudConverter
 
                             case "-scale":
                                 Log.Write("scale = " + param);
-
-                                bool parsedScale = float.TryParse(param, out tempFloat);
+                                param = param.Replace(",", ".");
+                                bool parsedScale = float.TryParse(param, NumberStyles.Float, CultureInfo.InvariantCulture, out tempFloat);
                                 if (parsedScale == false)
                                 {
                                     importSettings.errors.Add("Invalid scale parameter: " + param);
@@ -433,7 +434,7 @@ namespace PointCloudConverter
 
                             case "-packmagic":
                                 Log.Write("packmagic = " + param);
-                                bool packMagicParsed = int.TryParse(param, out tempInt);
+                                bool packMagicParsed = int.TryParse(param, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempInt);
                                 if (packMagicParsed == false || tempInt < 1)
                                 {
                                     importSettings.errors.Add("Invalid packmagic parameter: " + param);
@@ -447,7 +448,7 @@ namespace PointCloudConverter
 
                             case "-skip":
                                 Log.Write("skip = " + param);
-                                bool skipParsed = int.TryParse(param, out tempInt);
+                                bool skipParsed = int.TryParse(param, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempInt);
                                 if (skipParsed == false || tempInt < 2)
                                 {
                                     importSettings.errors.Add("Invalid skip parameter: " + param);
@@ -461,7 +462,7 @@ namespace PointCloudConverter
 
                             case "-keep":
                                 Log.Write("keep = " + param);
-                                bool keepParsed = int.TryParse(param, out tempInt);
+                                bool keepParsed = int.TryParse(param, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempInt);
                                 if (keepParsed == false || tempInt < 2)
                                 {
                                     importSettings.errors.Add("Invalid keep parameter: " + param);
@@ -475,7 +476,7 @@ namespace PointCloudConverter
 
                             case "-maxfiles":
                                 Log.Write("maxfiles = " + param);
-                                bool maxFilesParsed = int.TryParse(param, out tempInt);
+                                bool maxFilesParsed = int.TryParse(param, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempInt);
                                 if (maxFilesParsed == false)
                                 {
                                     importSettings.errors.Add("Invalid maxfiles parameter: " + param);
@@ -489,7 +490,7 @@ namespace PointCloudConverter
                             case "-maxthreads":
                                 Log.Write("maxthreads = " + param);
                                 string cleanParam = param.Trim().TrimEnd('%');
-                                bool maxThreadsParsed = int.TryParse(cleanParam, out tempInt);
+                                bool maxThreadsParsed = int.TryParse(cleanParam, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempInt);
                                 if (maxThreadsParsed == false)
                                 {
                                     importSettings.errors.Add("Invalid maxthreads parameter: " + param);
@@ -580,7 +581,7 @@ namespace PointCloudConverter
 
                             case "-seed":
                                 Log.Write("seed = " + param);
-                                bool seedParsed = int.TryParse(param, out tempInt);
+                                bool seedParsed = int.TryParse(param, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempInt);
                                 if (seedParsed == false)
                                 {
                                     importSettings.errors.Add("Invalid seed parameter: " + param);
@@ -638,7 +639,7 @@ namespace PointCloudConverter
                             case "-limit":
                                 Log.Write("limit = " + param);
                                 // TODO add option to use percentage
-                                bool limitParsed = int.TryParse(param, out tempInt);
+                                bool limitParsed = int.TryParse(param, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempInt);
                                 if (limitParsed == false || tempInt <= 0)
                                 {
                                     importSettings.errors.Add("Invalid limit parameter: " + param);
@@ -665,7 +666,7 @@ namespace PointCloudConverter
 
                             case "-minpoints":
                                 Log.Write("minPoints = " + param);
-                                bool minpointsParsed = int.TryParse(param, out tempInt);
+                                bool minpointsParsed = int.TryParse(param, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempInt);
                                 if (minpointsParsed == false || tempInt < 1)
                                 {
                                     importSettings.errors.Add("Invalid minpoints parameter: " + param + " (should be >0)");
