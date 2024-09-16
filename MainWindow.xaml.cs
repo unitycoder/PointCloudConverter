@@ -527,7 +527,7 @@ namespace PointCloudConverter
             //Log.Write("Starting progress timer..*-*************************");
             progressTimerThread = new DispatcherTimer(DispatcherPriority.Background, Application.Current.Dispatcher);
             progressTimerThread.Tick += ProgressTick;
-            progressTimerThread.Interval = TimeSpan.FromSeconds(0.1);
+            progressTimerThread.Interval = TimeSpan.FromSeconds(1);
             progressTimerThread.Start();
 
             Application.Current.Dispatcher.Invoke(new Action(() =>
@@ -625,7 +625,7 @@ namespace PointCloudConverter
                             {
                                 progressBar.Maximum = maxValue;
                                 progressBar.Value = currentValue;
-                                progressBar.Foreground = (currentValue + 1 >= maxValue ? Brushes.Lime : Brushes.Red); //+1 hack fix
+                                progressBar.Foreground = ((currentValue + 1 >= maxValue) ? Brushes.Lime : Brushes.Red); //+1 hack fix
                                 //progressBar.ToolTip = $"Thread {index} - {currentValue} / {maxValue}"; // not visible, because modal dialog
                                 //Log.Write("ProgressTick: " + index + " " + currentValue + " / " + maxValue);
 
@@ -637,7 +637,7 @@ namespace PointCloudConverter
                                         "\"thread\": " + index + "," +
                                         "\"currentPoint\": " + currentValue + "," +
                                         "\"totalPoints\": " + maxValue + "," +
-                                        "\"percentage\": " + (int)((currentValue / (float)maxValue) * 100) + "," +
+                                        "\"percentage\": " + (int)((currentValue / (float)maxValue) * 100.0) + "," +
                                         "\"file\": " + System.Text.Json.JsonSerializer.Serialize(progressInfo.FilePath) +
                                         "}";
                                     Log.Write(jsonString, LogEvent.Progress);
@@ -686,7 +686,7 @@ namespace PointCloudConverter
         // process single file
         static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId, CancellationToken cancellationToken)
         {
-            progressTotalPoints = 1; // FIXME dummy for progress bar
+            progressTotalPoints = 0;
 
             Log.Write("Started processing file: " + importSettings.inputFiles[fileIndex]);
 
@@ -697,7 +697,7 @@ namespace PointCloudConverter
             IReader taskReader = importSettings.GetOrCreateReader(taskId);
 
             ProgressInfo progressInfo = null;
-            lock (lockObject)
+            //lock (lockObject)
             {
                 //Log.Write(progressInfos.Count + " : " + fileIndex, LogEvent.Info);
                 progressInfo = progressInfos[fileIndex % progressInfos.Count];
@@ -800,8 +800,6 @@ namespace PointCloudConverter
                 //progressPoint = 0;
                 progressInfo.CurrentValue = 0;
                 progressInfo.MaxValue = importSettings.useLimit ? pointCount : fullPointCount;
-                //progressTotalPoints = importSettings.useLimit ? pointCount : fullPointCount;
-
                 progressInfo.FilePath = importSettings.inputFiles[fileIndex];
 
                 lastStatusMessage = "Processing points..";
@@ -816,14 +814,19 @@ namespace PointCloudConverter
 
                 Log.Write(jsonString, LogEvent.File);
 
-                int checkCancelEvery = fullPointCount / 100;
+                int checkCancelEvery = fullPointCount / 128;
 
                 // Loop all points
-                for (int i = 0; i < fullPointCount; i++)
+
+                int maxPointIterations = importSettings.useLimit ? pointCount : fullPointCount;
+
+                //for (int i = 0; i < fullPointCount; i++)
+                for (int i = 0; i < maxPointIterations; i++)
                 //for (int i = 0; i < 1000; i++)
                 {
+
                     // stop at limit count
-                    if (importSettings.useLimit == true && i > pointCount) break;
+                    //if (importSettings.useLimit == true && i > pointCount) break;
 
                     // check for cancel every 1% of points
                     if (i % checkCancelEvery == 0)
@@ -839,7 +842,7 @@ namespace PointCloudConverter
 
                     // get point XYZ
                     Float3 point = taskReader.GetXYZ();
-                    if (point.hasError == true) break;
+                    if (point.hasError == true) break; // TODO display errors
 
                     // add offsets (its 0 if not used)
                     point.x -= importSettings.offsetX;
@@ -915,7 +918,11 @@ namespace PointCloudConverter
                     taskWriter.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     //progressPoint = i;
                     progressInfo.CurrentValue = i;
+
                 } // for all points
+
+                // hack for missing 100% progress
+                progressInfo.CurrentValue = maxPointIterations;
 
                 lastStatusMessage = "Saving files..";
                 //importSettings.writer.Save(fileIndex);
@@ -1446,7 +1453,7 @@ namespace PointCloudConverter
             Properties.Settings.Default.customintensityrange = (bool)chkCustomIntensityRange.IsChecked;
             Properties.Settings.Default.openOutputFolder = (bool)chkOpenOutputFolder.IsChecked;
             Properties.Settings.Default.useManualOffset = (bool)chkManualOffset.IsChecked;
-            float.TryParse(txtOffsetX.Text.Replace(",","."), NumberStyles.Float, CultureInfo.InvariantCulture, out float offsetX);
+            float.TryParse(txtOffsetX.Text.Replace(",", "."), NumberStyles.Float, CultureInfo.InvariantCulture, out float offsetX);
             Properties.Settings.Default.manualOffsetX = offsetX;
             float.TryParse(txtOffsetY.Text.Replace(",", "."), NumberStyles.Float, CultureInfo.InvariantCulture, out float offsetY);
             Properties.Settings.Default.manualOffsetY = offsetY;
@@ -1642,6 +1649,7 @@ namespace PointCloudConverter
             var dialog = new OpenFileDialog();
             dialog.Title = "Select settings file";
             dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+            //dialog.DefaultDirectory = "configs/";
 
             if (dialog.ShowDialog() == true)
             {

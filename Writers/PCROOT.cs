@@ -231,6 +231,8 @@ namespace PointCloudConverter.Writers
             for (int i = 0, len = nodeBounds.Count; i < len; i++)
             {
                 var tilerow = nodeBounds[i].fileName + sep + nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep + nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
+                // force dot as decimal separator
+                tilerow = tilerow.Replace(",", ".");
                 tilerootdata.Add(tilerow);
                 totalPointCount += nodeBounds[i].totalPoints;
             }
@@ -266,6 +268,9 @@ namespace PointCloudConverter.Writers
             string globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep + cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep + cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
             //                  autoOffsetX,             globalOffsetY,           globalOffsetZ,           packMagic 
             globalData += sep + importSettings.offsetX + sep + importSettings.offsetY + sep + importSettings.offsetZ + sep + importSettings.packMagicValue;
+            // force dot as decimal separator
+            globalData = globalData.Replace(",", ".");
+
             if (addComments)
             {
                 tilerootdata.Insert(2, globalData);
