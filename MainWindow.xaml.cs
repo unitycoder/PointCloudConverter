@@ -20,12 +20,15 @@ using Brushes = System.Windows.Media.Brushes;
 using System.Threading.Tasks;
 using PointCloudConverter.Readers;
 using System.Collections.Concurrent;
+using PointCloudConverter.Writers;
+using System.Reflection;
+using System.Globalization;
 
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "10.09.2024";
+        static readonly string version = "16.09.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -51,7 +54,6 @@ namespace PointCloudConverter
         bool isInitialiazing = true;
 
         static List<LasHeader> lasHeaders = new List<LasHeader>();
-        private readonly ILogger logger;
 
         // progress bar data
         static int progressPoint = 0;
@@ -63,6 +65,9 @@ namespace PointCloudConverter
         public static int errorCounter = 0; // how many errors when importing or reading files (single file could have multiple errors)
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
+        // plugins
+        string externalFileFormats = "";
+
         public MainWindow()
         {
             InitializeComponent();
@@ -70,27 +75,76 @@ namespace PointCloudConverter
             Main();
         }
 
+        public static Dictionary<string, Type> externalWriters = new Dictionary<string, Type>();
+
+        static ILogger Log;
+
         private async void Main()
         {
             // check cmdline args
             string[] args = Environment.GetCommandLineArgs();
-
             Tools.FixDLLFoldersAndConfig(rootFolder);
             Tools.ForceDotCultureSeparator();
 
             // default logger
-            Log.CreateLogger(isJSON: false, version: version);
-
+            //Log.CreateLogger(isJSON: false, version: version);
+            Log = LoggerFactory.CreateLogger(isJSON: false);
+            //Log.CreateLogger(isJSON: false, version: "1.0");
             // default code
             Environment.ExitCode = (int)ExitCode.Success;
 
-            // load plugins
+            // load all plugins from plugins folder
             //var testwriter = PointCloudConverter.Plugins.PluginLoader.LoadWriter("plugins/GLTFWriter.dll");
-            //testwriter.Close();
+            ////testwriter.Close();
+            //externalWriters = AppDomain.CurrentDomain.GetAssemblies().SelectMany(assembly => assembly.GetTypes()).Where(type => typeof(IWriter).IsAssignableFrom(type) && !type.IsInterface);
+
+            var pluginsDirectory = "plugins";
+
+            if (!Directory.Exists(pluginsDirectory))
+            {
+                Log.Write("Plugins directory not found.");
+                return;
+            }
+
+            // Get all DLL files in the plugins directory
+            var pluginFiles = Directory.GetFiles(pluginsDirectory, "*.dll");
+
+            foreach (var pluginDLL in pluginFiles)
+            {
+                try
+                {
+                    // Load the DLL file as an assembly
+                    var assembly = Assembly.LoadFrom(pluginDLL);
+
+                    // Find all types in the assembly that implement IWriter
+                    var writerTypes = assembly.GetTypes().Where(type => typeof(IWriter).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract);
+
+                    foreach (var writerType in writerTypes)
+                    {
+                        // Derive a unique key for the writer (e.g., from its name or class name)
+                        string writerName = writerType.Name;//.Replace("Writer", ""); // Customize the key generation logic
+                        if (!externalWriters.ContainsKey(writerName))
+                        {
+                            // Add the writer type to the dictionary for later use
+                            externalWriters.Add(writerName, writerType);
+                            //Log.Write($"Found writer: {writerType.FullName} in {pluginDLL}");
+
+                            // TODO take extensions from plugin? has 2: .glb and .gltf
+                            externalFileFormats += "|" + writerName + " (" + writerType.FullName + ")|*." + writerName.ToLower();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading plugin {pluginDLL}: {ex.Message}");
+                }
+            }
+
+            //return;
 
             // for debug: print config file location in appdata local here directly
             // string configFilePath = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.PerUserRoamingAndLocal).FilePath;
-            // Log.WriteLine("Config file: " + configFilePath);
+            // Log.Write("Config file: " + configFilePath);
 
             // using from commandline
             if (args.Length > 1)
@@ -105,24 +159,26 @@ namespace PointCloudConverter
                 {
                     if (arg.ToLower().Contains("-json=true"))
                     {
-                        Log.CreateLogger(isJSON: true, version: version);
+                        //Log.CreateLogger(isJSON: true, version: version);
+                        Log = LoggerFactory.CreateLogger(isJSON: true);
                     }
                 }
 
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Log.WriteLine("\n::: " + appname + " :::\n");
+                Log.Write("\n::: " + appname + " :::\n");
                 //Console.WriteLine("\n::: " + appname + " :::\n");
                 Console.ForegroundColor = ConsoleColor.White;
                 IntPtr cw = GetConsoleWindow();
 
                 // check args, null here because we get the args later
-                var importSettings = ArgParser.Parse(null, rootFolder);
+                var importSettings = ArgParser.Parse(null, rootFolder, Log);
 
-                if (importSettings.useJSONLog)
-                {
-                    importSettings.version = version;
-                    Log.SetSettings(importSettings);
-                }
+                // NOTE was not used?
+                //if (importSettings.useJSONLog)
+                //{
+                //    importSettings.version = version;
+                //    Log.SetSettings(importSettings);
+                //}
 
                 //if (importSettings.useJSONLog) log.Init(importSettings, version);
 
@@ -150,10 +206,10 @@ namespace PointCloudConverter
                 string elapsedString = elapsed.ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s");
 
                 // end output
-                Log.WriteLine("Exited.\nElapsed: " + elapsedString);
+                Log.Write("Exited.\nElapsed: " + elapsedString);
                 if (importSettings.useJSONLog)
                 {
-                    Log.WriteLine("{\"event\": \"" + LogEvent.End + "\", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + ",\"errors\":" + errorCounter + "}", LogEvent.End);
+                    Log.Write("{\"event\": \"" + LogEvent.End + "\", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + ",\"errors\":" + errorCounter + "}", LogEvent.End);
                 }
 
                 // https://stackoverflow.com/a/45620138/5452781
@@ -207,11 +263,11 @@ namespace PointCloudConverter
             // TODO: check what happens if its too high? over 128/256?
             //if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false)
 
-            //Log.WriteLine(importSettings.useAutoOffset + " && " + importSettings.importMetadataOnly + " || (" + importSettings.importIntensity + " && " + importSettings.importRGB + " && " + importSettings.packColors + " && " + importSettings.importMetadataOnly + ")");
+            //Log.Write(importSettings.useAutoOffset + " && " + importSettings.importMetadataOnly + " || (" + importSettings.importIntensity + " && " + importSettings.importRGB + " && " + importSettings.packColors + " && " + importSettings.importMetadataOnly + ")");
             //bool istrue1 = (importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false);
             //bool istrue2 = (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false);
-            //Log.WriteLine(istrue1 ? "1" : "0");
-            //Log.WriteLine(istrue2 ? "1" : "0");
+            //Log.Write(istrue1 ? "1" : "0");
+            //Log.Write(istrue2 ? "1" : "0");
 
             if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
             {
@@ -223,7 +279,7 @@ namespace PointCloudConverter
                     }
 
                     progressFile = i;
-                    Log.WriteLine("\nReading bounds from file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
+                    Log.Write("\nReading bounds from file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
                     var res = GetBounds(importSettings, i);
 
                     if (res.Item1 == true)
@@ -235,11 +291,11 @@ namespace PointCloudConverter
                         errorCounter++;
                         if (importSettings.useJSONLog)
                         {
-                            Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                            Log.Write("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
                         }
                         else
                         {
-                            Log.WriteLine("Error> Failed to get bounds from file: " + importSettings.inputFiles[i], LogEvent.Error);
+                            Log.Write("Error> Failed to get bounds from file: " + importSettings.inputFiles[i], LogEvent.Error);
                         }
                     }
                 }
@@ -273,7 +329,7 @@ namespace PointCloudConverter
             //    }
 
             //    progressFile = i;
-            //    Log.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
+            //    Log.Write("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
             //    //Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
             //    //if (abort==true) 
             //    // do actual point cloud parsing for this file
@@ -283,11 +339,11 @@ namespace PointCloudConverter
             //        errorCounter++;
             //        if (importSettings.useJSONLog)
             //        {
-            //            Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+            //            Log.Write("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
             //        }
             //        else
             //        {
-            //            Log.WriteLine("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+            //            Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
             //        }
             //    }
             //}
@@ -298,7 +354,7 @@ namespace PointCloudConverter
             int maxThreads = Math.Min(importSettings.maxThreads, importSettings.maxFiles);
             // clamp to min 1
             maxThreads = Math.Max(maxThreads, 1);
-            Log.WriteLine("Using MaxThreads: " + maxThreads);
+            Log.Write("Using MaxThreads: " + maxThreads);
 
             // init pool
             importSettings.InitWriterPool(maxThreads, importSettings.exportFormat);
@@ -323,7 +379,7 @@ namespace PointCloudConverter
                 catch (OperationCanceledException)
                 {
                     // Handle the cancellation scenario here
-                    Log.WriteLine("Wait was canceled.");
+                    Log.Write("Wait was canceled.");
                 }
                 finally
                 {
@@ -345,8 +401,8 @@ namespace PointCloudConverter
                 tasks.Add(Task.Run(async () =>
                 {
                     int? taskId = Task.CurrentId; // Get the current task ID
-                                                  //Log.WriteLine("task started: " + taskId + " fileindex: " + index);
-                    Log.WriteLine("task:" + taskId + ", reading file (" + (index + 1) + "/" + len2 + ") : " + importSettings.inputFiles[index] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[index]).Length) + ")\n");
+                                                  //Log.Write("task started: " + taskId + " fileindex: " + index);
+                    Log.Write("task:" + taskId + ", reading file (" + (index + 1) + "/" + len2 + ") : " + importSettings.inputFiles[index] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[index]).Length) + ")\n");
 
                     try
                     {
@@ -357,21 +413,22 @@ namespace PointCloudConverter
                             Interlocked.Increment(ref errorCounter); // thread-safe error counter increment
                             if (importSettings.useJSONLog)
                             {
-                                Log.WriteLine("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                                Trace.WriteLine("useJSONLoguseJSONLoguseJSONLoguseJSONLog");
+                                Log.Write("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
                             }
                             else
                             {
-                                Log.WriteLine("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                                Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
                             }
                         }
                     }
                     catch (TaskCanceledException ex)
                     {
-                        Log.WriteLine("Task was canceled: " + ex.Message, LogEvent.Error);
+                        Log.Write("Task was canceled: " + ex.Message, LogEvent.Error);
                     }
                     catch (TimeoutException ex)
                     {
-                        Log.WriteLine("Timeout occurred: " + ex.Message, LogEvent.Error);
+                        Log.Write("Timeout occurred: " + ex.Message, LogEvent.Error);
                     }
                     catch (OperationCanceledException)
                     {
@@ -379,7 +436,7 @@ namespace PointCloudConverter
                     }
                     catch (Exception ex)
                     {
-                        Log.WriteLine("Exception> " + ex.Message, LogEvent.Error);
+                        Log.Write("Exception> " + ex.Message, LogEvent.Error);
                         //throw; // Rethrow to ensure Task.WhenAll sees the exception
                     }
                     finally
@@ -394,7 +451,7 @@ namespace PointCloudConverter
             //Trace.WriteLine(" ---------------------- all finished -------------------- ");
 
             // now write header for for pcroot (using main writer)
-            if (importSettings.exportFormat == ExportFormat.PCROOT)
+            if (importSettings.exportFormat != ExportFormat.UCPC)
             {
                 importSettings.writer.Close();
                 // UCPC calls close in Save() itself
@@ -411,18 +468,18 @@ namespace PointCloudConverter
             string jsonMeta = JsonConvert.SerializeObject(lasHeaders, settings);
 
             // var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
-            //Log.WriteLine("MetaData: " + jsonMeta);
+            //Log.Write("MetaData: " + jsonMeta);
             // write metadata to file
             if (importSettings.importMetadata == true)
             {
                 var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
-                Log.WriteLine("Writing metadata to file: " + jsonFile);
+                Log.Write("Writing metadata to file: " + jsonFile);
                 File.WriteAllText(jsonFile, jsonMeta);
             }
 
             lastStatusMessage = "Done!";
             Console.ForegroundColor = ConsoleColor.Green;
-            Log.WriteLine("Finished!");
+            Log.Write("Finished!");
             Console.ForegroundColor = ConsoleColor.White;
             mainWindowStatic.Dispatcher.Invoke(() =>
             {
@@ -444,7 +501,7 @@ namespace PointCloudConverter
             //    } // if last file
 
             stopwatch.Stop();
-            Log.WriteLine("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
+            Log.Write("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
             stopwatch.Reset();
 
             Application.Current.Dispatcher.Invoke(new Action(() =>
@@ -467,10 +524,10 @@ namespace PointCloudConverter
 
         static void StartProgressTimer()
         {
-            //Log.WriteLine("Starting progress timer..*-*************************");
+            //Log.Write("Starting progress timer..*-*************************");
             progressTimerThread = new DispatcherTimer(DispatcherPriority.Background, Application.Current.Dispatcher);
             progressTimerThread.Tick += ProgressTick;
-            progressTimerThread.Interval = TimeSpan.FromSeconds(1);
+            progressTimerThread.Interval = TimeSpan.FromSeconds(0.1);
             progressTimerThread.Start();
 
             Application.Current.Dispatcher.Invoke(new Action(() =>
@@ -570,7 +627,7 @@ namespace PointCloudConverter
                                 progressBar.Value = currentValue;
                                 progressBar.Foreground = (currentValue + 1 >= maxValue ? Brushes.Lime : Brushes.Red); //+1 hack fix
                                 //progressBar.ToolTip = $"Thread {index} - {currentValue} / {maxValue}"; // not visible, because modal dialog
-                                //Log.WriteLine("ProgressTick: " + index + " " + currentValue + " / " + maxValue);
+                                //Log.Write("ProgressTick: " + index + " " + currentValue + " / " + maxValue);
 
                                 // print json progress
                                 if (progressInfo.UseJsonLog) // TODO now same bool value is for each progressinfo..
@@ -583,7 +640,7 @@ namespace PointCloudConverter
                                         "\"percentage\": " + (int)((currentValue / (float)maxValue) * 100) + "," +
                                         "\"file\": " + System.Text.Json.JsonSerializer.Serialize(progressInfo.FilePath) +
                                         "}";
-                                    Log.WriteLine(jsonString, LogEvent.Progress);
+                                    Log.Write(jsonString, LogEvent.Progress);
                                 }
                             }
                         }
@@ -592,7 +649,7 @@ namespace PointCloudConverter
                 //}
                 //else //  finished ?
                 //{
-                //    Log.WriteLine("*************** ProgressTick: progressTotalPoints is 0, finishing..");
+                //    Log.Write("*************** ProgressTick: progressTotalPoints is 0, finishing..");
                 //    mainWindowStatic.progressBarFiles.Value = 0;
                 //    mainWindowStatic.lblStatus.Content = "";
 
@@ -614,7 +671,7 @@ namespace PointCloudConverter
             var res = importSettings.reader.InitReader(importSettings, fileIndex);
             if (res == false)
             {
-                Log.WriteLine("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
+                Log.Write("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
                 Environment.ExitCode = (int)ExitCode.Error;
                 return (false, 0, 0, 0);
             }
@@ -631,7 +688,7 @@ namespace PointCloudConverter
         {
             progressTotalPoints = 1; // FIXME dummy for progress bar
 
-            Log.WriteLine("Started processing file: " + importSettings.inputFiles[fileIndex]);
+            Log.Write("Started processing file: " + importSettings.inputFiles[fileIndex]);
 
             // each thread needs its own reader
             bool res;
@@ -642,7 +699,7 @@ namespace PointCloudConverter
             ProgressInfo progressInfo = null;
             lock (lockObject)
             {
-                //Log.WriteLine(progressInfos.Count + " : " + fileIndex, LogEvent.Info);
+                //Log.Write(progressInfos.Count + " : " + fileIndex, LogEvent.Info);
                 progressInfo = progressInfos[fileIndex % progressInfos.Count];
             }
 
@@ -655,11 +712,11 @@ namespace PointCloudConverter
                 throw new Exception("Error> Failed to initialize reader: " + importSettings.inputFiles[fileIndex]);
             }
 
-            //Log.WriteLine("taskid: " + taskId + " reader initialized");
+            //Log.Write("taskid: " + taskId + " reader initialized");
 
             if (res == false)
             {
-                Log.WriteLine("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
+                Log.Write("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
                 Environment.ExitCode = (int)ExitCode.Error;
                 return false;
             }
@@ -679,24 +736,24 @@ namespace PointCloudConverter
                 if (importSettings.skipPoints == true)
                 {
                     var afterSkip = (int)Math.Floor(pointCount - (pointCount / (float)importSettings.skipEveryN));
-                    Log.WriteLine("Skip every X points is enabled, original points: " + fullPointCount + ", After skipping:" + afterSkip);
+                    Log.Write("Skip every X points is enabled, original points: " + fullPointCount + ", After skipping:" + afterSkip);
                     pointCount = afterSkip;
                 }
 
                 if (importSettings.keepPoints == true)
                 {
-                    Log.WriteLine("Keep every x points is enabled, original points: " + fullPointCount + ", After keeping:" + (pointCount / importSettings.keepEveryN));
+                    Log.Write("Keep every x points is enabled, original points: " + fullPointCount + ", After keeping:" + (pointCount / importSettings.keepEveryN));
                     pointCount = pointCount / importSettings.keepEveryN;
                 }
 
                 if (importSettings.useLimit == true)
                 {
-                    Log.WriteLine("Original points: " + pointCount + " Limited points: " + importSettings.limit);
+                    Log.Write("Original points: " + pointCount + " Limited points: " + importSettings.limit);
                     pointCount = importSettings.limit > pointCount ? pointCount : importSettings.limit;
                 }
                 else
                 {
-                    Log.WriteLine("Points: " + pointCount + " (" + importSettings.inputFiles[fileIndex] + ")");
+                    Log.Write("Points: " + pointCount + " (" + importSettings.inputFiles[fileIndex] + ")");
                 }
 
                 // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds?
@@ -721,21 +778,22 @@ namespace PointCloudConverter
 
                 var taskWriter = importSettings.GetOrCreateWriter(taskId);
 
-                //// for saving pcroot header, we need this writer
-                if (importSettings.exportFormat == ExportFormat.PCROOT)
+                // for saving pcroot header, we need this writer
+                if (importSettings.exportFormat != ExportFormat.UCPC)
                 {
-                    var mainWriterRes = importSettings.writer.InitWriter(importSettings, pointCount);
+                    var mainWriterRes = importSettings.writer.InitWriter(importSettings, pointCount, Log);
                     if (mainWriterRes == false)
                     {
-                        Log.WriteLine("Error> Failed to initialize main Writer, fileindex: " + fileIndex + " taskid:" + taskId);
+                        Log.Write("Error> Failed to initialize main Writer, fileindex: " + fileIndex + " taskid:" + taskId);
                         return false;
                     }
                 }
 
-                var writerRes = taskWriter.InitWriter(importSettings, pointCount);
+                // init writer for this file
+                var writerRes = taskWriter.InitWriter(importSettings, pointCount, Log);
                 if (writerRes == false)
                 {
-                    Log.WriteLine("Error> Failed to initialize Writer, fileindex: " + fileIndex + " taskid:" + taskId);
+                    Log.Write("Error> Failed to initialize Writer, fileindex: " + fileIndex + " taskid:" + taskId);
                     return false;
                 }
 
@@ -756,7 +814,7 @@ namespace PointCloudConverter
                 "\"status\": \"" + LogStatus.Processing + "\"" +
                 "}";
 
-                Log.WriteLine(jsonString, LogEvent.File);
+                Log.Write(jsonString, LogEvent.File);
 
                 int checkCancelEvery = fullPointCount / 100;
 
@@ -772,7 +830,7 @@ namespace PointCloudConverter
                     {
                         if (cancellationToken.IsCancellationRequested)
                         {
-                            //Log.WriteLine("Parse task (" + taskId + ") was canceled for: " + importSettings.inputFiles[fileIndex]);
+                            //Log.Write("Parse task (" + taskId + ") was canceled for: " + importSettings.inputFiles[fileIndex]);
                             return false;
                         }
                     }
@@ -865,11 +923,11 @@ namespace PointCloudConverter
                 lastStatusMessage = "Finished saving..";
                 //taskReader.Close();
 
-                //Log.WriteLine("------------ release reader and writer ------------");
+                //Log.Write("------------ release reader and writer ------------");
                 importSettings.ReleaseReader(taskId);
                 //taskReader.Dispose();
                 importSettings.ReleaseWriter(taskId);
-                //Log.WriteLine("------------ reader and writer released ------------");
+                //Log.Write("------------ reader and writer released ------------");
 
                 // TODO add event for finished writing this file, and return list of output files
                 //jsonString = "{" +
@@ -880,11 +938,11 @@ namespace PointCloudConverter
                 //    "\"status\": \"" + LogStatus.Complete + "\"" +
                 //    "}";
 
-                //Log.WriteLine(jsonString, LogEvent.File);
+                //Log.Write(jsonString, LogEvent.File);
 
             } // if importMetadataOnly == false
 
-            //Log.WriteLine("taskid: " + taskId + " done");
+            //Log.Write("taskid: " + taskId + " done");
             return true;
         } // ParseFile
 
@@ -906,7 +964,7 @@ namespace PointCloudConverter
             }
             else
             {
-                Log.WriteLine("Error> Invalid settings, aborting..");
+                Log.Write("Error> Invalid settings, aborting..");
             }
 
         }
@@ -965,7 +1023,11 @@ namespace PointCloudConverter
             args.Add("-rgb=" + (bool)chkImportRGB.IsChecked);
             args.Add("-intensity=" + (bool)chkImportIntensity.IsChecked);
 
-            if (cmbExportFormat.SelectedItem?.ToString()?.ToUpper()?.Contains("PCROOT") == true) args.Add("-gridsize=" + txtGridSize.Text);
+            bool isPCROOT = (cmbExportFormat.SelectedItem.ToString() == "PCROOT");
+            bool isGLTF = (cmbExportFormat.SelectedItem.ToString() == "GLTF");
+            // cmbExportFormat.SelectedItem?.ToString()?.ToUpper()?.Contains("PCROOT")
+
+            if (isPCROOT == true) args.Add("-gridsize=" + txtGridSize.Text);
 
             if ((bool)chkUseMinPointCount.IsChecked) args.Add("-minpoints=" + txtMinPointCount.Text);
             if ((bool)chkUseScale.IsChecked) args.Add("-scale=" + txtScale.Text);
@@ -988,10 +1050,14 @@ namespace PointCloudConverter
             if ((bool)chkCalculateOverlappingTiles.IsChecked) args.Add("-checkoverlap=true");
             args.Add("-maxthreads=" + txtMaxThreads.Text);
 
+            if (isGLTF == true) args.Add(("-usegrid=" + (bool)chkUseGrid.IsChecked).ToLower());
+
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
 
             // check input files
-            var importSettings = ArgParser.Parse(args.ToArray(), rootFolder);
+            Trace.WriteLine("loggeris:" + Log.GetType().ToString());
+
+            var importSettings = ArgParser.Parse(args.ToArray(), rootFolder, Log);
 
             // if have files, process them
             if (importSettings.errors.Count == 0)
@@ -1045,7 +1111,7 @@ namespace PointCloudConverter
         // set gui from commandline args
         void ImportArgs(string rawArgs)
         {
-            Log.WriteLine(rawArgs);
+            Log.Write(rawArgs);
             string[] args = ArgParser.SplitArgs(rawArgs);
             bool isFirstArgExe = args[0].EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
             int startIndex = isFirstArgExe ? 1 : 0;
@@ -1061,7 +1127,7 @@ namespace PointCloudConverter
 
                     if (parts.Length < 2)
                     {
-                        Log.WriteLine($"Missing value for argument: {arg}");
+                        Log.Write($"Missing value for argument: {arg}");
                         continue;
                     }
 
@@ -1232,7 +1298,7 @@ namespace PointCloudConverter
             // select single output filename
             var dialog = new SaveFileDialog();
             dialog.Title = "Set output folder and filename";
-            dialog.Filter = "UCPC (V2)|*.ucpc|PCROOT (V3)|*.pcroot";
+            dialog.Filter = "UCPC (V2)|*.ucpc|PCROOT (V3)|*.pcroot" + externalFileFormats;
 
             dialog.FilterIndex = cmbExportFormat.SelectedIndex + 1;
 
@@ -1276,16 +1342,29 @@ namespace PointCloudConverter
 
         private void LoadSettings()
         {
+            // add importer formats
             foreach (var item in Enum.GetValues(typeof(ImportFormat)))
             {
                 if ((ImportFormat)item == ImportFormat.Unknown) continue;
                 cmbImportFormat.Items.Add(item);
             }
 
+            // add builtin exporter formats
             foreach (var item in Enum.GetValues(typeof(ExportFormat)))
             {
                 if ((ExportFormat)item == ExportFormat.Unknown) continue;
+                if ((ExportFormat)item == ExportFormat.External) continue;
                 cmbExportFormat.Items.Add(item);
+            }
+
+            // Add dynamic export formats discovered from plugins
+            foreach (var externalPlugin in externalWriters)
+            {
+                // Avoid adding duplicates if they already exist in the enum
+                if (!cmbExportFormat.Items.Contains(externalPlugin.Key))
+                {
+                    cmbExportFormat.Items.Add(externalPlugin.Key);
+                }
             }
 
             // TODO check if format is available in list..
@@ -1333,6 +1412,7 @@ namespace PointCloudConverter
             chkGetAvgTileTimestamp.IsChecked = Properties.Settings.Default.getAvgTileTimestamp;
             chkCalculateOverlappingTiles.IsChecked = Properties.Settings.Default.calculateOverlappingTiles;
             txtMaxThreads.Text = Properties.Settings.Default.maxThreads;
+            chkUseGrid.IsChecked = Properties.Settings.Default.useGrid;
             isInitialiazing = false;
         }
 
@@ -1366,13 +1446,13 @@ namespace PointCloudConverter
             Properties.Settings.Default.customintensityrange = (bool)chkCustomIntensityRange.IsChecked;
             Properties.Settings.Default.openOutputFolder = (bool)chkOpenOutputFolder.IsChecked;
             Properties.Settings.Default.useManualOffset = (bool)chkManualOffset.IsChecked;
-            float.TryParse(txtOffsetX.Text, out float offsetX);
+            float.TryParse(txtOffsetX.Text.Replace(",","."), NumberStyles.Float, CultureInfo.InvariantCulture, out float offsetX);
             Properties.Settings.Default.manualOffsetX = offsetX;
-            float.TryParse(txtOffsetY.Text, out float offsetY);
+            float.TryParse(txtOffsetY.Text.Replace(",", "."), NumberStyles.Float, CultureInfo.InvariantCulture, out float offsetY);
             Properties.Settings.Default.manualOffsetY = offsetY;
-            float.TryParse(txtOffsetZ.Text, out float offsetZ);
+            float.TryParse(txtOffsetZ.Text.Replace(",", "."), NumberStyles.Float, CultureInfo.InvariantCulture, out float offsetZ);
             int tempSeed = 42;
-            int.TryParse(txtRandomSeed.Text, out tempSeed);
+            int.TryParse(txtRandomSeed.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempSeed);
             Properties.Settings.Default.seed = tempSeed;
             Properties.Settings.Default.useJSON = (bool)chkUseJSONLog.IsChecked;
             Properties.Settings.Default.importMetadata = (bool)chkReadMetaData.IsChecked;
@@ -1382,6 +1462,7 @@ namespace PointCloudConverter
             Properties.Settings.Default.getAvgTileTimestamp = (bool)chkGetAvgTileTimestamp.IsChecked;
             Properties.Settings.Default.calculateOverlappingTiles = (bool)chkCalculateOverlappingTiles.IsChecked;
             Properties.Settings.Default.maxThreads = txtMaxThreads.Text;
+            Properties.Settings.Default.useGrid = (bool)chkUseGrid.IsChecked;
             Properties.Settings.Default.Save();
         }
 
@@ -1396,7 +1477,7 @@ namespace PointCloudConverter
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
-            Log.WriteLine("Aborting - Please wait..");
+            Log.Write("Aborting - Please wait..");
             _cancellationTokenSource.Cancel();
         }
 
@@ -1437,6 +1518,8 @@ namespace PointCloudConverter
                 }
                 else // no filename, set default
                 {
+                    //Log.Write("cmbExportFormat.SelectedValue> " + cmbExportFormat.SelectedValue.ToString());
+                    if (string.IsNullOrEmpty(currentOutput)) return;
                     txtOutput.Text = Path.Combine(Path.GetDirectoryName(currentOutput), "output." + cmbExportFormat.SelectedValue.ToString().ToLower());
                 }
             }

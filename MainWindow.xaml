@@ -141,6 +141,13 @@
                 <CheckBox x:Name="chkGetAvgTileTimestamp" Content="Get Average timestamp per Tile" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Experimental: Calculate average raw gps_time from tile points and save into pcroot"/>
                 <CheckBox x:Name="chkCalculateOverlappingTiles" Content="Calculate overlapping tiles" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Experimental: Save additional overlapped tile data into pcroot (if tile overlaps another tile)"/>
             </StackPanel>
+        </GroupBox>        
+        
+        <!-- gltf options -->
+        <GroupBox x:Name="groupBoxGLTF" HorizontalAlignment="Right" Header="GLTF (.glb) Options" Margin="0,365,10,0" VerticalAlignment="Top" Width="276" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">
+            <StackPanel Margin="0,4,0,0">
+                <CheckBox x:Name="chkUseGrid" Content="Use grid (split to grid)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="If disabled, 1 cloud is exported to single .glb file. If enabled: 1 tile is 1 .glb file"/>
+            </StackPanel>
         </GroupBox>
 
 

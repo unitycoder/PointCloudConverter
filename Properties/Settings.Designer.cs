@@ -562,5 +562,17 @@ namespace PointCloudConverter.Properties {
                 this["maxThreads"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool useGrid {
+            get {
+                return ((bool)(this["useGrid"]));
+            }
+            set {
+                this["useGrid"] = value;
+            }
+        }
     }
 }

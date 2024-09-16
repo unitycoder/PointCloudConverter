@@ -4,6 +4,7 @@
     {
         Unknown,
         UCPC, // V2
-        PCROOT // V3
+        PCROOT, // V3
+        External // dll plugin?
     }
 }

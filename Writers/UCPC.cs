@@ -20,7 +20,7 @@ namespace PointCloudConverter.Writers
         {
             get { return __importSettings; }
             set { __importSettings = value;
-                //Log.WriteLine("set importsettings");
+                //Log.Write("set importsettings");
                     }
         }
 
@@ -44,9 +44,13 @@ namespace PointCloudConverter.Writers
         static float cloudMaxY = float.NegativeInfinity;
         static float cloudMaxZ = float.NegativeInfinity;
 
-        bool IWriter.InitWriter<TSettings>(TSettings _importSettings, int _pointCount)
+        static ILogger Log;
+
+        bool IWriter.InitWriter(dynamic _importSettings, int _pointCount, ILogger logger)
         {
             importSettings = (ImportSettings)(object)_importSettings;
+            Log = logger;
+
             pointCount = _pointCount;
 
             pointsTempFile = importSettings.outputFile + "_PointsTemp";
@@ -75,7 +79,7 @@ namespace PointCloudConverter.Writers
             }
             catch (Exception e)
             {
-                Log.WriteLine(e.Message, LogEvent.Error);
+                Log.Write(e.Message, LogEvent.Error);
                 return false;
             }
 
@@ -168,7 +172,7 @@ namespace PointCloudConverter.Writers
             writerPoints.Close();
             bsPoints.Dispose();
 
-            Log.WriteLine("Randomizing " + pointCount + " points...");
+            Log.Write("Randomizing " + pointCount + " points...");
             // randomize points and colors
             byte[] tempBytes = null;
             using (FileStream fs = File.Open(pointsTempFile, FileMode.Open, FileAccess.Read, FileShare.None))
@@ -212,7 +216,7 @@ namespace PointCloudConverter.Writers
                 writerColorsV2.Close();
                 bsColorsV2.Dispose();
 
-                Log.WriteLine("Randomizing " + pointCount + " colors...");
+                Log.Write("Randomizing " + pointCount + " colors...");
 
                 tempBytes = null;
                 using (FileStream fs = File.Open(colorsTempFile, FileMode.Open, FileAccess.Read, FileShare.None))
@@ -284,14 +288,14 @@ namespace PointCloudConverter.Writers
         {
             if (importSettings.packColors == true)
             {
-                Log.WriteLine("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile));
+                Log.Write("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile));
             }
             else
             {
-                Log.WriteLine("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
+                Log.Write("Combining files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
             }
             Console.ForegroundColor = ConsoleColor.Green;
-            Log.WriteLine("Output: " + importSettings.outputFile);
+            Log.Write("Output: " + importSettings.outputFile);
 
             string jsonString = "{" +
             "\"event\": \"" + LogEvent.File + "\"," +
@@ -299,7 +303,7 @@ namespace PointCloudConverter.Writers
             "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
             "\"output\": " + JsonSerializer.Serialize(importSettings.outputFile) + "}";
 
-            Log.WriteLine(jsonString, LogEvent.File);
+            Log.Write(jsonString, LogEvent.File);
             Console.ForegroundColor = ConsoleColor.White;
 
             var sep = '"';
@@ -321,7 +325,7 @@ namespace PointCloudConverter.Writers
                 {
                     outputFile = importSettings.outputFile;
                 }
-                else // its filename without extension
+                else // its filename without extension, add it
                 {
                     outputFile = importSettings.outputFile + ".ucpc";
                 }
@@ -344,7 +348,7 @@ namespace PointCloudConverter.Writers
             proc.Start();
             proc.WaitForExit();
 
-            Log.WriteLine("Deleting temporary files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
+            Log.Write("Deleting temporary files: " + Path.GetFileName(headerTempFile) + "," + Path.GetFileName(pointsTempFile) + "," + Path.GetFileName(colorsTempFile));
             if (File.Exists(headerTempFile)) File.Delete(headerTempFile);
             if (File.Exists(pointsTempFile)) File.Delete(pointsTempFile);
             if (File.Exists(colorsTempFile)) File.Delete(colorsTempFile);

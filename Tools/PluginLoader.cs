@@ -1,4 +1,5 @@
-﻿using PointCloudConverter.Writers;
+﻿using PointCloudConverter.Logger;
+using PointCloudConverter.Writers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,11 +13,18 @@ namespace PointCloudConverter.Plugins
 {
     public static class PluginLoader
     {
+        static readonly string pluginDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Plugins");
 
-        public static IWriter LoadWriter(string pluginPath)
+        // TODO add logger, if needed
+        //static ILogger Log;
+
+        public static IWriter LoadWriter(string pluginName)
         {
-            if (!File.Exists(pluginPath))
-                throw new FileNotFoundException($"The plugin at {pluginPath} could not be found.");
+            //Log = logger;
+
+            string pluginPath = Path.Combine(pluginDirectory, pluginName + ".dll");
+            //Log.Write($"Loading plugin at {pluginPath}");
+            if (File.Exists(pluginPath) == false) throw new FileNotFoundException($"The plugin at {pluginPath} could not be found.");
 
             // Load the plugin assembly
             var pluginAssembly = Assembly.LoadFrom(pluginPath);

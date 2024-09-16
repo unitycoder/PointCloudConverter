@@ -239,20 +239,19 @@ namespace PointCloudConverter
             }
         }
 
-
         public static int ParseInt(string s)
         {
             int f = 0;
-            // TODO add invariant culture
-            int.TryParse(s, out f);
+            s = s.Replace(",", ".");
+            int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out f);
             return f;
         }
 
         public static float ParseFloat(string s)
         {
             float f = 0;
-            // TODO add invariant culture
-            float.TryParse(s, out f);
+            s = s.Replace(",", ".");
+            float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out f);
             return f;
         }
 
