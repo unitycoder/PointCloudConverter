@@ -61,7 +61,7 @@ namespace PointCloudConverter.Logger
     {
         public static ILogger CreateLogger(bool isJSON)
         {
-            Trace.WriteLine($"Creating logger with JSON: {isJSON}");
+            //Trace.WriteLine($"Creating logger with JSON: {isJSON}");
             if (isJSON)
             {
                 return new LogJSON();

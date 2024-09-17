@@ -28,7 +28,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "16.09.2024";
+        static readonly string version = "17.09.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -100,43 +100,42 @@ namespace PointCloudConverter
 
             var pluginsDirectory = "plugins";
 
-            if (!Directory.Exists(pluginsDirectory))
+            if (Directory.Exists(pluginsDirectory))
             {
-                Log.Write("Plugins directory not found.");
-                return;
-            }
+                //Log.Write("Plugins directory not found.");
 
-            // Get all DLL files in the plugins directory
-            var pluginFiles = Directory.GetFiles(pluginsDirectory, "*.dll");
+                // Get all DLL files in the plugins directory
+                var pluginFiles = Directory.GetFiles(pluginsDirectory, "*.dll");
 
-            foreach (var pluginDLL in pluginFiles)
-            {
-                try
+                foreach (var pluginDLL in pluginFiles)
                 {
-                    // Load the DLL file as an assembly
-                    var assembly = Assembly.LoadFrom(pluginDLL);
-
-                    // Find all types in the assembly that implement IWriter
-                    var writerTypes = assembly.GetTypes().Where(type => typeof(IWriter).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract);
-
-                    foreach (var writerType in writerTypes)
+                    try
                     {
-                        // Derive a unique key for the writer (e.g., from its name or class name)
-                        string writerName = writerType.Name;//.Replace("Writer", ""); // Customize the key generation logic
-                        if (!externalWriters.ContainsKey(writerName))
-                        {
-                            // Add the writer type to the dictionary for later use
-                            externalWriters.Add(writerName, writerType);
-                            //Log.Write($"Found writer: {writerType.FullName} in {pluginDLL}");
+                        // Load the DLL file as an assembly
+                        var assembly = Assembly.LoadFrom(pluginDLL);
 
-                            // TODO take extensions from plugin? has 2: .glb and .gltf
-                            externalFileFormats += "|" + writerName + " (" + writerType.FullName + ")|*." + writerName.ToLower();
+                        // Find all types in the assembly that implement IWriter
+                        var writerTypes = assembly.GetTypes().Where(type => typeof(IWriter).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract);
+
+                        foreach (var writerType in writerTypes)
+                        {
+                            // Derive a unique key for the writer (e.g., from its name or class name)
+                            string writerName = writerType.Name;//.Replace("Writer", ""); // Customize the key generation logic
+                            if (!externalWriters.ContainsKey(writerName))
+                            {
+                                // Add the writer type to the dictionary for later use
+                                externalWriters.Add(writerName, writerType);
+                                //Log.Write($"Found writer: {writerType.FullName} in {pluginDLL}");
+
+                                // TODO take extensions from plugin? has 2: .glb and .gltf
+                                externalFileFormats += "|" + writerName + " (" + writerType.FullName + ")|*." + writerName.ToLower();
+                            }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error loading plugin {pluginDLL}: {ex.Message}");
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error loading plugin {pluginDLL}: {ex.Message}");
+                    }
                 }
             }
 
@@ -413,7 +412,7 @@ namespace PointCloudConverter
                             Interlocked.Increment(ref errorCounter); // thread-safe error counter increment
                             if (importSettings.useJSONLog)
                             {
-                                Trace.WriteLine("useJSONLoguseJSONLoguseJSONLoguseJSONLog");
+                                //Trace.WriteLine("useJSONLoguseJSONLoguseJSONLoguseJSONLog");
                                 Log.Write("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
                             }
                             else
