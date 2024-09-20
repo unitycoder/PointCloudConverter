@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Platforms>AnyCPU;x64</Platforms>
+    <Configurations>Debug;Release;LinuxDebug</Configurations>
   </PropertyGroup>
   
 	<PropertyGroup>

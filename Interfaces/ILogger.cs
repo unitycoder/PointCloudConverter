@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace PointCloudConverter.Logger
+namespace PointCloudConverterForDotnetCLI.Logger
 {
     public enum LogEvent
     {

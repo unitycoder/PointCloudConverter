@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
@@ -17,8 +17,13 @@
     <RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis>
     <EnableNETAnalyzers>False</EnableNETAnalyzers>
     <Platforms>x64</Platforms>
+    <Configurations>Debug;Release;LinuxDebug</Configurations>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <WarningLevel>4</WarningLevel>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LinuxDebug|x64'">
     <WarningLevel>4</WarningLevel>
     <DebugType>full</DebugType>
   </PropertyGroup>
@@ -31,6 +36,9 @@
     <EmbeddedResource Remove="Interfaces\**" />
     <None Remove="Interfaces\**" />
     <Page Remove="Interfaces\**" />
+  </ItemGroup>
+  <ItemGroup>    
+	<Compile Remove="PointCloudConverterForDotnetCLI\**\*" />
   </ItemGroup>
 
   <ItemGroup>

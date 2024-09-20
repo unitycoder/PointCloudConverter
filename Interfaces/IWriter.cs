@@ -1,6 +1,6 @@
-﻿using PointCloudConverter.Logger;
+﻿using PointCloudConverterForDotnetCLI.Logger;
 
-namespace PointCloudConverter.Writers
+namespace PointCloudConverterForDotnetCLI.Writers
 {
     public interface IWriter
     {

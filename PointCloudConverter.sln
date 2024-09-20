@@ -5,12 +5,16 @@ VisualStudioVersion = 17.10.35122.118
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PointCloudConverter", "PointCloudConverter.csproj", "{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Interfaces\Shared.csproj", "{692B05A5-DEB5-4B3B-8171-1C126783003B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shared", "Interfaces\Shared.csproj", "{692B05A5-DEB5-4B3B-8171-1C126783003B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PointCloudConverterForDotnetCLI", "PointCloudConverterForDotnetCLI\PointCloudConverterForDotnetCLI.csproj", "{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
+		LinuxDebug|Any CPU = LinuxDebug|Any CPU
+		LinuxDebug|x64 = LinuxDebug|x64
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 	EndGlobalSection
@@ -19,6 +23,10 @@ Global
 		{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}.Debug|x64.Build.0 = Debug|Any CPU
+		{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}.LinuxDebug|Any CPU.ActiveCfg = LinuxDebug|x64
+		{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}.LinuxDebug|Any CPU.Build.0 = LinuxDebug|x64
+		{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}.LinuxDebug|x64.ActiveCfg = LinuxDebug|x64
+		{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}.LinuxDebug|x64.Build.0 = LinuxDebug|x64
 		{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B348688B-00FB-45A8-8BBD-D2D64FD7E8D8}.Release|x64.ActiveCfg = Release|x64
@@ -27,10 +35,26 @@ Global
 		{692B05A5-DEB5-4B3B-8171-1C126783003B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{692B05A5-DEB5-4B3B-8171-1C126783003B}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{692B05A5-DEB5-4B3B-8171-1C126783003B}.Debug|x64.Build.0 = Debug|Any CPU
+		{692B05A5-DEB5-4B3B-8171-1C126783003B}.LinuxDebug|Any CPU.ActiveCfg = LinuxDebug|Any CPU
+		{692B05A5-DEB5-4B3B-8171-1C126783003B}.LinuxDebug|Any CPU.Build.0 = LinuxDebug|Any CPU
+		{692B05A5-DEB5-4B3B-8171-1C126783003B}.LinuxDebug|x64.ActiveCfg = LinuxDebug|x64
+		{692B05A5-DEB5-4B3B-8171-1C126783003B}.LinuxDebug|x64.Build.0 = LinuxDebug|x64
 		{692B05A5-DEB5-4B3B-8171-1C126783003B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{692B05A5-DEB5-4B3B-8171-1C126783003B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{692B05A5-DEB5-4B3B-8171-1C126783003B}.Release|x64.ActiveCfg = Release|x64
 		{692B05A5-DEB5-4B3B-8171-1C126783003B}.Release|x64.Build.0 = Release|x64
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.Debug|x64.Build.0 = Debug|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.LinuxDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.LinuxDebug|Any CPU.Build.0 = Debug|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.LinuxDebug|x64.ActiveCfg = Debug|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.LinuxDebug|x64.Build.0 = Debug|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.Release|x64.ActiveCfg = Release|Any CPU
+		{6C250F20-B01E-476D-AFF1-B80C4B8C8EE5}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
