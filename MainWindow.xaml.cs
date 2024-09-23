@@ -28,7 +28,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "17.09.2024";
+        static readonly string version = "23.09.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -816,17 +816,10 @@ namespace PointCloudConverter
                 int checkCancelEvery = fullPointCount / 128;
 
                 // Loop all points
-
+                // FIXME: would be nicer, if use different STEP value for skip, keep and limit..(to collect points all over the file, not just start)
                 int maxPointIterations = importSettings.useLimit ? pointCount : fullPointCount;
-
-                //for (int i = 0; i < fullPointCount; i++)
                 for (int i = 0; i < maxPointIterations; i++)
-                //for (int i = 0; i < 1000; i++)
                 {
-
-                    // stop at limit count
-                    //if (importSettings.useLimit == true && i > pointCount) break;
-
                     // check for cancel every 1% of points
                     if (i % checkCancelEvery == 0)
                     {
@@ -837,11 +830,16 @@ namespace PointCloudConverter
                         }
                     }
 
-                    // FIXME: need to add skip and keep point skipper here, to make skipping faster!
-
                     // get point XYZ
                     Float3 point = taskReader.GetXYZ();
                     if (point.hasError == true) break; // TODO display errors
+
+                    // skip points
+                    if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
+
+                    // keep points
+                    if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
+
 
                     // add offsets (its 0 if not used)
                     point.x -= importSettings.offsetX;
@@ -849,9 +847,6 @@ namespace PointCloudConverter
                     point.z -= importSettings.offsetZ;
 
                     // scale if enabled
-                    //point.x = importSettings.useScale ? point.x * importSettings.scale : point.x;
-                    //point.y = importSettings.useScale ? point.y * importSettings.scale : point.y;
-                    //point.z = importSettings.useScale ? point.z * importSettings.scale : point.z;
                     if (importSettings.useScale == true)
                     {
                         point.x *= importSettings.scale;
@@ -917,7 +912,6 @@ namespace PointCloudConverter
                     taskWriter.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     //progressPoint = i;
                     progressInfo.CurrentValue = i;
-
                 } // for all points
 
                 // hack for missing 100% progress
@@ -1025,7 +1019,15 @@ namespace PointCloudConverter
             }
             args.Add("-output=" + txtOutput.Text);
 
-            args.Add("-offset=" + (bool)chkAutoOffset.IsChecked);
+            // check if using autooffset
+            if ((bool)chkAutoOffset.IsChecked && !(bool)chkManualOffset.IsChecked)
+            {
+                args.Add("-offset=" + (bool)chkAutoOffset.IsChecked);
+            }
+
+            // or manual offset, TODO later should allow using both (first autooffset, then add manual)
+            if ((bool)chkManualOffset.IsChecked) args.Add("-offset=" + txtOffsetX.Text + "," + txtOffsetY.Text + "," + txtOffsetZ.Text);
+
             args.Add("-rgb=" + (bool)chkImportRGB.IsChecked);
             args.Add("-intensity=" + (bool)chkImportIntensity.IsChecked);
 
@@ -1046,7 +1048,6 @@ namespace PointCloudConverter
             if ((bool)chkUseSkip.IsChecked) args.Add("-skip=" + txtSkipEvery.Text);
             if ((bool)chkUseKeep.IsChecked) args.Add("-keep=" + txtKeepEvery.Text);
             if ((bool)chkUseMaxFileCount.IsChecked) args.Add("-maxfiles=" + txtMaxFileCount.Text);
-            if ((bool)chkManualOffset.IsChecked) args.Add("-offset=" + txtOffsetX.Text + "," + txtOffsetY.Text + "," + txtOffsetZ.Text);
             args.Add("-randomize=" + (bool)chkRandomize.IsChecked);
             if ((bool)chkSetRandomSeed.IsChecked) args.Add("-seed=" + txtRandomSeed.Text);
             if ((bool)chkUseJSONLog.IsChecked) args.Add("-json=true");
@@ -1061,7 +1062,7 @@ namespace PointCloudConverter
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
 
             // check input files
-            Trace.WriteLine("loggeris:" + Log.GetType().ToString());
+            //Trace.WriteLine("loggeris:" + Log.GetType().ToString());
 
             var importSettings = ArgParser.Parse(args.ToArray(), rootFolder, Log);
 
@@ -1139,6 +1140,8 @@ namespace PointCloudConverter
 
                     string key = parts[0].ToLower().TrimStart('-');
                     string value = parts[1];
+
+                    // FIXME, if value is not saved, need to use default value
 
                     // Apply the key-value pairs to the GUI elements
                     switch (key)
@@ -1360,7 +1363,7 @@ namespace PointCloudConverter
             {
                 if ((ExportFormat)item == ExportFormat.Unknown) continue;
                 if ((ExportFormat)item == ExportFormat.External) continue;
-                cmbExportFormat.Items.Add(item);
+                cmbExportFormat.Items.Add(item.ToString());
             }
 
             // Add dynamic export formats discovered from plugins
@@ -1646,9 +1649,18 @@ namespace PointCloudConverter
         private void btnImportSettings_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog();
-            dialog.Title = "Select settings file";
+            dialog.Title = "Import settings file";
             dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
-            //dialog.DefaultDirectory = "configs/";
+
+            // if have previously used config dir use that, if not, use local config dir if exists, if neither, use default..
+            if (string.IsNullOrEmpty(Properties.Settings.Default.lastImportFolder) == false)
+            {
+                dialog.InitialDirectory = Properties.Settings.Default.lastImportFolder;
+            }
+            else if (Directory.Exists("configs/"))
+            {
+                dialog.InitialDirectory = "configs/";
+            }
 
             if (dialog.ShowDialog() == true)
             {
@@ -1656,6 +1668,7 @@ namespace PointCloudConverter
                 {
                     var contents = File.ReadAllText(dialog.FileName);
                     ImportArgs(contents);
+                    Properties.Settings.Default.lastImportFolder = Path.GetDirectoryName(dialog.FileName);
                 }
             }
         }
@@ -1666,10 +1679,20 @@ namespace PointCloudConverter
             dialog.Title = "Save settings file";
             dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
 
+            if (string.IsNullOrEmpty(Properties.Settings.Default.lastImportFolder) == false)
+            {
+                dialog.InitialDirectory = Properties.Settings.Default.lastImportFolder;
+            }
+            else if (Directory.Exists("configs/"))
+            {
+                dialog.InitialDirectory = "configs/";
+            }
+
             if (dialog.ShowDialog() == true)
             {
                 StartProcess(false);
                 File.WriteAllText(dialog.FileName, txtConsole.Text);
+                Properties.Settings.Default.lastImportFolder = Path.GetDirectoryName(dialog.FileName);
             }
         }
 

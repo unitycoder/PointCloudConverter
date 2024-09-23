@@ -252,11 +252,11 @@ namespace PointCloudConverter.Writers
 
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i, bool hasTime, double time)
         {
-            // skip points
-            if (importSettings.skipPoints == true && (index % importSettings.skipEveryN == 0)) return;
+            //// skip points
+            //if (importSettings.skipPoints == true && (index % importSettings.skipEveryN == 0)) return;
 
-            // keep points
-            if (importSettings.keepPoints == true && (index % importSettings.keepEveryN != 0)) return;
+            //// keep points
+            //if (importSettings.keepPoints == true && (index % importSettings.keepEveryN != 0)) return;
 
             // get bounds
             if (x < cloudMinX) cloudMinX = x;

@@ -574,5 +574,17 @@ namespace PointCloudConverter.Properties {
                 this["useGrid"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string lastUsedConfigFolder {
+            get {
+                return ((string)(this["lastUsedConfigFolder"]));
+            }
+            set {
+                this["lastUsedConfigFolder"] = value;
+            }
+        }
     }
 }

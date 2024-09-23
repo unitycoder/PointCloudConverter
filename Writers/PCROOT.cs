@@ -585,11 +585,11 @@ namespace PointCloudConverter.Writers
                 // loop and output all points within that node/tile
                 for (int i = 0, len = nodeTempX.Count; i < len; i++)
                 {
-                    // skip points
-                    if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
+                    //// skip points
+                    //if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
 
-                    // keep points
-                    if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
+                    //// keep points
+                    //if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
                     // get original world positions
                     float px = nodeTempX[i];

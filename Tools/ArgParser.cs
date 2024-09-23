@@ -595,16 +595,15 @@ namespace PointCloudConverter
                             case "-offset":
                                 Log.Write("offset = " + param);
 
-                                // check if its true or false
+                                // check if its true or false (for automatic offset)
                                 if (param != "false" && param != "true")
                                 {
-                                    // check if its valid integer x,z
+                                    // check if have x,y,z values, NOTE should be in this format: -offset=10.5,-123,0
                                     if (param.IndexOf(',') > -1)
                                     {
                                         var temp = param.Split(',');
                                         if (temp.Length == 3)
                                         {
-
                                             float xOff, yOff, zOff;
                                             if (float.TryParse(temp[0].Trim(), out xOff) && float.TryParse(temp[1].Trim(), out yOff) && float.TryParse(temp[2].Trim(), out zOff))
                                             {

@@ -81,7 +81,7 @@
                         <CheckBox x:Name="chkUseMaxFileCount" Content="Maximum file count:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="For batch processing, parse only this many files (good for testing with few files first)"/>
                         <TextBox x:Name="txtMaxFileCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="92"/>
                     </StackPanel>
-                    <CheckBox x:Name="chkRandomize" Content="Randomize" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Randomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)"/>
+                    <CheckBox x:Name="chkRandomize" Content="Randomize" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Randomize point indexes, to use Dynamic resolution. Default is true (Always enabled for v3)"/>
                     <CheckBox x:Name="chkOpenOutputFolder" Content="Open output folder" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Open Explorer to Output folder after finished processing"/>
                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                         <CheckBox x:Name="chkReadMetaData" Content="Import metadata" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads LAs/LAZ metadata and saves into file"/>
