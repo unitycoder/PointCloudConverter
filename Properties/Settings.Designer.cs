@@ -586,5 +586,17 @@ namespace PointCloudConverter.Properties {
                 this["lastUsedConfigFolder"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("min")]
+        public string offsetMode {
+            get {
+                return ((string)(this["offsetMode"]));
+            }
+            set {
+                this["offsetMode"] = value;
+            }
+        }
     }
 }

@@ -41,7 +41,10 @@
                         <CheckBox x:Name="chkImportRGB" Content="Read RGB" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads RGB color values" Checked="chkImportRGB_Checked" Unchecked="chkImportRGB_Unchecked"/>
                         <CheckBox x:Name="chkImportIntensity" Content="Read Intensity" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportIntensity_Checked" Unchecked="chkImportIntensity_Unchecked"/>
                     </StackPanel>
-                    <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using bounds min. as offset" Checked="chkAutoOffset_Checked"/>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset, mode:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using bounds min. as offset" Checked="chkAutoOffset_Checked"/>
+                         <TextBox x:Name="txtOffsetMode" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="45" Text="min" MaxLines="1" ToolTip="Legacy=first cloud min bounds, Min=All clouds min bounds" />
+                    </StackPanel>
                     <StackPanel Orientation="Vertical">
                         <CheckBox x:Name="chkManualOffset" Content="Manual Offset" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Add offset to all points (After Auto-Offset and Flip, if those are enabled)" Checked="chkManualOffset_Checked"/>
                         <StackPanel Orientation="Horizontal" Margin="18,0,0,0">

@@ -262,7 +262,6 @@ namespace PointCloudConverter
             // get all file bounds, if in batch mode and RGB+INT+PACK
             // TODO: check what happens if its too high? over 128/256?
             //if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false)
-
             //Log.Write(importSettings.useAutoOffset + " && " + importSettings.importMetadataOnly + " || (" + importSettings.importIntensity + " && " + importSettings.importRGB + " && " + importSettings.packColors + " && " + importSettings.importMetadataOnly + ")");
             //bool istrue1 = (importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false);
             //bool istrue2 = (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false);
@@ -271,7 +270,9 @@ namespace PointCloudConverter
 
             if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
             {
-                for (int i = 0, len = importSettings.maxFiles; i < len; i++)
+                int iterations = importSettings.offsetMode == "min" ? importSettings.maxFiles : 1; // 1 for legacy mode
+
+                for (int i = 0, len = iterations; i < len; i++)
                 {
                     if (cancellationToken.IsCancellationRequested)
                     {
@@ -768,6 +769,7 @@ namespace PointCloudConverter
                 // dont use these bounds, in this case
                 if (importSettings.useAutoOffset == true || (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true))
                 {
+                    // TODO add manual offset here still?
                     // we use global bounds or Y offset to fix negative Y
                 }
                 else if (importSettings.useManualOffset == true)
@@ -847,12 +849,20 @@ namespace PointCloudConverter
                     Float3 point = taskReader.GetXYZ();
                     if (point.hasError == true) break; // TODO display errors
 
+                    // get point color
+                    Color rgb = (default);
+
+                    if (importSettings.importRGB == true)
+                    {
+                        rgb = taskReader.GetRGB();
+                    }
+
+
                     // skip points
                     if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
 
                     // keep points
                     if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
-
 
                     // add offsets (its 0 if not used)
                     point.x -= importSettings.offsetX;
@@ -887,15 +897,9 @@ namespace PointCloudConverter
                         point.x = -point.x;
                     }
 
-                    // get point color
-                    Color rgb = (default);
+
                     Color intensity = (default);
                     double time = 0;
-
-                    if (importSettings.importRGB == true)
-                    {
-                        rgb = taskReader.GetRGB();
-                    }
 
                     // TODO get intensity as separate value, TODO is this float or rgb?
                     if (importSettings.importIntensity == true)
@@ -1038,6 +1042,8 @@ namespace PointCloudConverter
             {
                 args.Add("-offset=" + (bool)chkAutoOffset.IsChecked);
             }
+
+            args.Add("-offsetmode=" + txtOffsetMode.Text.ToLower());
 
             // or manual offset, TODO later should allow using both (first autooffset, then add manual)
             if ((bool)chkManualOffset.IsChecked) args.Add("-offset=" + txtOffsetX.Text + "," + txtOffsetY.Text + "," + txtOffsetZ.Text);
@@ -1460,6 +1466,7 @@ namespace PointCloudConverter
             chkCalculateOverlappingTiles.IsChecked = Properties.Settings.Default.calculateOverlappingTiles;
             txtMaxThreads.Text = Properties.Settings.Default.maxThreads;
             chkUseGrid.IsChecked = Properties.Settings.Default.useGrid;
+            txtOffsetMode.Text = Properties.Settings.Default.offsetMode;
             isInitialiazing = false;
         }
 
@@ -1510,6 +1517,7 @@ namespace PointCloudConverter
             Properties.Settings.Default.calculateOverlappingTiles = (bool)chkCalculateOverlappingTiles.IsChecked;
             Properties.Settings.Default.maxThreads = txtMaxThreads.Text;
             Properties.Settings.Default.useGrid = (bool)chkUseGrid.IsChecked;
+            Properties.Settings.Default.offsetMode = txtOffsetMode.Text;
             Properties.Settings.Default.Save();
         }
 
@@ -1691,13 +1699,13 @@ namespace PointCloudConverter
             dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
 
             // if have previously used config dir use that, if not, use local config dir if exists, if neither, use default..
-            if (string.IsNullOrEmpty(Properties.Settings.Default.lastImportFolder) == false)
+            if (string.IsNullOrEmpty(Properties.Settings.Default.lastUsedConfigFolder) == false)
             {
-                dialog.InitialDirectory = Properties.Settings.Default.lastImportFolder;
+                dialog.InitialDirectory = Properties.Settings.Default.lastUsedConfigFolder;
             }
-            else if (Directory.Exists("configs/"))
+            else if (Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "configs")))
             {
-                dialog.InitialDirectory = "configs/";
+                dialog.InitialDirectory = Path.Combine(Directory.GetCurrentDirectory(), "configs");
             }
 
             if (dialog.ShowDialog() == true)
@@ -1706,7 +1714,7 @@ namespace PointCloudConverter
                 {
                     var contents = File.ReadAllText(dialog.FileName);
                     ImportArgs(contents);
-                    Properties.Settings.Default.lastImportFolder = Path.GetDirectoryName(dialog.FileName);
+                    Properties.Settings.Default.lastUsedConfigFolder = Path.GetDirectoryName(dialog.FileName);
                 }
             }
         }
@@ -1717,20 +1725,20 @@ namespace PointCloudConverter
             dialog.Title = "Save settings file";
             dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
 
-            if (string.IsNullOrEmpty(Properties.Settings.Default.lastImportFolder) == false)
+            if (string.IsNullOrEmpty(Properties.Settings.Default.lastUsedConfigFolder) == false)
             {
-                dialog.InitialDirectory = Properties.Settings.Default.lastImportFolder;
+                dialog.InitialDirectory = Properties.Settings.Default.lastUsedConfigFolder;
             }
-            else if (Directory.Exists("configs/"))
+            else if (Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "configs")))
             {
-                dialog.InitialDirectory = "configs/";
+                dialog.InitialDirectory = Path.Combine(Directory.GetCurrentDirectory(), "configs");
             }
 
             if (dialog.ShowDialog() == true)
             {
                 StartProcess(false);
                 File.WriteAllText(dialog.FileName, txtConsole.Text);
-                Properties.Settings.Default.lastImportFolder = Path.GetDirectoryName(dialog.FileName);
+                Properties.Settings.Default.lastUsedConfigFolder = Path.GetDirectoryName(dialog.FileName);
             }
         }
 

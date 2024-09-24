@@ -203,12 +203,13 @@ namespace PointCloudConverter
         public int seed { get; set; } = -1; // random seed for shuffling
         public int maxThreads { get; set; }
 
-        public bool useJSONLog = false;
-        public bool importMetadata = false;
-        public bool importMetadataOnly = false;
-        public bool averageTimestamp = false; // calculate average timestamp for all points for this tile
-        public bool checkoverlap = false; // check if tile overlaps with other tiles (save into pcroot)
-        public bool useGrid = true; // required for PCROOT format
+        public bool useJSONLog { get; set; } = false;
+        public bool importMetadata { get; set; } = false;
+        public bool importMetadataOnly { get; set; } = false;
+        public bool averageTimestamp { get; set; } = false; // calculate average timestamp for all points for this tile
+        public bool checkoverlap { get; set; } = false; // check if tile overlaps with other tiles (save into pcroot)
+        public bool useGrid { get; set; } = true; // required for PCROOT format
+        public string offsetMode { get; set; } = "min"; // TODO use enum: "min" or "legacy" now (legacy is first bounds min only)
 
         public override string ToString()
         {
@@ -251,6 +252,8 @@ namespace PointCloudConverter
             t += "\n importMetadataOnly=" + importMetadataOnly;
             t += "\n averageTimestamp=" + averageTimestamp;
             t += "\n checkoverlap=" + checkoverlap;
+            t += "\n useGrid=" + useGrid;
+            t += "\n offsetMode=" + offsetMode;
             return t;
         }
 

@@ -296,6 +296,7 @@ namespace PointCloudConverter
             Console.WriteLine("-metadataonly" + argSeparator + "false\t\tRead metadata only (dont process points)\tDefault is false");
             Console.WriteLine("-averagetimestamp" + argSeparator + "false\t\tGet Average timestamp per Tile\tDefault is false");
             Console.WriteLine("-checkoverlap" + argSeparator + "false\t\tCalculate overlapping tiles\tDefault is false");
+            Console.WriteLine("-offsetmode" + argSeparator + "min\t\tGet auto-offset bounds, min=min from all bounds, legacy= first cloud min bounds\tDefault is min");
             Console.WriteLine("");
             Console.WriteLine("? /? -? help -help /help");
             Console.ForegroundColor = ConsoleColor.White;

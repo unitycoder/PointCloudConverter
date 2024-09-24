@@ -143,5 +143,8 @@
     <Setting Name="lastUsedConfigFolder" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="offsetMode" Type="System.String" Scope="User">
+      <Value Profile="(Default)">min</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

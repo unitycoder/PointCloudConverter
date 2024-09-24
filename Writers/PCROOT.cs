@@ -43,7 +43,7 @@ namespace PointCloudConverter.Writers
         //int? taskID;
 
         static int skippedNodesCounter = 0;
-        static int skippedPointsCounter = 0;
+        static int skippedPointsCounter = 0; // FIXME, not used in regular mode, only for lossy filtering, TODO can calculate from importsetting values
         static bool useLossyFiltering = false; //not used, for testing only
 
         public void Dispose()
@@ -507,6 +507,7 @@ namespace PointCloudConverter.Writers
                 }
 
 
+
                 // randomize points in this node
                 if (importSettings.randomize == true)
                 {
@@ -693,7 +694,7 @@ namespace PointCloudConverter.Writers
                         }
 
                         reservedGridCells[reservedTileLocalCellIndex] = true;
-                    }
+                    } // if packed or lossy
 
                     if (useLossyFiltering == true)
                     {
@@ -739,7 +740,6 @@ namespace PointCloudConverter.Writers
                         //}
                         //writerPoints.Write(pz);
 
-
                         FloatToBytes(px, pointBuffer, 0);
 
                         if (importSettings.packColors == true && importSettings.importRGB == true && importSettings.importIntensity == true)
@@ -750,12 +750,9 @@ namespace PointCloudConverter.Writers
                         {
                             FloatToBytes(py, pointBuffer, 4);    // Convert float to bytes manually
                         }
-
                         FloatToBytes(pz, pointBuffer, 8);
-
                         writerPoints.Write(pointBuffer);
-
-                    }
+                    } // wrote packed or unpacked xyz
 
                     if (importSettings.averageTimestamp == true)
                     {
@@ -774,45 +771,44 @@ namespace PointCloudConverter.Writers
                 // not packed
                 if (importSettings.packColors == false && useLossyFiltering == false)
                 {
-                    try
+                    //try
+                    //{
+                    // save separate RGB
+                    using (var writerColors = new BinaryWriter(new BufferedStream(new FileStream(fullpath + ".rgb", FileMode.Create))))
                     {
+                        //bool skipPoints = importSettings.skipPoints;
+                        //bool keepPoints = importSettings.keepPoints;
+                        //int skipEveryN = importSettings.skipEveryN;
+                        //int keepEveryN = importSettings.keepEveryN;
 
-                        // save separate RGB
-                        using (var writerColors = new BinaryWriter(new BufferedStream(new FileStream(fullpath + ".rgb", FileMode.Create))))
+                        int len = nodeTempX.Count;
+                        byte[] colorBuffer = new byte[12]; // Buffer to hold the RGB values as bytes
+
+                        //unsafe void FloatToBytes(float value, byte[] buffer, int offset)
+                        //{
+                        //    fixed (byte* b = &buffer[offset])
+                        //    {
+                        //        *(float*)b = value;
+                        //    }
+                        //}
+
+                        for (int i = 0; i < len; i++)
                         {
-                            bool skipPoints = importSettings.skipPoints;
-                            bool keepPoints = importSettings.keepPoints;
-                            int skipEveryN = importSettings.skipEveryN;
-                            int keepEveryN = importSettings.keepEveryN;
+                            //if ((skipPoints && (i % skipEveryN == 0)) || (keepPoints && (i % keepEveryN != 0))) continue;
 
-                            int len = nodeTempX.Count;
-                            byte[] colorBuffer = new byte[12]; // Buffer to hold the RGB values as bytes
+                            FloatToBytes(nodeTempR[i], colorBuffer, 0);
+                            FloatToBytes(nodeTempG[i], colorBuffer, 4);
+                            FloatToBytes(nodeTempB[i], colorBuffer, 8);
 
-                            //unsafe void FloatToBytes(float value, byte[] buffer, int offset)
-                            //{
-                            //    fixed (byte* b = &buffer[offset])
-                            //    {
-                            //        *(float*)b = value;
-                            //    }
-                            //}
-
-                            for (int i = 0; i < len; i++)
-                            {
-                                if ((skipPoints && (i % skipEveryN == 0)) || (keepPoints && (i % keepEveryN != 0))) continue;
-
-                                FloatToBytes(nodeTempR[i], colorBuffer, 0);
-                                FloatToBytes(nodeTempG[i], colorBuffer, 4);
-                                FloatToBytes(nodeTempB[i], colorBuffer, 8);
-
-                                writerColors.Write(colorBuffer);
-                            }
+                            writerColors.Write(colorBuffer);
                         }
                     }
-                    catch (Exception e)
-                    {
-                        Trace.WriteLine("Error writing RGB file: " + e.Message);
-                        throw;
-                    }
+                    //}
+                    //catch (Exception e)
+                    //{
+                    //    Trace.WriteLine("Error writing RGB file: " + e.Message);
+                    //    throw;
+                    //}
 
                     // TESTING save separate Intensity, if both rgb and intensity are enabled
                     if (importSettings.importRGB == true && importSettings.importIntensity == true)
@@ -824,11 +820,11 @@ namespace PointCloudConverter.Writers
                         // output all points within that node cell
                         for (int i = 0, len = nodeTempX.Count; i < len; i++)
                         {
-                            // skip points
-                            if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
+                            //// skip points
+                            //if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
 
-                            // keep points
-                            if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
+                            //// keep points
+                            //if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
                             // TODO write as byte (not RGB floats)
                             writerIntensity.Write(nodeTempIntensity[i]);

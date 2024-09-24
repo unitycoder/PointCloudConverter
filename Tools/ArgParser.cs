@@ -727,6 +727,19 @@ namespace PointCloudConverter
                                     importSettings.importIntensity = (param == "true");
                                 }
                                 break;
+                            
+                            case "-offsetmode":
+                                Log.Write("offsetmode = " + param);
+
+                                if (param != "legacy" && param != "min")
+                                {
+                                    importSettings.errors.Add("Invalid offsetmode parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.offsetMode = param;
+                                }
+                                break;
 
                             // TODO load whole commandline args list from text file
                             case "-config":
