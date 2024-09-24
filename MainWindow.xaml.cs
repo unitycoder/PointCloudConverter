@@ -23,12 +23,13 @@ using System.Collections.Concurrent;
 using PointCloudConverter.Writers;
 using System.Reflection;
 using System.Globalization;
+using System.Windows.Media;
 
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "23.09.2024";
+        static readonly string version = "24.09.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -310,7 +311,7 @@ namespace PointCloudConverter
                     if (boundsListTemp[iii].z < lowestZ) lowestZ = (float)boundsListTemp[iii].z;
                 }
 
-                //Console.WriteLine("Lowest bounds: " + lowestX + " " + lowestY + " " + lowestZ);
+                //Log.Write("Lowest bounds: " + lowestX + " " + lowestY + " " + lowestZ);
                 // TODO could take center for XZ, and lowest for Y?
                 importSettings.offsetX = lowestX;
                 importSettings.offsetY = lowestY;
@@ -382,11 +383,18 @@ namespace PointCloudConverter
                 }
                 finally
                 {
-                    //// Ensure the semaphore is released, if needed
-                    //if (semaphore.CurrentCount == 0) // Make sure we don't release more times than we acquire
-                    //{
-                    //    semaphore.Release();
-                    //}
+                    // Ensure the semaphore is released safely
+                    if (semaphore.CurrentCount == 0) // Make sure we don't release more times than we acquire
+                    {
+                        try
+                        {
+                            semaphore.Release();
+                        }
+                        catch (SemaphoreFullException ex)
+                        {
+                            //Log.Write($"Semaphore was already fully released. Exception: {ex.Message}");
+                        }
+                    }
                 }
                 //int? taskId = Task.CurrentId; // Get the current task ID
 
@@ -768,12 +776,17 @@ namespace PointCloudConverter
                     importSettings.offsetY = importSettings.manualOffsetY;
                     importSettings.offsetZ = importSettings.manualOffsetZ;
                 }
-                else // neither
+                else // no autooffset either
                 {
-                    importSettings.offsetX = 0;
-                    importSettings.offsetY = 0;
-                    importSettings.offsetZ = 0;
+                    if (importSettings.useAutoOffset == false)
+                    {
+                        importSettings.offsetX = 0;
+                        importSettings.offsetY = 0;
+                        importSettings.offsetZ = 0;
+                    }
                 }
+
+                //Log.Write("************** Offsets: " + importSettings.offsetX + " " + importSettings.offsetY + " " + importSettings.offsetZ);
 
                 var taskWriter = importSettings.GetOrCreateWriter(taskId);
 
@@ -1020,7 +1033,8 @@ namespace PointCloudConverter
             args.Add("-output=" + txtOutput.Text);
 
             // check if using autooffset
-            if ((bool)chkAutoOffset.IsChecked && !(bool)chkManualOffset.IsChecked)
+            //if ((bool)chkAutoOffset.IsChecked && !(bool)chkManualOffset.IsChecked)
+            if (!(bool)chkManualOffset.IsChecked)
             {
                 args.Add("-offset=" + (bool)chkAutoOffset.IsChecked);
             }
@@ -1122,6 +1136,9 @@ namespace PointCloudConverter
             string[] args = ArgParser.SplitArgs(rawArgs);
             bool isFirstArgExe = args[0].EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
             int startIndex = isFirstArgExe ? 1 : 0;
+
+            // reset all checkboxes to false
+            UncheckAllCheckboxes(this);
 
             for (int i = startIndex; i < args.Length; i++)
             {
@@ -1245,6 +1262,27 @@ namespace PointCloudConverter
                 }
             } // for all args
         } // ImportArgs()
+
+        private void UncheckAllCheckboxes(DependencyObject parent)
+        {
+            // Loop through all the child elements
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+
+                // If the child is a CheckBox, set it to unchecked
+                if (child is CheckBox checkBox)
+                {
+                    checkBox.IsChecked = false;
+                }
+
+                // If the child is a container, recursively call the function to check its children
+                if (VisualTreeHelper.GetChildrenCount(child) > 0)
+                {
+                    UncheckAllCheckboxes(child);
+                }
+            }
+        }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {

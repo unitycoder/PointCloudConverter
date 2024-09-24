@@ -867,7 +867,12 @@ namespace PointCloudConverter
 
             if (importSettings.batch == true && importSettings.exportFormat == ExportFormat.UCPC && Path.GetExtension(importSettings.outputFile).ToLower() == ".ucpc")
             {
-                importSettings.errors.Add("With UCPC batching, do not set output filename - set ONLY output folder (each ucpc file will be saved separately)");
+                importSettings.errors.Add("With batch processing whole input folder, do not set output filename - Set output folder (each .UCPP file will be saved separately)");
+            }
+
+            if (importSettings.batch == true && importSettings.exportFormat == ExportFormat.External && Path.GetExtension(importSettings.outputFile).ToLower() == ".glb")
+            {
+                importSettings.errors.Add("With batch processing whole input folder, do not set output filename - Set output folder (each .GLB file will be saved separately)");
             }
 
             if (importSettings.skipPoints == true && importSettings.keepPoints == true)
@@ -885,7 +890,7 @@ namespace PointCloudConverter
             if (importSettings.exportFormat == ExportFormat.PCROOT && importSettings.useGrid == false)
             {
                 //importSettings.errors.Add("V3 pcroot export format requires -usegrid=true to use grid");
-                Log.Write("V3 pcroot export format requires -usegrid=true to use grid, enabling it..");
+                Log.Write("V3 pcroot export format requires -usegrid=true to use grid, enabling it now.");
                 importSettings.useGrid = true;
             }
 

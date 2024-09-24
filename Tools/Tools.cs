@@ -289,7 +289,7 @@ namespace PointCloudConverter
             // TODO Console.WriteLine("-decimate" + separator + "50\t\t\tRemoves 50% of the points (by skipping every x point)\tDefault is off");
             //Console.WriteLine("-version" + argSeparator + "2\t\t2=v2 .ucpc, 3=v3 .pcroot tiles\tDefault is 2");
             Console.WriteLine("-randomize" + argSeparator + "true\t\tRandomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)");
-            Console.WriteLine("-seed" + argSeparator + "42\t\tSet random seed\tDefault is random value");
+            Console.WriteLine("-seed" + argSeparator + "42\t\tSet random seed\tDefault is some random value");
             Console.WriteLine("-json" + argSeparator + "false\t\tOutput console log in JSON format\tDefault is false");
             Console.WriteLine("-customintensityrange" + argSeparator + "false\t\tCustom intensity range (0-65535)\tDefault is false");
             Console.WriteLine("-metadata" + argSeparator + "false\t\tRead metadata from header, outputs into json file\tDefault is false");

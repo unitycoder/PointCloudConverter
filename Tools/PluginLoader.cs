@@ -30,7 +30,7 @@ namespace PointCloudConverter.Plugins
             var pluginAssembly = Assembly.LoadFrom(pluginPath);
 
             // Find the specific type 'PointCloudConverter.Writers.GLTF'
-            var writerType = pluginAssembly.GetType("PointCloudConverter.Writers.GLTF");
+            var writerType = pluginAssembly.GetType("PointCloudConverter.Writers.GLB");
 
             if (writerType == null)
                 throw new InvalidOperationException($"No valid implementation of IWriter found in {pluginPath}");

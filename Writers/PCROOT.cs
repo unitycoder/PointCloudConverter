@@ -230,9 +230,10 @@ namespace PointCloudConverter.Writers
             // add to tileroot list
             for (int i = 0, len = nodeBounds.Count; i < len; i++)
             {
-                var tilerow = nodeBounds[i].fileName + sep + nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep + nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
-                // force dot as decimal separator
+                var tilerow = nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep + nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
+                // force dot as decimal separator for values
                 tilerow = tilerow.Replace(",", ".");
+                tilerow = nodeBounds[i].fileName + sep + tilerow;
                 tilerootdata.Add(tilerow);
                 totalPointCount += nodeBounds[i].totalPoints;
             }
