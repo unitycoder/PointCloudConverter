@@ -291,11 +291,13 @@ namespace PointCloudConverter
             Console.WriteLine("-randomize" + argSeparator + "true\t\tRandomize point indexes, to use Dynamic resolution\tDefault is true (Always enabled for v3)");
             Console.WriteLine("-seed" + argSeparator + "42\t\tSet random seed\tDefault is some random value");
             Console.WriteLine("-json" + argSeparator + "false\t\tOutput console log in JSON format\tDefault is false");
-            Console.WriteLine("-customintensityrange" + argSeparator + "false\t\tCustom intensity range (0-65535)\tDefault is false");
+            Console.WriteLine("-customintensityrange" + argSeparator + "false\t\tUse custom intensity range (0-65535) instead of 0-255\tDefault is false");
             Console.WriteLine("-metadata" + argSeparator + "false\t\tRead metadata from header, outputs into json file\tDefault is false");
             Console.WriteLine("-metadataonly" + argSeparator + "false\t\tRead metadata only (dont process points)\tDefault is false");
             Console.WriteLine("-averagetimestamp" + argSeparator + "false\t\tGet Average timestamp per Tile\tDefault is false");
             Console.WriteLine("-checkoverlap" + argSeparator + "false\t\tCalculate overlapping tiles\tDefault is false");
+            Console.WriteLine("-config" + argSeparator + "filename\t\tLoad arguments from text file (easier to handle separate settings for different projects)");
+            Console.WriteLine("-usegrid" + argSeparator + "true\t\tSplits point cloud to grid (multiple files). Required for V3 format (automatically enabled if its off). \tDefault is true for v3");
             Console.WriteLine("-offsetmode" + argSeparator + "min\t\tGet auto-offset bounds, min=min from all bounds, legacy= first cloud min bounds\tDefault is min");
             Console.WriteLine("");
             Console.WriteLine("? /? -? help -help /help");

@@ -29,7 +29,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "24.09.2024";
+        static readonly string version = "21.10.2024";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -1052,7 +1052,7 @@ namespace PointCloudConverter
             args.Add("-intensity=" + (bool)chkImportIntensity.IsChecked);
 
             bool isPCROOT = (cmbExportFormat.SelectedItem.ToString() == "PCROOT");
-            bool isGLTF = (cmbExportFormat.SelectedItem.ToString() == "GLTF");
+            bool isGLTF = (cmbExportFormat.SelectedItem.ToString().ToUpper() == "GLTF" || cmbExportFormat.SelectedItem.ToString().ToUpper() == "GLB");
             // cmbExportFormat.SelectedItem?.ToString()?.ToUpper()?.Contains("PCROOT")
 
             if (isPCROOT == true) args.Add("-gridsize=" + txtGridSize.Text);
@@ -1742,6 +1742,15 @@ namespace PointCloudConverter
             }
         }
 
-
+        private void btnPlugins_Click(object sender, RoutedEventArgs e)
+        {
+            // open plugins folder in explorer at location of this exe
+            var pluginsFolder = Path.Combine(Directory.GetCurrentDirectory(), "plugins");
+            if (Directory.Exists(pluginsFolder) == false)
+            {
+                Directory.CreateDirectory(pluginsFolder);
+            }
+            Process.Start(new ProcessStartInfo("explorer.exe", pluginsFolder));
+        }
     } // class
 } // namespace
