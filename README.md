@@ -19,7 +19,7 @@ This is pointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp;
 - PCROOT (V3) for https://github.com/unitycoder/UnityPointCloudViewer
 
 ### Requirements
-- Windows 10
+- Windows 10 or later
 - Visual Studio 2017 or later
 - To view converted Point Clouds inside Unity, this viewer is required: from Unity Asset Store: https://github.com/unitycoder/UnityPointCloudViewer
 
