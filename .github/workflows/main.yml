@@ -5,7 +5,8 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master ]
+    branches:
+      - master
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -50,7 +51,7 @@ jobs:
       - name: Build Artifact
         shell: cmd
         run: call .\ArtifactBuild.cmd      
-        
+       
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -61,8 +62,14 @@ jobs:
           release_name: Release ${{github.run_number}}
           body: |
             Automated Release by GitHub Action CI
+            
+            ${{ join(github.event.commits.*.message, '\n') }}
           draft: false
-          prerelease: false      
+          prerelease: false     
+        
+      - name: List directory contents for debugging
+        run: Get-ChildItem -Recurse
+        shell: pwsh
         
       - name: Upload Release Asset (x64)
         id: upload-release-asset-x64

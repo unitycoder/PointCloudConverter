@@ -17,8 +17,8 @@ namespace PointCloudConverter.Writers
 
         BufferedStream bsPoints = null;
         BinaryWriter writerPoints = null;
-
         ImportSettings importSettings;
+
         static List<PointCloudTile> nodeBounds = new List<PointCloudTile>(); // for all tiles
         static float cloudMinX = float.PositiveInfinity;
         static float cloudMinY = float.PositiveInfinity;
@@ -27,34 +27,35 @@ namespace PointCloudConverter.Writers
         static float cloudMaxY = float.NegativeInfinity;
         static float cloudMaxZ = float.NegativeInfinity;
 
+        StringBuilder keyBuilder = new StringBuilder(32);
         Dictionary<string, (int, int, int)> keyCache = new Dictionary<string, (int, int, int)>();
 
         // our nodes (=tiles, =grid cells), string is tileID and float are X,Y,Z,R,G,B values
         Dictionary<string, List<float>> nodeX = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeY = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeZ = new Dictionary<string, List<float>>();
-
         Dictionary<string, List<float>> nodeR = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
-
         Dictionary<string, List<float>> nodeIntensity = new Dictionary<string, List<float>>();
         Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
 
+        //int? taskID;
 
-        int? taskID;
+        static int skippedNodesCounter = 0;
+        static int skippedPointsCounter = 0; // FIXME, not used in regular mode, only for lossy filtering, TODO can calculate from importsetting values
+        static bool useLossyFiltering = false; //not used, for testing only
 
         public void Dispose()
         {
-            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            //Log.Write("Memory used: " + GC.GetTotalMemory(false));
             Dispose(true);
             GC.Collect();
             //            GC.SuppressFinalize(this);
             GC.WaitForPendingFinalizers();
             GC.Collect();
-
             //GC.Collect();
-            //Log.WriteLine("Memory used: " + GC.GetTotalMemory(false));
+            //Log.Write("Memory used: " + GC.GetTotalMemory(false));
         }
 
 
@@ -111,23 +112,25 @@ namespace PointCloudConverter.Writers
 
         ~PCROOT()
         {
-            //Log.WriteLine("pcroot writer finalized for task: " + taskID);
+            //Log.Write("pcroot writer finalized for task: " + taskID);
             Dispose(false);
         }
 
         // add constructor
         public PCROOT(int? _taskID)
         {
-            //Log.WriteLine("*** PCROOT writer created for task: " + _taskID);
-            taskID = _taskID;
+            //Log.Write("*** PCROOT writer created for task: " + _taskID);
+            //taskID = _taskID;
         }
 
-        public bool InitWriter<TSettings>(TSettings _importSettings, int pointCount)
+        static ILogger Log;
+
+        public bool InitWriter(dynamic _importSettings, int pointCount, ILogger logger)
         {
-            //Log.WriteLine("--------------------- initwriter for taskID: " + taskID);
-
-
+            //Log.Write("--------------------- initwriter for taskID: " + taskID);
             var res = true;
+
+            Log = logger;
 
             // clear old nodes
             keyCache.Clear();
@@ -170,7 +173,7 @@ namespace PointCloudConverter.Writers
             // if (isLastTask == true)
             //if (fileIndex == (importSettings.maxFiles - 1))
             // {
-            //Log.WriteLine(" *****************************  save this only after last file from all threads ***************************** ");
+            //Log.Write(" *****************************  save this only after last file from all threads ***************************** ");
             // check if any tile overlaps with other tiles
             if (importSettings.checkoverlap == true)
             {
@@ -222,11 +225,15 @@ namespace PointCloudConverter.Writers
             var tilerootdata = new List<string>();
             var outputFileRoot = Path.Combine(baseFolder, fileOnly) + ".pcroot";
 
-            // add to tileroot list
             long totalPointCount = 0;
+
+            // add to tileroot list
             for (int i = 0, len = nodeBounds.Count; i < len; i++)
             {
-                var tilerow = nodeBounds[i].fileName + sep + nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep + nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
+                var tilerow = nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep + nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
+                // force dot as decimal separator for values
+                tilerow = tilerow.Replace(",", ".");
+                tilerow = nodeBounds[i].fileName + sep + tilerow;
                 tilerootdata.Add(tilerow);
                 totalPointCount += nodeBounds[i].totalPoints;
             }
@@ -239,8 +246,8 @@ namespace PointCloudConverter.Writers
             "\"skippedPoints\": " + skippedPointsCounter + "" +
             "}";
 
-            Log.WriteLine(jsonString, LogEvent.End);
-            Log.WriteLine("\nSaving rootfile: " + outputFileRoot + "\n*Total points= " + Tools.HumanReadableCount(totalPointCount));
+            Log.Write(jsonString, LogEvent.End);
+            Log.Write("\nSaving rootfile: " + outputFileRoot + "\n*Total points= " + Tools.HumanReadableCount(totalPointCount));
 
             int versionID = importSettings.packColors ? 2 : 1; // (1 = original, 2 = packed v3 format)
             if (importSettings.packColors == true) versionID = 2;
@@ -262,6 +269,9 @@ namespace PointCloudConverter.Writers
             string globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep + cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep + cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
             //                  autoOffsetX,             globalOffsetY,           globalOffsetZ,           packMagic 
             globalData += sep + importSettings.offsetX + sep + importSettings.offsetY + sep + importSettings.offsetZ + sep + importSettings.packMagicValue;
+            // force dot as decimal separator
+            globalData = globalData.Replace(",", ".");
+
             if (addComments)
             {
                 tilerootdata.Insert(2, globalData);
@@ -277,28 +287,28 @@ namespace PointCloudConverter.Writers
             File.WriteAllLines(outputFileRoot, tilerootdata.ToArray());
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Log.WriteLine("Done saving v3 : " + outputFileRoot);
+            Log.Write("Done saving v3 : " + outputFileRoot);
             Console.ForegroundColor = ConsoleColor.White;
             if (skippedNodesCounter > 0)
             {
-                Log.WriteLine("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
+                Log.Write("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
             }
 
             if (useLossyFiltering == true && skippedPointsCounter > 0)
             {
-                Log.WriteLine("*Skipped " + skippedPointsCounter + " points due to bytepacked grid filtering");
+                Log.Write("*Skipped " + skippedPointsCounter + " points due to bytepacked grid filtering");
             }
 
             if ((tilerootdata.Count - 1) <= 0)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 // TODO add json error log
-                Log.WriteLine("Error> No tiles found! Try enable -scale (to make your cloud to smaller) Or make -gridsize bigger, or set -limit point count to smaller value");
+                Log.Write("Error> No tiles found! Try enable -scale (to make your cloud to smaller) Or make -gridsize bigger, or set -limit point count to smaller value");
                 Console.ForegroundColor = ConsoleColor.White;
             }
 
             // cleanup after last file
-            //nodeBounds.Clear();
+            nodeBounds.Clear();
 
             cloudMinX = float.PositiveInfinity;
             cloudMinY = float.PositiveInfinity;
@@ -319,6 +329,7 @@ namespace PointCloudConverter.Writers
             //nodeIntensity.Clear();
             //nodeTime.Clear();
 
+
             // dispose
             bsPoints?.Dispose();
             writerPoints?.Dispose();
@@ -327,7 +338,7 @@ namespace PointCloudConverter.Writers
 
         void IWriter.Cleanup(int fileIndex)
         {
-            //Log.WriteLine("Cleanup: this doesnt do anything yet..");
+            //Log.Write("Cleanup: this doesnt do anything yet..");
             //Dispose();
             bsPoints?.Dispose();
             writerPoints?.Dispose();
@@ -343,8 +354,6 @@ namespace PointCloudConverter.Writers
             ClearDictionary(nodeTime);
 
             keyCache.Clear();
-
-
         }
 
         void IWriter.Randomize()
@@ -352,17 +361,9 @@ namespace PointCloudConverter.Writers
 
         }
 
-        StringBuilder keyBuilder = new StringBuilder(32);
-
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i, bool hasTime, double time)
         {
             // get global all clouds bounds
-            //if (x < cloudMinX) cloudMinX = x;
-            //if (x > cloudMaxX) cloudMaxX = x;
-            //if (y < cloudMinY) cloudMinY = y;
-            //if (y > cloudMaxY) cloudMaxY = y;
-            //if (z < cloudMinZ) cloudMinZ = z;
-            //if (z > cloudMaxZ) cloudMaxZ = z;
             cloudMinX = Math.Min(cloudMinX, x);
             cloudMaxX = Math.Max(cloudMaxX, x);
             cloudMinY = Math.Min(cloudMinY, y);
@@ -421,7 +422,7 @@ namespace PointCloudConverter.Writers
                 if (hasIntensity == true) nodeIntensity[key] = new List<float> { i };
                 if (hasTime == true) nodeTime[key] = new List<double> { time };
             }
-        }
+        } // addpoint()
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void FloatToBytes(float value, byte[] buffer, int offset)
@@ -441,9 +442,6 @@ namespace PointCloudConverter.Writers
             }
         }
 
-        static int skippedNodesCounter = 0;
-        static int skippedPointsCounter = 0;
-        static bool useLossyFiltering = false; //not used, for testing only
 
         // returns list of saved files
         void IWriter.Save(int fileIndex)
@@ -458,7 +456,7 @@ namespace PointCloudConverter.Writers
             // TODO no need colors for json.. could move this inside custom logger, so that it doesnt do anything, if json
             Console.ForegroundColor = ConsoleColor.Blue;
 
-            Log.WriteLine("Saving " + nodeX.Count + " tiles into: " + baseFolder);
+            Log.Write("Saving " + nodeX.Count + " tiles into: " + baseFolder);
 
             Console.ForegroundColor = ConsoleColor.White;
 
@@ -507,6 +505,7 @@ namespace PointCloudConverter.Writers
                 {
                     nodeTempTime = nodeTime[key];
                 }
+
 
 
                 // randomize points in this node
@@ -558,7 +557,7 @@ namespace PointCloudConverter.Writers
                 }
 
                 // save this tile
-                //Log.WriteLine("*** Saving tile: " + fullpathFileOnly + " (" + nodeTempX.Count + " points)");
+                //Log.Write("*** Saving tile: " + fullpathFileOnly + " (" + nodeTempX.Count + " points)");
                 bsPoints = new BufferedStream(new FileStream(fullpath, FileMode.Create));
                 writerPoints = new BinaryWriter(bsPoints);
 
@@ -588,11 +587,11 @@ namespace PointCloudConverter.Writers
                 // loop and output all points within that node/tile
                 for (int i = 0, len = nodeTempX.Count; i < len; i++)
                 {
-                    // skip points
-                    if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
+                    //// skip points
+                    //if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
 
-                    // keep points
-                    if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
+                    //// keep points
+                    //if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
                     // get original world positions
                     float px = nodeTempX[i];
@@ -685,7 +684,7 @@ namespace PointCloudConverter.Writers
 
                         var reservedTileLocalCellIndex = packx + cellsInTile * (packy + cellsInTile * packz);
 
-                        //if (i < 10) Log.WriteLine("cellX:" + cellX + " cellY:" + cellY + " cellZ:" + cellZ + "  px: " + px + " py: " + py + " pz: " + pz + " localIndex: " + reservedTileLocalCellIndex + " packx: " + packx + " packy: " + packy + " packz: " + packz);
+                        //if (i < 10) Log.Write("cellX:" + cellX + " cellY:" + cellY + " cellZ:" + cellZ + "  px: " + px + " py: " + py + " pz: " + pz + " localIndex: " + reservedTileLocalCellIndex + " packx: " + packx + " packy: " + packy + " packz: " + packz);
 
                         // TODO could decide which point is more important or stronger color?
                         if (reservedGridCells[reservedTileLocalCellIndex] == true)
@@ -695,7 +694,7 @@ namespace PointCloudConverter.Writers
                         }
 
                         reservedGridCells[reservedTileLocalCellIndex] = true;
-                    }
+                    } // if packed or lossy
 
                     if (useLossyFiltering == true)
                     {
@@ -741,7 +740,6 @@ namespace PointCloudConverter.Writers
                         //}
                         //writerPoints.Write(pz);
 
-
                         FloatToBytes(px, pointBuffer, 0);
 
                         if (importSettings.packColors == true && importSettings.importRGB == true && importSettings.importIntensity == true)
@@ -752,12 +750,9 @@ namespace PointCloudConverter.Writers
                         {
                             FloatToBytes(py, pointBuffer, 4);    // Convert float to bytes manually
                         }
-
                         FloatToBytes(pz, pointBuffer, 8);
-
                         writerPoints.Write(pointBuffer);
-
-                    }
+                    } // wrote packed or unpacked xyz
 
                     if (importSettings.averageTimestamp == true)
                     {
@@ -776,45 +771,44 @@ namespace PointCloudConverter.Writers
                 // not packed
                 if (importSettings.packColors == false && useLossyFiltering == false)
                 {
-                    try
+                    //try
+                    //{
+                    // save separate RGB
+                    using (var writerColors = new BinaryWriter(new BufferedStream(new FileStream(fullpath + ".rgb", FileMode.Create))))
                     {
+                        //bool skipPoints = importSettings.skipPoints;
+                        //bool keepPoints = importSettings.keepPoints;
+                        //int skipEveryN = importSettings.skipEveryN;
+                        //int keepEveryN = importSettings.keepEveryN;
 
-                        // save separate RGB
-                        using (var writerColors = new BinaryWriter(new BufferedStream(new FileStream(fullpath + ".rgb", FileMode.Create))))
+                        int len = nodeTempX.Count;
+                        byte[] colorBuffer = new byte[12]; // Buffer to hold the RGB values as bytes
+
+                        //unsafe void FloatToBytes(float value, byte[] buffer, int offset)
+                        //{
+                        //    fixed (byte* b = &buffer[offset])
+                        //    {
+                        //        *(float*)b = value;
+                        //    }
+                        //}
+
+                        for (int i = 0; i < len; i++)
                         {
-                            bool skipPoints = importSettings.skipPoints;
-                            bool keepPoints = importSettings.keepPoints;
-                            int skipEveryN = importSettings.skipEveryN;
-                            int keepEveryN = importSettings.keepEveryN;
+                            //if ((skipPoints && (i % skipEveryN == 0)) || (keepPoints && (i % keepEveryN != 0))) continue;
 
-                            int len = nodeTempX.Count;
-                            byte[] colorBuffer = new byte[12]; // Buffer to hold the RGB values as bytes
+                            FloatToBytes(nodeTempR[i], colorBuffer, 0);
+                            FloatToBytes(nodeTempG[i], colorBuffer, 4);
+                            FloatToBytes(nodeTempB[i], colorBuffer, 8);
 
-                            //unsafe void FloatToBytes(float value, byte[] buffer, int offset)
-                            //{
-                            //    fixed (byte* b = &buffer[offset])
-                            //    {
-                            //        *(float*)b = value;
-                            //    }
-                            //}
-
-                            for (int i = 0; i < len; i++)
-                            {
-                                if ((skipPoints && (i % skipEveryN == 0)) || (keepPoints && (i % keepEveryN != 0))) continue;
-
-                                FloatToBytes(nodeTempR[i], colorBuffer, 0);
-                                FloatToBytes(nodeTempG[i], colorBuffer, 4);
-                                FloatToBytes(nodeTempB[i], colorBuffer, 8);
-
-                                writerColors.Write(colorBuffer);
-                            }
+                            writerColors.Write(colorBuffer);
                         }
                     }
-                    catch (Exception e)
-                    {
-                        Trace.WriteLine("Error writing RGB file: " + e.Message);
-                        throw;
-                    }
+                    //}
+                    //catch (Exception e)
+                    //{
+                    //    Trace.WriteLine("Error writing RGB file: " + e.Message);
+                    //    throw;
+                    //}
 
                     // TESTING save separate Intensity, if both rgb and intensity are enabled
                     if (importSettings.importRGB == true && importSettings.importIntensity == true)
@@ -826,11 +820,11 @@ namespace PointCloudConverter.Writers
                         // output all points within that node cell
                         for (int i = 0, len = nodeTempX.Count; i < len; i++)
                         {
-                            // skip points
-                            if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
+                            //// skip points
+                            //if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
 
-                            // keep points
-                            if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
+                            //// keep points
+                            //if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
                             // TODO write as byte (not RGB floats)
                             writerIntensity.Write(nodeTempIntensity[i]);
@@ -883,7 +877,7 @@ namespace PointCloudConverter.Writers
                                 "\"tiles\": " + nodeX.Count + "," +
                                 "\"folder\": " + JsonSerializer.Serialize(baseFolder) + "}" +
                                 "\"filenames\": " + JsonSerializer.Serialize(outputFiles);
-            Log.WriteLine(jsonString, LogEvent.End);
+            Log.Write(jsonString, LogEvent.End);
 
         } // Save()
 

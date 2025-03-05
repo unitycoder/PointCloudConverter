@@ -562,5 +562,41 @@ namespace PointCloudConverter.Properties {
                 this["maxThreads"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool useGrid {
+            get {
+                return ((bool)(this["useGrid"]));
+            }
+            set {
+                this["useGrid"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string lastUsedConfigFolder {
+            get {
+                return ((string)(this["lastUsedConfigFolder"]));
+            }
+            set {
+                this["lastUsedConfigFolder"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("min")]
+        public string offsetMode {
+            get {
+                return ((string)(this["offsetMode"]));
+            }
+            set {
+                this["offsetMode"] = value;
+            }
+        }
     }
 }

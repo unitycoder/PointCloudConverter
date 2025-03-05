@@ -137,5 +137,14 @@
     <Setting Name="maxThreads" Type="System.String" Scope="User">
       <Value Profile="(Default)">4</Value>
     </Setting>
+    <Setting Name="useGrid" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="lastUsedConfigFolder" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="offsetMode" Type="System.String" Scope="User">
+      <Value Profile="(Default)">min</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
