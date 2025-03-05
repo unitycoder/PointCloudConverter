@@ -1,5 +1,5 @@
 # PointCloudConverter
-This is pointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp; Tools (Unity plugin)](https://assetstore.unity.com/packages/tools/utilities/point-cloud-viewer-and-tools-16019?aid=1101lGti)
+This is pointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp; Tools 3 (Unity plugin)](https://assetstore.unity.com/packages/tools/utilities/point-cloud-viewer-and-tools-3-310385?aid=1101lGti)
 
 ### Documentation
 - Check [Wiki](https://github.com/unitycoder/PointCloudConverter/wiki)
