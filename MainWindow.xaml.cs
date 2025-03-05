@@ -29,7 +29,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "21.10.2024";
+        static readonly string version = "05.03.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
