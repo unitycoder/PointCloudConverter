@@ -143,8 +143,8 @@ namespace LASzip.Net
 				if (num_bytes_NIR != 0)
 				{
 					if (!instream.getBytes(bytes, num_bytes, num_bytes_NIR)) throw new EndOfStreamException();
-					instream_NIR = new MemoryStream(bytes, num_bytes, num_bytes_RGB);
-					dec_NIR.init(instream_NIR);
+                    instream_NIR = new MemoryStream(bytes, num_bytes, num_bytes_NIR);
+                    dec_NIR.init(instream_NIR);
 					changed_NIR = true;
 				}
 				else

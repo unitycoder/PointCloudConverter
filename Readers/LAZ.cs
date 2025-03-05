@@ -310,8 +310,6 @@ namespace PointCloudConverter.Readers
 
             // get point reference
             var p = lazReader.point;
-            // TODO get timestamp
-            //var pointTime = lazReader.point.gps_time;
 
             if (p.rgb[0] > 255 || p.rgb[1] > 255 || p.rgb[2] > 255)
             {
