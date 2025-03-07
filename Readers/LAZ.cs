@@ -112,7 +112,7 @@ namespace PointCloudConverter.Readers
                     vlr.Description = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].description);
                     vlr.Description = vlr.Description.Replace("\0", string.Empty);
 
-                    //Get WKT (Well Known Text String)
+                    // Get WKT (Well Known Text String)
                     if (vlr.RecordID == 2112)
                     {
                         string wkt = Encoding.ASCII.GetString(lazReader.header.vlrs[i].data);
@@ -152,7 +152,6 @@ namespace PointCloudConverter.Readers
                                 h.ProjectionID = newEntry.Value_Offset;
                                 h.Projection = newEntry.Value_OffsetString;
                             }
-
                             gk.KeyEntries.Add(newEntry);
 
                             //gk.KeyEntries.Add(new sKeyEntry
@@ -178,8 +177,39 @@ namespace PointCloudConverter.Readers
                     h.VariableLengthRecords.Add(vlr);
                 }
             }
+
+            // additional data for LAS 1.3/1.4
+
+            // LAS 1.3 and higher: waveform data packet record pointer.
+            if (h.VersionMajor > 1 || (h.VersionMajor == 1 && h.VersionMinor >= 3))
+            {
+                h.StartOfWaveformDataPacketRecord = lazReader.header.start_of_waveform_data_packet_record;
+            }
+
+            // LAS 1.4 and higher: extended VLRs and extended point record counts.
+            if (h.VersionMajor > 1 || (h.VersionMajor == 1 && h.VersionMinor >= 4))
+            {
+                h.StartOfFirstExtendedVariableLengthRecord = lazReader.header.start_of_first_extended_variable_length_record;
+                h.NumberOfExtendedVariableLengthRecords = lazReader.header.number_of_extended_variable_length_records;
+                h.ExtendedNumberOfPointRecords = lazReader.header.extended_number_of_point_records;
+                h.ExtendedNumberOfPointsByReturn = lazReader.header.extended_number_of_points_by_return;
+            }
+
+            // optional user data in header
+            if (lazReader.header.user_data_in_header_size > 0)
+            {
+                h.UserDataInHeader = lazReader.header.user_data_in_header;
+            }
+
+            // optional user data after header
+            if (lazReader.header.user_data_after_header_size > 0)
+            {
+                h.UserDataAfterHeader = lazReader.header.user_data_after_header;
+            }
+
             return h;
         }
+
 
         public GeoKeys ParseGeoKeysFromByteArray(byte[] byteArray)
         {

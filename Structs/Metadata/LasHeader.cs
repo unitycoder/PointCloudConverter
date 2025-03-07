@@ -44,5 +44,12 @@ namespace PointCloudConverter.Structs
         public double MaxZ { get; set; }
         public double MinZ { get; set; }
         public List<LasVariableLengthRecord> VariableLengthRecords { get; set; }
+        public ulong StartOfWaveformDataPacketRecord { get; internal set; }
+        public ulong StartOfFirstExtendedVariableLengthRecord { get; internal set; }
+        public uint NumberOfExtendedVariableLengthRecords { get; internal set; }
+        public ulong ExtendedNumberOfPointRecords { get; internal set; }
+        public ulong[] ExtendedNumberOfPointsByReturn { get; internal set; }
+        public byte[] UserDataInHeader { get; internal set; }
+        public byte[] UserDataAfterHeader { get; internal set; }
     }
 }
