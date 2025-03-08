@@ -41,6 +41,7 @@
                     <StackPanel Orientation="Horizontal">
                         <CheckBox x:Name="chkImportRGB" Content="Read RGB" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads RGB color values" Checked="chkImportRGB_Checked" Unchecked="chkImportRGB_Unchecked"/>
                         <CheckBox x:Name="chkImportIntensity" Content="Read Intensity" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportIntensity_Checked" Unchecked="chkImportIntensity_Unchecked"/>
+                        <CheckBox x:Name="chkImportClassification" Content="Read Classification" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportClassification_Checked" Unchecked="chkImportClassification_Unchecked"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset, mode:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using bounds min. as offset" Checked="chkAutoOffset_Checked"/>

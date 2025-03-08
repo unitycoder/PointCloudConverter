@@ -38,6 +38,7 @@ namespace PointCloudConverter.Writers
         Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeIntensity = new Dictionary<string, List<float>>();
+        Dictionary<string, List<float>> nodeClassification = new Dictionary<string, List<float>>();
         Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
 
         //int? taskID;
@@ -101,6 +102,7 @@ namespace PointCloudConverter.Writers
                 ClearDictionary(nodeG);
                 ClearDictionary(nodeB);
                 ClearDictionary(nodeIntensity);
+                ClearDictionary(nodeClassification);
                 ClearDictionary(nodeTime);
 
                 keyCache.Clear();
@@ -141,6 +143,7 @@ namespace PointCloudConverter.Writers
             nodeG.Clear();
             nodeB.Clear();
             nodeIntensity.Clear();
+            nodeClassification.Clear();
             nodeTime.Clear();
 
             bsPoints = null;
@@ -351,6 +354,7 @@ namespace PointCloudConverter.Writers
             ClearDictionary(nodeG);
             ClearDictionary(nodeB);
             ClearDictionary(nodeIntensity);
+            ClearDictionary(nodeClassification);
             ClearDictionary(nodeTime);
 
             keyCache.Clear();
@@ -407,6 +411,7 @@ namespace PointCloudConverter.Writers
                 nodeB[key].Add(b);
 
                 if (hasIntensity == true) nodeIntensity[key].Add(i);
+                //if (hasClasssification == true) nodeClassification[key].Add(
                 if (hasTime == true) nodeTime[key].Add(time);
             }
             else // create new list for this key

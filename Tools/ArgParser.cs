@@ -727,7 +727,20 @@ namespace PointCloudConverter
                                     importSettings.importIntensity = (param == "true");
                                 }
                                 break;
-                            
+
+                            case "-classification":
+                                Log.Write("classification = " + param);
+
+                                if (param != "false" && param != "true")
+                                {
+                                    importSettings.errors.Add("Invalid classification parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.importClassification = (param == "true");
+                                }
+                                break;
+
                             case "-offsetmode":
                                 Log.Write("offsetmode = " + param);
 
@@ -862,9 +875,9 @@ namespace PointCloudConverter
             //}            
 
             // must have at least one
-            if (importSettings.importRGB == false && importSettings.importIntensity == false)
+            if (importSettings.importRGB == false && importSettings.importIntensity == false && importSettings.importClassification == false)
             {
-                importSettings.errors.Add("Must have -rgb OR -intensity enabled");
+                importSettings.errors.Add("Must have -rgb OR -intensity OR -classification enabled");
             }
 
             if (importSettings.exportFormat == ExportFormat.UCPC && importSettings.maxThreads > 1)

@@ -44,13 +44,13 @@ namespace PointCloudConverter.Readers
             int res = 1;
             //try
             //{
-                //Log.WriteLine("--------------------- initreader: " + fileIndex + " taskID: " + taskID);
-                // TODO check errors
-                var file = importSettings.inputFiles[fileIndex];
-                //importRGB = importSettings.importRGB;
-                //importIntensity = importSettings.importIntensity;
-                customIntensityRange = importSettings.useCustomIntensityRange;
-                res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
+            //Log.WriteLine("--------------------- initreader: " + fileIndex + " taskID: " + taskID);
+            // TODO check errors
+            var file = importSettings.inputFiles[fileIndex];
+            //importRGB = importSettings.importRGB;
+            //importIntensity = importSettings.importIntensity;
+            customIntensityRange = importSettings.useCustomIntensityRange;
+            res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
             //}
             //catch (Exception e)
             //{
@@ -376,6 +376,27 @@ namespace PointCloudConverter.Readers
             c.r = i;
             c.g = i;
             c.b = i;
+            return c;
+        }
+
+        float Remap(float source, float sourceFrom, float sourceTo, float targetFrom, float targetTo)
+        {
+            return targetFrom + (source - sourceFrom) * (targetTo - targetFrom) / (sourceTo - sourceFrom);
+        }
+
+        Color IReader.GetClassification()
+        {
+            var c = new Color();
+            // get point reference
+            var p = lazReader.point;
+            //c.r = (Remap(p.classification, 0, 11, 0, 1)); // doesnt match cloudcompare?
+            c.r = (Remap(p.extended_classification, 2, 112, 0, 1));
+            //c.r = p.classification;
+            //c.r = p.extended_classification;
+            //c.r = Tools.LUT255[(byte)(p.classification)];
+            //Console.WriteLine(c.r);
+            c.g = c.r;
+            c.b = c.r;
             return c;
         }
 

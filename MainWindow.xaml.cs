@@ -916,6 +916,34 @@ namespace PointCloudConverter
                         }
                     }
 
+                    // FIXME cannot have both classification and intensity, because both save into RGB now
+
+                    if (importSettings.importClassification == true)
+                    {
+                        intensity = taskReader.GetClassification();
+                        // if (i < 1000) Log.Write(intensity.r.ToString());
+
+                        if (intensity.r < minInt)
+                        {
+                            minInt = intensity.r;
+                            Log.Write("Min: " + minInt + " Max: " + maxInt);
+                        }
+                        if (intensity.r > maxInt)
+                        {
+                            maxInt = intensity.r;
+                            Log.Write("Min: " + minInt + " Max: " + maxInt);
+                        }
+
+
+                        // if no rgb, then replace RGB with intensity
+                        //if (importSettings.importRGB == false)
+                        {
+                            rgb.r = intensity.r;
+                            rgb.g = intensity.r;
+                            rgb.b = intensity.r;
+                        }
+                    }
+
                     if (importSettings.averageTimestamp == true)
                     {
                         // get time
@@ -962,6 +990,9 @@ namespace PointCloudConverter
             //Log.Write("taskid: " + taskId + " done");
             return true;
         } // ParseFile
+
+        static float maxInt = 0;
+        static float minInt = 999999;
 
         private void btnConvert_Click(object sender, RoutedEventArgs e)
         {
@@ -1050,6 +1081,8 @@ namespace PointCloudConverter
 
             args.Add("-rgb=" + (bool)chkImportRGB.IsChecked);
             args.Add("-intensity=" + (bool)chkImportIntensity.IsChecked);
+            args.Add("-classification=" + (bool)chkImportClassification.IsChecked);
+
 
             bool isPCROOT = (cmbExportFormat.SelectedItem.ToString() == "PCROOT");
             bool isGLTF = (cmbExportFormat.SelectedItem.ToString().ToUpper() == "GLTF" || cmbExportFormat.SelectedItem.ToString().ToUpper() == "GLB");
@@ -1189,6 +1222,9 @@ namespace PointCloudConverter
                             break;
                         case "intensity":
                             chkImportIntensity.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "classification":
+                            chkImportClassification.IsChecked = value.ToLower() == "true";
                             break;
                         case "gridsize":
                             txtGridSize.Text = value;
@@ -1429,6 +1465,7 @@ namespace PointCloudConverter
 
             chkImportRGB.IsChecked = Properties.Settings.Default.importRGB;
             chkImportIntensity.IsChecked = Properties.Settings.Default.importIntensity;
+            chkImportClassification.IsChecked = Properties.Settings.Default.importClassification;
 
             chkAutoOffset.IsChecked = Properties.Settings.Default.useAutoOffset;
             txtGridSize.Text = Properties.Settings.Default.gridSize.ToString();
@@ -1590,6 +1627,16 @@ namespace PointCloudConverter
             Properties.Settings.Default.Save();
         }
 
+        private void chkImportRGB_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (isInitialiazing == true) return;
+            Properties.Settings.Default.importRGB = false;
+
+            //chkImportIntensity.IsChecked = true;
+            //Properties.Settings.Default.importIntensity = true;
+            Properties.Settings.Default.Save();
+        }
+
         private void chkImportIntensity_Checked(object sender, RoutedEventArgs e)
         {
             if (isInitialiazing == true) return;
@@ -1604,20 +1651,29 @@ namespace PointCloudConverter
             if (isInitialiazing == true) return;
             Properties.Settings.Default.importIntensity = false;
 
-            chkImportRGB.IsChecked = true;
-            Properties.Settings.Default.importRGB = true;
+            //chkImportRGB.IsChecked = true;
+            //Properties.Settings.Default.importRGB = true;
+            Properties.Settings.Default.importIntensity = false;
             Properties.Settings.Default.Save();
         }
 
-        private void chkImportRGB_Unchecked(object sender, RoutedEventArgs e)
+        private void chkImportClassification_Checked(object sender, RoutedEventArgs e)
         {
             if (isInitialiazing == true) return;
-            Properties.Settings.Default.importRGB = false;
 
-            chkImportIntensity.IsChecked = true;
-            Properties.Settings.Default.importIntensity = true;
+            // TODO for now only can import classification as RGB color
+            Properties.Settings.Default.importClassification = true;
             Properties.Settings.Default.Save();
         }
+
+        private void chkImportClassification_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (isInitialiazing == true) return;
+            // TODO for now only can import classification as RGB color
+            Properties.Settings.Default.importClassification = false;
+            Properties.Settings.Default.Save();
+        }
+
 
         private void txtInputFile_DragEnter(object sender, DragEventArgs e)
         {
@@ -1752,5 +1808,6 @@ namespace PointCloudConverter
             }
             Process.Start(new ProcessStartInfo("explorer.exe", pluginsFolder));
         }
+
     } // class
 } // namespace
