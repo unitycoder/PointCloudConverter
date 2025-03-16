@@ -365,7 +365,7 @@ namespace PointCloudConverter.Writers
 
         }
 
-        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i, bool hasTime, double time, bool hasClassification, float c)
+        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, float i, double time, float c)
         {
             // get global all clouds bounds
             cloudMinX = Math.Min(cloudMinX, x);
@@ -410,9 +410,10 @@ namespace PointCloudConverter.Writers
                 nodeG[key].Add(g);
                 nodeB[key].Add(b);
 
-                if (importSettings.importRGB && hasIntensity == true) nodeIntensity[key].Add(i);
-                if (hasClassification == true) nodeClassification[key].Add(c);
-                if (hasTime == true) nodeTime[key].Add(time);
+                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key].Add(i);
+                // TODO separate if rgb and or int?
+                if (importSettings.importClassification == true) nodeClassification[key].Add(c);
+                if (importSettings.averageTimestamp == true) nodeTime[key].Add(time);
             }
             else // create new list for this key
             {
@@ -424,9 +425,9 @@ namespace PointCloudConverter.Writers
                 nodeG[key] = new List<float> { g };
                 nodeB[key] = new List<float> { b };
 
-                if (importSettings.importRGB && hasIntensity == true) nodeIntensity[key] = new List<float> { i };
-                if (hasClassification == true) nodeClassification[key] = new List<float> { c };
-                if (hasTime == true) nodeTime[key] = new List<double> { time };
+                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key] = new List<float> { i };
+                if (importSettings.importClassification == true) nodeClassification[key] = new List<float> { c };
+                if (importSettings.averageTimestamp == true) nodeTime[key] = new List<double> { time };
             }
         } // addpoint()
 
