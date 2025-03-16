@@ -530,19 +530,22 @@ namespace PointCloudConverter.Writers
                     Tools.Shuffle(ref nodeTempY);
                     Tools.Shuffle(ref nodeTempZ);
 
-                    if (importSettings.importRGB)
+                    // intensity is saved into rgb if not packed
+                    if (importSettings.importRGB || ((importSettings.importIntensity || importSettings.importClassification) && importSettings.packColors))
                     {
                         Tools.Shuffle(ref nodeTempR);
                         Tools.Shuffle(ref nodeTempG);
                         Tools.Shuffle(ref nodeTempB);
                     }
 
-                    if (importSettings.importIntensity)
+                    // if separate intensity
+                    if (importSettings.importRGB && importSettings.importIntensity && importSettings.packColors == false)
                     {
                         Tools.Shuffle(ref nodeTempIntensity);
                     }
 
-                    if (importSettings.importClassification)
+                    // if separate classification
+                    if (importSettings.importRGB && importSettings.importClassification && importSettings.packColors == false)
                     {
                         Tools.Shuffle(ref nodeTempClassification);
                     }
