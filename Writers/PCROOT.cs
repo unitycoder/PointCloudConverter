@@ -845,7 +845,7 @@ namespace PointCloudConverter.Writers
                             //// keep points
                             //if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
-                            // TODO write as byte (not RGB floats)
+                            // TODO write as byte (not RGB floats) and write all in one
                             writerIntensity.Write(nodeTempIntensity[i]);
                             writerIntensity.Write(nodeTempIntensity[i]);
                             writerIntensity.Write(nodeTempIntensity[i]);
@@ -854,6 +854,32 @@ namespace PointCloudConverter.Writers
                         // close tile/node
                         writerIntensity.Close();
                         bsIntensity.Dispose();
+                    }
+                    // TEST separate classification
+                    if (importSettings.importRGB == true && importSettings.importClassification == true)
+                    {
+                        BufferedStream bsClassification;
+                        bsClassification = new BufferedStream(new FileStream(fullpath + ".cla", FileMode.Create));
+                        var writerClassification = new BinaryWriter(bsClassification);
+
+                        // output all points within that node cell
+                        for (int i = 0, len = nodeTempX.Count; i < len; i++)
+                        {
+                            //// skip points
+                            //if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
+
+                            //// keep points
+                            //if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
+
+                            // TODO write as byte (not RGB floats)
+                            writerClassification.Write(nodeTempClassification[i]);
+                            writerClassification.Write(nodeTempClassification[i]);
+                            writerClassification.Write(nodeTempClassification[i]);
+                        } // loop all point in cell cells
+
+                        // close tile/node
+                        writerClassification.Close();
+                        bsClassification.Dispose();
                     }
 
                 } // if packColors == false && useLossyFiltering == false
