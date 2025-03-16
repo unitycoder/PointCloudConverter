@@ -145,7 +145,7 @@ namespace PointCloudConverter.Writers
             nodeIntensity.Clear();
             nodeClassification.Clear();
             nodeTime.Clear();
-
+            occupiedCells.Clear();
             bsPoints = null;
             writerPoints = null;
             importSettings = (ImportSettings)(object)_importSettings;
@@ -356,7 +356,7 @@ namespace PointCloudConverter.Writers
             ClearDictionary(nodeIntensity);
             ClearDictionary(nodeClassification);
             ClearDictionary(nodeTime);
-
+            occupiedCells.Clear();
             keyCache.Clear();
         }
 
@@ -365,8 +365,24 @@ namespace PointCloudConverter.Writers
 
         }
 
+        // TEST filter by distance
+        private readonly float cellSize = 0.25f;
+        private HashSet<(int, int, int)> occupiedCells = new();
+
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, float i, double time, float c)
         {
+            //if (importSettings.filterByDistance)
+            //if (1 == 0)
+            //{
+            //    var cell = ((int)Math.Floor(x / cellSize), (int)Math.Floor(y / cellSize), (int)Math.Floor(z / cellSize));
+
+            //    if (occupiedCells.Contains(cell))
+            //    {
+            //        return; // cell already taken
+            //    }
+            //    occupiedCells.Add(cell);
+            //}
+
             // get global all clouds bounds
             cloudMinX = Math.Min(cloudMinX, x);
             cloudMaxX = Math.Max(cloudMaxX, x);
