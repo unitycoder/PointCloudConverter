@@ -902,7 +902,7 @@ namespace PointCloudConverter
                     float classification = 0;
                     double time = 0;
 
-                    // TODO get intensity as separate value, TODO is this float or rgb?
+                    // TODO get intensity as separate value
                     if (importSettings.importIntensity == true)
                     {
                         intensity = taskReader.GetIntensity();
@@ -954,7 +954,7 @@ namespace PointCloudConverter
                     // collect this point XYZ and RGB into node, optionally intensity also
                     //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     // TODO can remove importsettings, its already passed on init
-                    taskWriter.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity, importSettings.averageTimestamp, time, importSettings.importClassification, classification);
+                    taskWriter.AddPoint(index: i, x: (float)point.x, y: (float)point.y, z: (float)point.z, r: rgb.r, g: rgb.g, b: rgb.b, hasIntensity: importSettings.importIntensity, i: intensity, hasTime: importSettings.averageTimestamp, time: time, hasClassification: importSettings.importClassification, c: classification);
                     //progressPoint = i;
                     progressInfo.CurrentValue = i;
                 } // for all points

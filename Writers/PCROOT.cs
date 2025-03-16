@@ -410,7 +410,7 @@ namespace PointCloudConverter.Writers
                 nodeG[key].Add(g);
                 nodeB[key].Add(b);
 
-                if (hasIntensity == true) nodeIntensity[key].Add(i);
+                if (importSettings.importRGB && hasIntensity == true) nodeIntensity[key].Add(i);
                 if (hasClassification == true) nodeClassification[key].Add(c);
                 if (hasTime == true) nodeTime[key].Add(time);
             }
@@ -424,7 +424,7 @@ namespace PointCloudConverter.Writers
                 nodeG[key] = new List<float> { g };
                 nodeB[key] = new List<float> { b };
 
-                if (hasIntensity == true) nodeIntensity[key] = new List<float> { i };
+                if (importSettings.importRGB && hasIntensity == true) nodeIntensity[key] = new List<float> { i };
                 if (hasClassification == true) nodeClassification[key] = new List<float> { c };
                 if (hasTime == true) nodeTime[key] = new List<double> { time };
             }
@@ -503,8 +503,8 @@ namespace PointCloudConverter.Writers
                 nodeTempB = nodeB[key];
 
                 // collect both rgb and intensity
-                //if (importSettings.importRGB == true && importSettings.importIntensity == true)
-                if (importSettings.importIntensity == true)
+                if (importSettings.importRGB == true && importSettings.importIntensity == true)
+                //if (importSettings.importIntensity == true)
                 {
                     nodeTempIntensity = nodeIntensity[key];
                 }
@@ -518,8 +518,6 @@ namespace PointCloudConverter.Writers
                 {
                     nodeTempTime = nodeTime[key];
                 }
-
-
 
                 // randomize points in this node
                 if (importSettings.randomize)
