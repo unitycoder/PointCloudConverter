@@ -522,32 +522,38 @@ namespace PointCloudConverter.Writers
 
 
                 // randomize points in this node
-                if (importSettings.randomize == true)
+                if (importSettings.randomize)
                 {
-                    // separate rgb and intensity
-                    if (importSettings.importRGB == true && importSettings.importIntensity == true)
+                    //ShuffleFlags flags = ShuffleFlags.None;
+                    //int rand = Tools.frnd.Next(0, index--);
+
+                    Tools.Shuffle(ref nodeTempX);
+                    Tools.Shuffle(ref nodeTempY);
+                    Tools.Shuffle(ref nodeTempZ);
+
+                    if (importSettings.importRGB)
                     {
-                        if (importSettings.averageTimestamp == true)
-                        {
-                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity, ref nodeTempTime);
-                        }
-                        else
-                        {
-                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity);
-                        }
+                        Tools.Shuffle(ref nodeTempR);
+                        Tools.Shuffle(ref nodeTempG);
+                        Tools.Shuffle(ref nodeTempB);
                     }
-                    else
+
+                    if (importSettings.importIntensity)
                     {
-                        if (importSettings.averageTimestamp == true)
-                        {
-                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempTime);
-                        }
-                        else
-                        {
-                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB);
-                        }
+                        Tools.Shuffle(ref nodeTempIntensity);
                     }
-                } // randomize
+
+                    if (importSettings.importClassification)
+                    {
+                        Tools.Shuffle(ref nodeTempClassification);
+                    }
+
+                    if (importSettings.averageTimestamp)
+                    {
+                        Tools.Shuffle(ref nodeTempTime);
+                    }
+                }
+
 
                 // get this node bounds, TODO but we know node(grid cell) x,y,z values?
                 float minX = float.PositiveInfinity;
@@ -772,7 +778,7 @@ namespace PointCloudConverter.Writers
                     {
                         //double ptime = 
                         totalTime += nodeTempTime[i]; // time for this single point
-                        //Console.WriteLine(ptime);
+                                                      //Console.WriteLine(ptime);
                     }
 
                     totalPointsWritten++;
