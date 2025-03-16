@@ -898,7 +898,8 @@ namespace PointCloudConverter
                     }
 
 
-                    Color intensity = (default);
+                    float intensity = 0;
+                    float classification = 0;
                     double time = 0;
 
                     // TODO get intensity as separate value, TODO is this float or rgb?
@@ -910,37 +911,36 @@ namespace PointCloudConverter
                         // if no rgb, then replace RGB with intensity
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = intensity.r;
-                            rgb.g = intensity.r;
-                            rgb.b = intensity.r;
+                            rgb.r = intensity;
+                            rgb.g = intensity;
+                            rgb.b = intensity;
                         }
                     }
 
-                    // FIXME cannot have both classification and intensity, because both save into RGB now
+                    // FIXME cannot have both classification and intensity, because both save into RGB here
 
                     if (importSettings.importClassification == true)
                     {
-                        intensity = taskReader.GetClassification();
+                        classification = taskReader.GetClassification();
                         // if (i < 1000) Log.Write(intensity.r.ToString());
 
-                        if (intensity.r < minInt)
-                        {
-                            minInt = intensity.r;
-                            Log.Write("Min: " + minInt + " Max: " + maxInt);
-                        }
-                        if (intensity.r > maxInt)
-                        {
-                            maxInt = intensity.r;
-                            Log.Write("Min: " + minInt + " Max: " + maxInt);
-                        }
-
+                        //if (intensity.r < minInt)
+                        //{
+                        //    minInt = intensity.r;
+                        //    Log.Write("Min: " + minInt + " Max: " + maxInt);
+                        //}
+                        //if (intensity.r > maxInt)
+                        //{
+                        //    maxInt = intensity.r;
+                        //    Log.Write("Min: " + minInt + " Max: " + maxInt);
+                        //}
 
                         // if no rgb, then replace RGB with intensity
-                        //if (importSettings.importRGB == false)
+                        if (importSettings.importRGB == false)
                         {
-                            rgb.r = intensity.r;
-                            rgb.g = intensity.r;
-                            rgb.b = intensity.r;
+                            rgb.r = classification;
+                            rgb.g = classification;
+                            rgb.b = classification;
                         }
                     }
 
@@ -954,7 +954,7 @@ namespace PointCloudConverter
                     // collect this point XYZ and RGB into node, optionally intensity also
                     //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     // TODO can remove importsettings, its already passed on init
-                    taskWriter.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
+                    taskWriter.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity, importSettings.averageTimestamp, time, importSettings.importClassification, classification);
                     //progressPoint = i;
                     progressInfo.CurrentValue = i;
                 } // for all points

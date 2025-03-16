@@ -365,7 +365,7 @@ namespace PointCloudConverter.Writers
 
         }
 
-        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i, bool hasTime, double time)
+        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i, bool hasTime, double time, bool hasClassification, float c)
         {
             // get global all clouds bounds
             cloudMinX = Math.Min(cloudMinX, x);
@@ -411,7 +411,7 @@ namespace PointCloudConverter.Writers
                 nodeB[key].Add(b);
 
                 if (hasIntensity == true) nodeIntensity[key].Add(i);
-                //if (hasClasssification == true) nodeClassification[key].Add(
+                if (hasClassification == true) nodeClassification[key].Add(c);
                 if (hasTime == true) nodeTime[key].Add(time);
             }
             else // create new list for this key
@@ -425,6 +425,7 @@ namespace PointCloudConverter.Writers
                 nodeB[key] = new List<float> { b };
 
                 if (hasIntensity == true) nodeIntensity[key] = new List<float> { i };
+                if (hasClassification == true) nodeClassification[key] = new List<float> { c };
                 if (hasTime == true) nodeTime[key] = new List<double> { time };
             }
         } // addpoint()
@@ -474,6 +475,7 @@ namespace PointCloudConverter.Writers
             List<float> nodeTempB;
 
             List<float> nodeTempIntensity = null;
+            List<float> nodeTempClassification = null;
             List<double> nodeTempTime = null;
 
             List<string> outputFiles = new List<string>();
@@ -500,10 +502,16 @@ namespace PointCloudConverter.Writers
                 nodeTempG = nodeG[key];
                 nodeTempB = nodeB[key];
 
-                // collect both
-                if (importSettings.importRGB == true && importSettings.importIntensity == true)
+                // collect both rgb and intensity
+                //if (importSettings.importRGB == true && importSettings.importIntensity == true)
+                if (importSettings.importIntensity == true)
                 {
                     nodeTempIntensity = nodeIntensity[key];
+                }
+
+                if (importSettings.importClassification == true)
+                {
+                    nodeTempClassification = nodeClassification[key];
                 }
 
                 if (importSettings.averageTimestamp == true)
@@ -516,6 +524,7 @@ namespace PointCloudConverter.Writers
                 // randomize points in this node
                 if (importSettings.randomize == true)
                 {
+                    // separate rgb and intensity
                     if (importSettings.importRGB == true && importSettings.importIntensity == true)
                     {
                         if (importSettings.averageTimestamp == true)

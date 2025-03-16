@@ -20,8 +20,8 @@ namespace PointCloudConverter.Readers
 
         // close filestream
         void Close();
-        Color GetIntensity();
-        Color GetClassification();
+        float GetIntensity();
+        float GetClassification();
         LasHeader GetMetaData(ImportSettings importSettings, int fileIndex);
         void Dispose();
     }

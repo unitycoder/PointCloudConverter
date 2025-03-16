@@ -357,9 +357,9 @@ namespace PointCloudConverter.Readers
             return c;
         }
 
-        Color IReader.GetIntensity()
+        float IReader.GetIntensity()
         {
-            var c = new Color();
+            //var c = new Color();
 
             // get point reference
             var p = lazReader.point;
@@ -373,10 +373,10 @@ namespace PointCloudConverter.Readers
             {
                 i = Tools.LUT255[(byte)(p.intensity)];
             }
-            c.r = i;
-            c.g = i;
-            c.b = i;
-            return c;
+            //c.r = i;
+            //c.g = i;
+            //c.b = i;
+            return i;
         }
 
         float Remap(float source, float sourceFrom, float sourceTo, float targetFrom, float targetTo)
@@ -384,19 +384,20 @@ namespace PointCloudConverter.Readers
             return targetFrom + (source - sourceFrom) * (targetTo - targetFrom) / (sourceTo - sourceFrom);
         }
 
-        Color IReader.GetClassification()
+        float IReader.GetClassification()
         {
-            var c = new Color();
+            //float c = new Color();
             // get point reference
             var p = lazReader.point;
-            //c.r = (Remap(p.classification, 0, 11, 0, 1)); // doesnt match cloudcompare?
-            c.r = (Remap(p.extended_classification, 2, 112, 0, 1));
+            //c.r = (Remap(p.extended_classification, 2, 112, 0, 1)); // works, but we dont know range ahead of time, unless read first all values in all files?
+            //c.r = (Remap(p.extended_classification, 0, 255, 0, 1));
+            float c = p.extended_classification / 255f;
             //c.r = p.classification;
             //c.r = p.extended_classification;
             //c.r = Tools.LUT255[(byte)(p.classification)];
             //Console.WriteLine(c.r);
-            c.g = c.r;
-            c.b = c.r;
+            //c.g = c.r;
+            //c.b = c.r;
             return c;
         }
 
