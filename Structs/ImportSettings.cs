@@ -211,6 +211,8 @@ namespace PointCloudConverter
         public bool checkoverlap { get; set; } = false; // check if tile overlaps with other tiles (save into pcroot)
         public bool useGrid { get; set; } = false; // required for PCROOT format (will be automatically enabled for v3)
         public string offsetMode { get; set; } = "min"; // TODO use enum: "min" or "legacy" now (legacy is first bounds min only)
+        public bool useFilter { get; set; } = false; // filter by distance
+        public float filterDistance { get; set; } = 0.5f;
 
         public override string ToString()
         {

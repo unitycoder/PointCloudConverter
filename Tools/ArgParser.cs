@@ -754,6 +754,22 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-filter":
+                                Log.Write("filter = " + param);
+
+                                bool filterDistValue = float.TryParse(param, out tempFloat);
+                                if (filterDistValue == false || tempFloat <= 0f)
+
+                                {
+                                    importSettings.errors.Add("Invalid filter value: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.useFilter = true;
+                                    importSettings.filterDistance = tempFloat;
+                                }
+                                break;
+
                             // TODO load whole commandline args list from text file
                             case "-config":
                                 Log.Write("config = " + param);

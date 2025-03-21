@@ -47,6 +47,10 @@ namespace PointCloudConverter.Writers
         static int skippedPointsCounter = 0; // FIXME, not used in regular mode, only for lossy filtering, TODO can calculate from importsetting values
         static bool useLossyFiltering = false; //not used, for testing only
 
+        // filter by distance
+        private readonly float cellSize = 0.5f;
+        private HashSet<(int, int, int)> occupiedCells = new();
+
         public void Dispose()
         {
             //Log.Write("Memory used: " + GC.GetTotalMemory(false));
@@ -158,7 +162,7 @@ namespace PointCloudConverter.Writers
             nodeIntensity.Clear();
             nodeClassification.Clear();
             nodeTime.Clear();
-            //occupiedCells.Clear();
+            occupiedCells.Clear();
             bsPoints = null;
             writerPoints = null;
             importSettings = (ImportSettings)(object)_importSettings;
@@ -371,7 +375,7 @@ namespace PointCloudConverter.Writers
             ClearDictionary(nodeIntensity);
             ClearDictionary(nodeClassification);
             ClearDictionary(nodeTime);
-            //occupiedCells.Clear();
+            occupiedCells.Clear();
             keyCache.Clear();
         }
 
@@ -380,23 +384,18 @@ namespace PointCloudConverter.Writers
 
         }
 
-        // TEST filter by distance
-        //private readonly float cellSize = 0.25f;
-        //private HashSet<(int, int, int)> occupiedCells = new();
-
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, byte intensity, double time, byte classification)
         {
-            //if (importSettings.filterByDistance)
-            //if (1 == 0)
-            //{
-            //    var cell = ((int)Math.Floor(x / cellSize), (int)Math.Floor(y / cellSize), (int)Math.Floor(z / cellSize));
+            if (importSettings.useFilter)
+            {
+                var cell = ((int)Math.Floor(x / importSettings.filterDistance), (int)Math.Floor(y / importSettings.filterDistance), (int)Math.Floor(z / importSettings.filterDistance));
 
-            //    if (occupiedCells.Contains(cell))
-            //    {
-            //        return; // cell already taken
-            //    }
-            //    occupiedCells.Add(cell);
-            //}
+                if (occupiedCells.Contains(cell))
+                {
+                    return; // cell already taken
+                }
+                occupiedCells.Add(cell);
+            }
 
             // get global all clouds bounds
             cloudMinX = Math.Min(cloudMinX, x);

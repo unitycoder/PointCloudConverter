@@ -610,5 +610,29 @@ namespace PointCloudConverter.Properties {
                 this["importClassification"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool useFilter {
+            get {
+                return ((bool)(this["useFilter"]));
+            }
+            set {
+                this["useFilter"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public float filterDistance {
+            get {
+                return ((float)(this["filterDistance"]));
+            }
+            set {
+                this["filterDistance"] = value;
+            }
+        }
     }
 }

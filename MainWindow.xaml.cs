@@ -29,7 +29,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "05.03.2025";
+        static readonly string version = "21.03.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -426,7 +426,14 @@ namespace PointCloudConverter
                             }
                             else
                             {
-                                Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                                if (cancellationToken.IsCancellationRequested)
+                                {
+                                    Log.Write("Task was canceled.");
+                                }
+                                else
+                                {
+                                    Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                                }
                             }
                         }
                     }
@@ -1115,6 +1122,8 @@ namespace PointCloudConverter
             if ((bool)chkCalculateOverlappingTiles.IsChecked) args.Add("-checkoverlap=true");
             args.Add("-maxthreads=" + txtMaxThreads.Text);
 
+            if ((bool)chkUseFilter.IsChecked) args.Add("-filter=" + txtFilterDistance.Text);
+
             if (isGLTF == true) args.Add(("-usegrid=" + (bool)chkUseGrid.IsChecked).ToLower());
 
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
@@ -1509,6 +1518,8 @@ namespace PointCloudConverter
             txtMaxThreads.Text = Properties.Settings.Default.maxThreads;
             chkUseGrid.IsChecked = Properties.Settings.Default.useGrid;
             txtOffsetMode.Text = Properties.Settings.Default.offsetMode;
+            chkUseFilter.IsChecked = Properties.Settings.Default.useFilter;
+            txtFilterDistance.Text = Properties.Settings.Default.filterDistance.ToString();
             isInitialiazing = false;
         }
 
@@ -1560,6 +1571,8 @@ namespace PointCloudConverter
             Properties.Settings.Default.maxThreads = txtMaxThreads.Text;
             Properties.Settings.Default.useGrid = (bool)chkUseGrid.IsChecked;
             Properties.Settings.Default.offsetMode = txtOffsetMode.Text;
+            Properties.Settings.Default.useFilter = (bool)chkUseFilter.IsChecked;
+            Properties.Settings.Default.filterDistance = Tools.ParseFloat(txtFilterDistance.Text);
             Properties.Settings.Default.Save();
         }
 
