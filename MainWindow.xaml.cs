@@ -905,8 +905,11 @@ namespace PointCloudConverter
                     // TODO get intensity as separate value
                     if (importSettings.importIntensity == true)
                     {
-                        intensity = taskReader.GetIntensity();
-                        //if (i < 100) Console.WriteLine(intensity.r);
+                        //intensity = taskReader.GetIntensity();
+                        
+                        intensity = taskReader.GetClassification();
+
+                        //if (i < 20000) Log.Write("int: " + intensity);
 
                         // if no rgb, then replace RGB with intensity
                         if (importSettings.importRGB == false)
@@ -921,8 +924,11 @@ namespace PointCloudConverter
 
                     if (importSettings.importClassification == true)
                     {
-                        classification = taskReader.GetClassification();
-                        // if (i < 1000) Log.Write(intensity.r.ToString());
+                        //classification = taskReader.GetClassification();
+                        classification = taskReader.GetIntensity();
+                        //if (classification<0 || classification>1) Log.Write("****: " + classification.ToString());
+
+                        //if (i < 20000) Log.Write("class: " + classification.ToString());
 
                         //if (intensity.r < minInt)
                         //{
@@ -954,7 +960,7 @@ namespace PointCloudConverter
                     // collect this point XYZ and RGB into node, optionally intensity also
                     //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     // TODO can remove importsettings, its already passed on init
-                    taskWriter.AddPoint(index: i, x: (float)point.x, y: (float)point.y, z: (float)point.z, r: rgb.r, g: rgb.g, b: rgb.b, i: intensity, time: time, c: classification);
+                    taskWriter.AddPoint(index: i, x: (float)point.x, y: (float)point.y, z: (float)point.z, r: rgb.r, g: rgb.g, b: rgb.b, intensity: intensity, time: time, classification: classification);
                     //progressPoint = i;
                     progressInfo.CurrentValue = i;
                 } // for all points

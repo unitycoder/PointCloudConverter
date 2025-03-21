@@ -379,11 +379,6 @@ namespace PointCloudConverter.Readers
             return i;
         }
 
-        float Remap(float source, float sourceFrom, float sourceTo, float targetFrom, float targetTo)
-        {
-            return targetFrom + (source - sourceFrom) * (targetTo - targetFrom) / (sourceTo - sourceFrom);
-        }
-
         float IReader.GetClassification()
         {
             //float c = new Color();
@@ -394,7 +389,7 @@ namespace PointCloudConverter.Readers
             float c = p.extended_classification / 255f;
             //c.r = p.classification;
             //c.r = p.extended_classification;
-            //c.r = Tools.LUT255[(byte)(p.classification)];
+            //float c = Tools.LUT255[(byte)(p.classification)];
             //Console.WriteLine(c.r);
             //c.g = c.r;
             //c.b = c.r;

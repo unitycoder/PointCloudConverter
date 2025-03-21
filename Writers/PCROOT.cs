@@ -369,7 +369,7 @@ namespace PointCloudConverter.Writers
         //private readonly float cellSize = 0.25f;
         //private HashSet<(int, int, int)> occupiedCells = new();
 
-        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, float i, double time, float c)
+        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, float intensity, double time, float classification)
         {
             //if (importSettings.filterByDistance)
             //if (1 == 0)
@@ -426,9 +426,9 @@ namespace PointCloudConverter.Writers
                 nodeG[key].Add(g);
                 nodeB[key].Add(b);
 
-                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key].Add(i);
+                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key].Add(intensity);
                 // TODO separate if rgb and or int?
-                if (importSettings.importClassification == true) nodeClassification[key].Add(c);
+                if (importSettings.importClassification == true) nodeClassification[key].Add(classification);
                 if (importSettings.averageTimestamp == true) nodeTime[key].Add(time);
             }
             else // create new list for this key
@@ -441,8 +441,8 @@ namespace PointCloudConverter.Writers
                 nodeG[key] = new List<float> { g };
                 nodeB[key] = new List<float> { b };
 
-                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key] = new List<float> { i };
-                if (importSettings.importClassification == true) nodeClassification[key] = new List<float> { c };
+                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key] = new List<float> { intensity };
+                if (importSettings.importClassification == true) nodeClassification[key] = new List<float> { classification };
                 if (importSettings.averageTimestamp == true) nodeTime[key] = new List<double> { time };
             }
         } // addpoint()
@@ -546,25 +546,59 @@ namespace PointCloudConverter.Writers
                     Tools.Shuffle(ref nodeTempY);
                     Tools.Shuffle(ref nodeTempZ);
 
-                    // intensity is saved into rgb if not packed
-                    if (importSettings.importRGB || ((importSettings.importIntensity || importSettings.importClassification) && importSettings.packColors))
+                    // NOTE now we shuffle all arrays, even if not all are used
+                    if (importSettings.importRGB == true)
                     {
                         Tools.Shuffle(ref nodeTempR);
                         Tools.Shuffle(ref nodeTempG);
                         Tools.Shuffle(ref nodeTempB);
                     }
 
-                    // if separate intensity
-                    if (importSettings.importRGB && importSettings.importIntensity && importSettings.packColors == false)
-                    {
-                        Tools.Shuffle(ref nodeTempIntensity);
-                    }
+                    if (importSettings.importIntensity == true) Tools.Shuffle(ref nodeTempIntensity);
+                    if (importSettings.importClassification == true) Tools.Shuffle(ref nodeTempClassification);
 
-                    // if separate classification
-                    if (importSettings.importRGB && importSettings.importClassification && importSettings.packColors == false)
-                    {
-                        Tools.Shuffle(ref nodeTempClassification);
-                    }
+                    //if (importSettings.importRGB == true)
+                    //{
+                    //    if (importSettings.packColors == true)
+                    //    {
+
+                    //    }
+                    //    else // not packed
+                    //    {
+                    //        //// intensity or classification are saved into rgb field if not packed
+                    //        //if (importSettings.importIntensity || importSettings.importClassification)
+                    //        //{
+                    //        //    Tools.Shuffle(ref nodeTempR);
+                    //        //    Tools.Shuffle(ref nodeTempG);
+                    //        //    Tools.Shuffle(ref nodeTempB);
+                    //        //}
+
+                    //        // if separate intensity
+                    //        if (importSettings.importIntensity)
+                    //        {
+                    //            Tools.Shuffle(ref nodeTempIntensity);
+                    //        }
+
+                    //        // if separate classification
+                    //        if (importSettings.importClassification)
+                    //        {
+                    //            Tools.Shuffle(ref nodeTempClassification);
+                    //        }
+                    //    }
+                    //}
+                    //else // no rgb
+                    //{
+                    //    if (importSettings.importIntensity)
+                    //    {
+                    //        Tools.Shuffle(ref nodeTempIntensity);
+                    //    }
+
+                    //    // if separate classification
+                    //    if (importSettings.importClassification)
+                    //    {
+                    //        Tools.Shuffle(ref nodeTempClassification);
+                    //    }
+                    //}
 
                     if (importSettings.averageTimestamp)
                     {
@@ -787,16 +821,20 @@ namespace PointCloudConverter.Writers
                         //}
                         //writerPoints.Write(pz);
 
+                        // x
                         FloatToBytes(px, pointBuffer, 0);
 
-                        if (importSettings.packColors == true && importSettings.importRGB == true && importSettings.importIntensity == true)
+                        if (importSettings.packColors == true && importSettings.importRGB == true && (importSettings.importIntensity == true || importSettings.importClassification == true))
                         {
+                            // y, int, classification for now
                             IntToBytes(packed, pointBuffer, 4);  // Convert int to bytes manually
                         }
                         else
                         {
+                            // y
                             FloatToBytes(py, pointBuffer, 4);    // Convert float to bytes manually
                         }
+                        // z
                         FloatToBytes(pz, pointBuffer, 8);
                         writerPoints.Write(pointBuffer);
                     } // wrote packed or unpacked xyz
