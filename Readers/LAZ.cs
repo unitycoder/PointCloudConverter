@@ -357,21 +357,23 @@ namespace PointCloudConverter.Readers
             return c;
         }
 
-        float IReader.GetIntensity()
+        byte IReader.GetIntensity()
         {
             //var c = new Color();
 
             // get point reference
             var p = lazReader.point;
 
-            float i = 0;
+            byte i = 0;
             if (customIntensityRange == true) // NOTE now only supports 65535 as custom range
             {
-                i = Tools.LUT255[(byte)(p.intensity / 255f)];
+                //i = Tools.LUT255[(byte)(p.intensity / 255f)];
+                i = (byte)(p.intensity / 255f);
             }
             else
             {
-                i = Tools.LUT255[(byte)(p.intensity)];
+                //i = Tools.LUT255[(byte)(p.intensity)];
+                i = (byte)(p.intensity);
             }
             //c.r = i;
             //c.g = i;
@@ -379,14 +381,14 @@ namespace PointCloudConverter.Readers
             return i;
         }
 
-        float IReader.GetClassification()
+        byte IReader.GetClassification()
         {
             //float c = new Color();
             // get point reference
             var p = lazReader.point;
             //c.r = (Remap(p.extended_classification, 2, 112, 0, 1)); // works, but we dont know range ahead of time, unless read first all values in all files?
             //c.r = (Remap(p.extended_classification, 0, 255, 0, 1));
-            float c = p.extended_classification / 255f;
+            byte c = p.extended_classification;// / 255f;
             //c.r = p.classification;
             //c.r = p.extended_classification;
             //float c = Tools.LUT255[(byte)(p.classification)];

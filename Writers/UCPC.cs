@@ -250,7 +250,7 @@ namespace PointCloudConverter.Writers
             }
         }
 
-        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, float i, double time, float classification)
+        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, byte intensity, double time, byte classification)
         {
             //// skip points
             //if (importSettings.skipPoints == true && (index % importSettings.skipEveryN == 0)) return;

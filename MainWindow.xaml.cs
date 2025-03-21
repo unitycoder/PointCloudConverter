@@ -898,8 +898,8 @@ namespace PointCloudConverter
                     }
 
 
-                    float intensity = 0;
-                    float classification = 0;
+                    byte intensity = 0;
+                    byte classification = 0;
                     double time = 0;
 
                     // TODO get intensity as separate value

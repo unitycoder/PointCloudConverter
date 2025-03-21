@@ -37,8 +37,8 @@ namespace PointCloudConverter.Writers
         Dictionary<string, List<float>> nodeR = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeIntensity = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeClassification = new Dictionary<string, List<float>>();
+        Dictionary<string, List<byte>> nodeIntensity = new Dictionary<string, List<byte>>();
+        Dictionary<string, List<byte>> nodeClassification = new Dictionary<string, List<byte>>();
         Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
 
         //int? taskID;
@@ -61,6 +61,19 @@ namespace PointCloudConverter.Writers
 
 
         private void ClearDictionary(Dictionary<string, List<float>> dictionary)
+        {
+            if (dictionary != null)
+            {
+                foreach (var list in dictionary.Values)
+                {
+                    list.Clear(); // Clear the list to free up memory
+                }
+                dictionary.Clear(); // Clear the dictionary itself
+                dictionary = null; // Help GC by removing reference
+            }
+        }        
+        
+        private void ClearDictionary(Dictionary<string, List<byte>> dictionary)
         {
             if (dictionary != null)
             {
@@ -370,7 +383,7 @@ namespace PointCloudConverter.Writers
         //private readonly float cellSize = 0.25f;
         //private HashSet<(int, int, int)> occupiedCells = new();
 
-        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, float intensity, double time, float classification)
+        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, byte intensity, double time, byte classification)
         {
             //if (importSettings.filterByDistance)
             //if (1 == 0)
@@ -442,8 +455,8 @@ namespace PointCloudConverter.Writers
                 nodeG[key] = new List<float> { g };
                 nodeB[key] = new List<float> { b };
 
-                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key] = new List<float> { intensity };
-                if (importSettings.importRGB && importSettings.importClassification == true) nodeClassification[key] = new List<float> { classification };
+                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key] = new List<byte> { intensity };
+                if (importSettings.importRGB && importSettings.importClassification == true) nodeClassification[key] = new List<byte> { classification };
                 if (importSettings.averageTimestamp == true) nodeTime[key] = new List<double> { time };
             }
         } // addpoint()
@@ -492,8 +505,8 @@ namespace PointCloudConverter.Writers
             List<float> nodeTempG;
             List<float> nodeTempB;
 
-            List<float> nodeTempIntensity = null;
-            List<float> nodeTempClassification = null;
+            List<byte> nodeTempIntensity = null;
+            List<byte> nodeTempClassification = null;
             List<double> nodeTempTime = null;
 
             List<string> outputFiles = new List<string>();
@@ -701,7 +714,7 @@ namespace PointCloudConverter.Writers
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
                             byte br = (byte)(nodeTempG[i] * 255);
-                            byte bi = (byte)(nodeTempIntensity[i] * 255);
+                            byte bi = nodeTempIntensity[i];
                             packed = (br << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         }
                         else if (importSettings.importRGB == true && importSettings.importClassification == true)
@@ -710,7 +723,7 @@ namespace PointCloudConverter.Writers
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
                             byte br = (byte)(nodeTempG[i] * 255);
-                            byte bi = (byte)(nodeTempClassification[i] * 255);
+                            byte bi = nodeTempClassification[i];
                             packed = (br << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         }
                         else

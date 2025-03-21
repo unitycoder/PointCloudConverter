@@ -149,6 +149,17 @@ namespace PointCloudConverter
                 int rand = frnd.Next(0, index--);
                 (array[index], array[rand]) = (array[rand], array[index]);
             }
+        }        
+        
+        public static void Shuffle(ref List<byte> array)
+        {
+            ResetRandom();
+            int index = array.Count;
+            while (index > 1)
+            {
+                int rand = frnd.Next(0, index--);
+                (array[index], array[rand]) = (array[rand], array[index]);
+            }
         }
 
         public static void Shuffle(ref List<double> array)

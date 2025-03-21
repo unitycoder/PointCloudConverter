@@ -14,7 +14,7 @@ namespace PointCloudConverter.Writers
         // output R,G,B values (float 0-1) to file
         void WriteRGB(float r, float g, float b);
         // optional: if you need to collect points for later processing
-        void AddPoint(int index, float x, float y, float z, float r, float g, float b, float intensity, double time, float classification);
+        void AddPoint(int index, float x, float y, float z, float r, float g, float b, byte intensity, double time, byte classification);
         // optional: randomizes points (to use dynamic resolution/tile LOD in Unity)
         void Randomize();
         // called after all points have been looped through
