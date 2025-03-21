@@ -268,7 +268,7 @@ namespace PointCloudConverter
             //Log.Write(istrue1 ? "1" : "0");
             //Log.Write(istrue2 ? "1" : "0");
 
-            if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
+            if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || ((importSettings.importIntensity == true||importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
             {
                 int iterations = importSettings.offsetMode == "min" ? importSettings.maxFiles : 1; // 1 for legacy mode
 
@@ -767,7 +767,7 @@ namespace PointCloudConverter
                 // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds?
 
                 // dont use these bounds, in this case
-                if (importSettings.useAutoOffset == true || (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true))
+                if (importSettings.useAutoOffset == true || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true))
                 {
                     // TODO add manual offset here still?
                     // we use global bounds or Y offset to fix negative Y
@@ -906,9 +906,8 @@ namespace PointCloudConverter
                     if (importSettings.importIntensity == true)
                     {
                         //intensity = taskReader.GetIntensity();
-                        
+                        // works here
                         intensity = taskReader.GetClassification();
-
                         //if (i < 20000) Log.Write("int: " + intensity);
 
                         // if no rgb, then replace RGB with intensity
@@ -924,12 +923,12 @@ namespace PointCloudConverter
 
                     if (importSettings.importClassification == true)
                     {
-                        //classification = taskReader.GetClassification();
-                        classification = taskReader.GetIntensity();
+                        classification = taskReader.GetClassification();
+                        //classification = taskReader.GetIntensity();
                         //if (classification<0 || classification>1) Log.Write("****: " + classification.ToString());
 
                         //if (i < 20000) Log.Write("class: " + classification.ToString());
-
+                        //classification = 0;
                         //if (intensity.r < minInt)
                         //{
                         //    minInt = intensity.r;

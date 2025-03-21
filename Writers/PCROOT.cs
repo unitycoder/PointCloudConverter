@@ -265,6 +265,7 @@ namespace PointCloudConverter.Writers
 
             string commentRow = "# version" + sep + "gridsize" + sep + "pointcount" + sep + "boundsMinX" + sep + "boundsMinY" + sep + "boundsMinZ" + sep + "boundsMaxX" + sep + "boundsMaxY" + sep + "boundsMaxZ" + sep + "autoOffsetX" + sep + "autoOffsetY" + sep + "autoOffsetZ" + sep + "packMagicValue";
             if (importSettings.importRGB == true && importSettings.importIntensity == true) commentRow += sep + "intensity";
+            if (importSettings.importRGB == true && importSettings.importClassification == true) commentRow += sep + "classification";
             if (addComments) tilerootdata.Insert(1, commentRow);
 
             // add global header settings to first row
@@ -526,7 +527,8 @@ namespace PointCloudConverter.Writers
                     nodeTempIntensity = nodeIntensity[key];
                 }
 
-                if (importSettings.importClassification == true)
+                // TODO separate?
+                if (importSettings.importRGB == true && importSettings.importClassification == true)
                 {
                     nodeTempClassification = nodeClassification[key];
                 }
@@ -921,6 +923,7 @@ namespace PointCloudConverter.Writers
                         writerIntensity.Close();
                         bsIntensity.Dispose();
                     }
+
                     // TEST separate classification
                     if (importSettings.importRGB == true && importSettings.importClassification == true)
                     {

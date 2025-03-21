@@ -875,7 +875,7 @@ namespace PointCloudConverter
             //}            
 
             // must have at least one
-            if (importSettings.importRGB == false && importSettings.importIntensity == false && importSettings.importClassification == false)
+            if (importSettings.importRGB == false && (importSettings.importIntensity == false && importSettings.importClassification == false) && importSettings.importClassification == false)
             {
                 importSettings.errors.Add("Must have -rgb OR -intensity OR -classification enabled");
             }
