@@ -83,7 +83,7 @@
                         <Label x:Name="label_Copyxx4" Content="point" HorizontalAlignment="Left" Margin="0" Foreground="{DynamicResource MainText}" VerticalAlignment="Top"/>
                     </StackPanel>
                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                        <CheckBox x:Name="chkUseFilter" Content="Filter by distance:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Only 1 (first) point is kept within this distance (in world grid)"/>
+                        <CheckBox x:Name="chkUseFilter" Content="Filter by distance:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Only 1 (first) point is kept within this distance (in world grid, Unity units)"/>
                         <TextBox x:Name="txtFilterDistance" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="0.5"/>
                         <Label x:Name="label_Copyxx5" Content="m" HorizontalAlignment="Left" Margin="0" Foreground="{DynamicResource MainText}" VerticalAlignment="Top"/>
                     </StackPanel>

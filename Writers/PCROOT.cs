@@ -544,16 +544,18 @@ namespace PointCloudConverter.Writers
                     Tools.Shuffle(ref nodeTempY);
                     Tools.Shuffle(ref nodeTempZ);
 
-                    // NOTE now we shuffle all arrays, even if not all are used
-                    if (importSettings.importRGB == true)
+                    // NOTE now we shuffle all arrays, even if not all are used?
+                    if (importSettings.importRGB == true || (importSettings.importIntensity == true || importSettings.importClassification))
                     {
                         Tools.Shuffle(ref nodeTempR);
                         Tools.Shuffle(ref nodeTempG);
                         Tools.Shuffle(ref nodeTempB);
                     }
-
-                    if (importSettings.importIntensity == true) Tools.Shuffle(ref nodeTempIntensity);
-                    if (importSettings.importClassification == true) Tools.Shuffle(ref nodeTempClassification);
+                    else
+                    {
+                        if (importSettings.importIntensity == true) Tools.Shuffle(ref nodeTempIntensity);
+                        if (importSettings.importClassification == true) Tools.Shuffle(ref nodeTempClassification);
+                    }
 
                     //if (importSettings.importRGB == true)
                     //{
@@ -944,9 +946,10 @@ namespace PointCloudConverter.Writers
                             //if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
                             // TODO write as byte (not RGB floats) and write all in one
-                            writerIntensity.Write(nodeTempIntensity[i]);
-                            writerIntensity.Write(nodeTempIntensity[i]);
-                            writerIntensity.Write(nodeTempIntensity[i]);
+                            float c = nodeTempIntensity[i] / 255f;
+                            writerIntensity.Write(c);
+                            writerIntensity.Write(c);
+                            writerIntensity.Write(c);
                         } // loop all point in cell cells
 
                         // close tile/node
@@ -971,9 +974,10 @@ namespace PointCloudConverter.Writers
                             //if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
                             // TODO write as byte (not RGB floats)
-                            writerClassification.Write(nodeTempClassification[i]);
-                            writerClassification.Write(nodeTempClassification[i]);
-                            writerClassification.Write(nodeTempClassification[i]);
+                            float c = nodeTempClassification[i] / 255f;
+                            writerClassification.Write(c);
+                            writerClassification.Write(c);
+                            writerClassification.Write(c);
                         } // loop all point in cell cells
 
                         // close tile/node

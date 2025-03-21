@@ -936,9 +936,9 @@ namespace PointCloudConverter
                         // if no rgb, then replace RGB with intensity
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = intensity;
-                            rgb.g = intensity;
-                            rgb.b = intensity;
+                            rgb.r = intensity/255f;
+                            rgb.g = rgb.r;
+                            rgb.b = rgb.r;
                         }
                     }
 
@@ -966,9 +966,9 @@ namespace PointCloudConverter
                         // if no rgb, then replace RGB with intensity
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = classification;
-                            rgb.g = classification;
-                            rgb.b = classification;
+                            rgb.r = classification/255f;
+                            rgb.g = rgb.r;
+                            rgb.b = rgb.r;
                         }
                     }
 
