@@ -71,8 +71,8 @@ namespace PointCloudConverter.Writers
                 dictionary.Clear(); // Clear the dictionary itself
                 dictionary = null; // Help GC by removing reference
             }
-        }        
-        
+        }
+
         private void ClearDictionary(Dictionary<string, List<byte>> dictionary)
         {
             if (dictionary != null)
@@ -269,6 +269,7 @@ namespace PointCloudConverter.Writers
             if (importSettings.packColors == true) versionID = 2;
             if (useLossyFiltering == true) versionID = 3;
             if ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB && importSettings.packColors) versionID = 4; // new int packed format
+            if ((importSettings.importIntensity == true && importSettings.importClassification == true) && importSettings.importRGB && importSettings.packColors) versionID = 5; // new int packed format + classification
 
             bool addComments = false;
 
@@ -684,7 +685,8 @@ namespace PointCloudConverter.Writers
                     float px = nodeTempX[i];
                     float py = nodeTempY[i];
                     float pz = nodeTempZ[i];
-                    int packed = 0;
+                    int packedX = 0;
+                    int packedY = 0;
                     // FIXME bounds is wrong if appended (but append is disabled now), should include previous data also, but now append is disabled.. also probably should use known cell xyz bounds directly
                     if (px < minX) minX = px;
                     if (px > maxX) maxX = px;
@@ -708,23 +710,32 @@ namespace PointCloudConverter.Writers
                         pz -= (cellZ * importSettings.gridSize);
 
                         // pack G, PY and INTensity
-                        if (importSettings.importRGB == true && importSettings.importIntensity == true)
+                        if (importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == false)
                         {
                             float c = py;
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
-                            byte br = (byte)(nodeTempG[i] * 255);
+                            byte bg = (byte)(nodeTempG[i] * 255);
                             byte bi = nodeTempIntensity[i];
-                            packed = (br << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
+                            packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         }
-                        else if (importSettings.importRGB == true && importSettings.importClassification == true)
+                        else if (importSettings.importRGB == true && importSettings.importIntensity == false && importSettings.importClassification == true)
                         {
                             float c = py;
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
-                            byte br = (byte)(nodeTempG[i] * 255);
-                            byte bi = nodeTempClassification[i];
-                            packed = (br << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
+                            byte bg = (byte)(nodeTempG[i] * 255);
+                            byte bc = nodeTempClassification[i];
+                            packedY = (bg << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
+                        }
+                        else if (importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == true)
+                        {
+                            float c = py;
+                            int cIntegral = (int)c;
+                            int cFractional = (int)((c - cIntegral) * 255);
+                            byte bg = (byte)(nodeTempG[i] * 255);
+                            byte bi = nodeTempIntensity[i];
+                            packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         }
                         else
                         {
@@ -732,8 +743,22 @@ namespace PointCloudConverter.Writers
                             py = Tools.SuperPacker(nodeTempG[i] * 0.98f, py, importSettings.gridSize * importSettings.packMagicValue);
                         }
 
-                        // pack red and x
-                        px = Tools.SuperPacker(nodeTempR[i] * 0.98f, px, importSettings.gridSize * importSettings.packMagicValue);
+                        // pack red, x and classification (since intensity is already in green)
+                        if (importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == true)
+                        {
+                            float c = px;
+                            int cIntegral = (int)c;
+                            int cFractional = (int)((c - cIntegral) * 255);
+                            byte br = (byte)(nodeTempR[i] * 255);
+                            byte bc = nodeTempClassification[i];
+                            packedX = (br << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
+                        }
+                        else
+                        {
+                            // pack red and x
+                            px = Tools.SuperPacker(nodeTempR[i] * 0.98f, px, importSettings.gridSize * importSettings.packMagicValue);
+                        }
+
                         // pack blue and z
                         pz = Tools.SuperPacker(nodeTempB[i] * 0.98f, pz, importSettings.gridSize * importSettings.packMagicValue);
 
@@ -836,21 +861,31 @@ namespace PointCloudConverter.Writers
                         //}
                         //writerPoints.Write(pz);
 
-                        // x
-                        FloatToBytes(px, pointBuffer, 0);
+                        // x, red, classification
+                        if (importSettings.packColors == true && importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == true)
+                        {
+                            IntToBytes(packedX, pointBuffer, 0);  // Convert int to bytes manually
+                        }
+                        else
+                        {
+                            // x, red
+                            FloatToBytes(px, pointBuffer, 0);
+                        }
 
                         if (importSettings.packColors == true && importSettings.importRGB == true && (importSettings.importIntensity == true || importSettings.importClassification == true))
                         {
                             // y, int, classification for now
-                            IntToBytes(packed, pointBuffer, 4);  // Convert int to bytes manually
+                            IntToBytes(packedY, pointBuffer, 4);
                         }
                         else
                         {
                             // y
-                            FloatToBytes(py, pointBuffer, 4);    // Convert float to bytes manually
+                            FloatToBytes(py, pointBuffer, 4);
                         }
+
                         // z
                         FloatToBytes(pz, pointBuffer, 8);
+
                         writerPoints.Write(pointBuffer);
                     } // wrote packed or unpacked xyz
 
