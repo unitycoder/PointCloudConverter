@@ -905,9 +905,9 @@ namespace PointCloudConverter
                     // TODO get intensity as separate value
                     if (importSettings.importIntensity == true)
                     {
-                        //intensity = taskReader.GetIntensity();
+                        intensity = taskReader.GetIntensity();
                         // works here
-                        intensity = taskReader.GetClassification();
+                        //intensity = taskReader.GetClassification();
                         //if (i < 20000) Log.Write("int: " + intensity);
 
                         // if no rgb, then replace RGB with intensity

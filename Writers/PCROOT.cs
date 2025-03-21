@@ -255,7 +255,7 @@ namespace PointCloudConverter.Writers
             int versionID = importSettings.packColors ? 2 : 1; // (1 = original, 2 = packed v3 format)
             if (importSettings.packColors == true) versionID = 2;
             if (useLossyFiltering == true) versionID = 3;
-            if (importSettings.importIntensity == true && importSettings.importRGB && importSettings.packColors) versionID = 4; // new int packed format
+            if ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB && importSettings.packColors) versionID = 4; // new int packed format
 
             bool addComments = false;
 
@@ -429,7 +429,7 @@ namespace PointCloudConverter.Writers
 
                 if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key].Add(intensity);
                 // TODO separate if rgb and or int?
-                if (importSettings.importClassification == true) nodeClassification[key].Add(classification);
+                if (importSettings.importRGB && importSettings.importClassification == true) nodeClassification[key].Add(classification);
                 if (importSettings.averageTimestamp == true) nodeTime[key].Add(time);
             }
             else // create new list for this key
@@ -443,7 +443,7 @@ namespace PointCloudConverter.Writers
                 nodeB[key] = new List<float> { b };
 
                 if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key] = new List<float> { intensity };
-                if (importSettings.importClassification == true) nodeClassification[key] = new List<float> { classification };
+                if (importSettings.importRGB && importSettings.importClassification == true) nodeClassification[key] = new List<float> { classification };
                 if (importSettings.averageTimestamp == true) nodeTime[key] = new List<double> { time };
             }
         } // addpoint()

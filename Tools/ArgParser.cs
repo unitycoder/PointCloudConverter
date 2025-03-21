@@ -875,9 +875,15 @@ namespace PointCloudConverter
             //}            
 
             // must have at least one
-            if (importSettings.importRGB == false && (importSettings.importIntensity == false && importSettings.importClassification == false) && importSettings.importClassification == false)
+            if (importSettings.importRGB == false && importSettings.importIntensity == false && importSettings.importClassification == false)
             {
                 importSettings.errors.Add("Must have -rgb OR -intensity OR -classification enabled");
+            }
+
+            // but cannot have int and class only
+            if (importSettings.importRGB == false && importSettings.importIntensity == true && importSettings.importClassification == true)
+            {
+                importSettings.errors.Add("Cannot have -intensity and -classification enabled without -rgb");
             }
 
             if (importSettings.exportFormat == ExportFormat.UCPC && importSettings.maxThreads > 1)
