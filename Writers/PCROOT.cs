@@ -145,7 +145,7 @@ namespace PointCloudConverter.Writers
             nodeIntensity.Clear();
             nodeClassification.Clear();
             nodeTime.Clear();
-            occupiedCells.Clear();
+            //occupiedCells.Clear();
             bsPoints = null;
             writerPoints = null;
             importSettings = (ImportSettings)(object)_importSettings;
@@ -356,7 +356,7 @@ namespace PointCloudConverter.Writers
             ClearDictionary(nodeIntensity);
             ClearDictionary(nodeClassification);
             ClearDictionary(nodeTime);
-            occupiedCells.Clear();
+            //occupiedCells.Clear();
             keyCache.Clear();
         }
 
@@ -366,8 +366,8 @@ namespace PointCloudConverter.Writers
         }
 
         // TEST filter by distance
-        private readonly float cellSize = 0.25f;
-        private HashSet<(int, int, int)> occupiedCells = new();
+        //private readonly float cellSize = 0.25f;
+        //private HashSet<(int, int, int)> occupiedCells = new();
 
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, float i, double time, float c)
         {
@@ -668,9 +668,18 @@ namespace PointCloudConverter.Writers
                             byte bi = (byte)(nodeTempIntensity[i] * 255);
                             packed = (br << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         }
+                        else if (importSettings.importRGB == true && importSettings.importClassification == true)
+                        {
+                            float c = py;
+                            int cIntegral = (int)c;
+                            int cFractional = (int)((c - cIntegral) * 255);
+                            byte br = (byte)(nodeTempG[i] * 255);
+                            byte bi = (byte)(nodeTempClassification[i] * 255);
+                            packed = (br << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
+                        }
                         else
                         {
-                            // pack green and y
+                            // pack green and y (note this is lossy, especially with *0.98)
                             py = Tools.SuperPacker(nodeTempG[i] * 0.98f, py, importSettings.gridSize * importSettings.packMagicValue);
                         }
 
