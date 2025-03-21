@@ -66,6 +66,10 @@ namespace PointCloudConverter
         public static int errorCounter = 0; // how many errors when importing or reading files (single file could have multiple errors)
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
+        // filter by distance
+        private readonly float cellSize = 0.5f;
+        private static ConcurrentDictionary<(int, int, int), bool> occupiedCells = new();
+
         // plugins
         string externalFileFormats = "";
 
@@ -401,6 +405,9 @@ namespace PointCloudConverter
 
                 //progressFile = i;
                 Interlocked.Increment(ref progressFile);
+
+                // clear filter by distance
+                occupiedCells.Clear();
 
                 //bool isLastTask = (i == len - 1); // Check if this is the last task
 
@@ -862,6 +869,17 @@ namespace PointCloudConverter
                     if (importSettings.importRGB == true)
                     {
                         rgb = taskReader.GetRGB();
+                    }
+
+                    if (importSettings.useFilter)
+                    {
+                        var cell = ((int)Math.Floor(point.x / importSettings.filterDistance), (int)Math.Floor(point.y / importSettings.filterDistance), (int)Math.Floor(point.z / importSettings.filterDistance));
+
+                        if (occupiedCells.TryAdd(cell, true))
+                        {
+                            continue; // cell already taken
+                        }
+                        //occupiedCells.Add(cell);
                     }
 
 

@@ -47,10 +47,6 @@ namespace PointCloudConverter.Writers
         static int skippedPointsCounter = 0; // FIXME, not used in regular mode, only for lossy filtering, TODO can calculate from importsetting values
         static bool useLossyFiltering = false; //not used, for testing only
 
-        // filter by distance
-        private readonly float cellSize = 0.5f;
-        private HashSet<(int, int, int)> occupiedCells = new();
-
         public void Dispose()
         {
             //Log.Write("Memory used: " + GC.GetTotalMemory(false));
@@ -162,7 +158,6 @@ namespace PointCloudConverter.Writers
             nodeIntensity.Clear();
             nodeClassification.Clear();
             nodeTime.Clear();
-            occupiedCells.Clear();
             bsPoints = null;
             writerPoints = null;
             importSettings = (ImportSettings)(object)_importSettings;
@@ -375,7 +370,6 @@ namespace PointCloudConverter.Writers
             ClearDictionary(nodeIntensity);
             ClearDictionary(nodeClassification);
             ClearDictionary(nodeTime);
-            occupiedCells.Clear();
             keyCache.Clear();
         }
 
@@ -386,17 +380,6 @@ namespace PointCloudConverter.Writers
 
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, byte intensity, double time, byte classification)
         {
-            if (importSettings.useFilter)
-            {
-                var cell = ((int)Math.Floor(x / importSettings.filterDistance), (int)Math.Floor(y / importSettings.filterDistance), (int)Math.Floor(z / importSettings.filterDistance));
-
-                if (occupiedCells.Contains(cell))
-                {
-                    return; // cell already taken
-                }
-                occupiedCells.Add(cell);
-            }
-
             // get global all clouds bounds
             cloudMinX = Math.Min(cloudMinX, x);
             cloudMaxX = Math.Max(cloudMaxX, x);
