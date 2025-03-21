@@ -68,7 +68,7 @@ namespace PointCloudConverter
 
         // filter by distance
         private readonly float cellSize = 0.5f;
-        private static ConcurrentDictionary<(int, int, int), bool> occupiedCells = new();
+        private static ConcurrentDictionary<(int, int, int), byte> occupiedCells = new();
 
         // plugins
         string externalFileFormats = "";
@@ -263,6 +263,9 @@ namespace PointCloudConverter
 
             List<Float3> boundsListTemp = new List<Float3>();
 
+            // clear filter by distance
+            occupiedCells.Clear();
+
             // get all file bounds, if in batch mode and RGB+INT+PACK
             // TODO: check what happens if its too high? over 128/256?
             //if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false)
@@ -272,7 +275,7 @@ namespace PointCloudConverter
             //Log.Write(istrue1 ? "1" : "0");
             //Log.Write(istrue2 ? "1" : "0");
 
-            if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || ((importSettings.importIntensity == true||importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
+            if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
             {
                 int iterations = importSettings.offsetMode == "min" ? importSettings.maxFiles : 1; // 1 for legacy mode
 
@@ -405,9 +408,6 @@ namespace PointCloudConverter
 
                 //progressFile = i;
                 Interlocked.Increment(ref progressFile);
-
-                // clear filter by distance
-                occupiedCells.Clear();
 
                 //bool isLastTask = (i == len - 1); // Check if this is the last task
 
@@ -871,18 +871,6 @@ namespace PointCloudConverter
                         rgb = taskReader.GetRGB();
                     }
 
-                    if (importSettings.useFilter)
-                    {
-                        var cell = ((int)Math.Floor(point.x / importSettings.filterDistance), (int)Math.Floor(point.y / importSettings.filterDistance), (int)Math.Floor(point.z / importSettings.filterDistance));
-
-                        if (occupiedCells.TryAdd(cell, true))
-                        {
-                            continue; // cell already taken
-                        }
-                        //occupiedCells.Add(cell);
-                    }
-
-
                     // skip points
                     if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
 
@@ -922,6 +910,16 @@ namespace PointCloudConverter
                         point.x = -point.x;
                     }
 
+                    // filtering is done after scaling and offsets
+                    if (importSettings.useFilter)
+                    {
+                        var cell = ((int)Math.Floor(point.x / importSettings.filterDistance), (int)Math.Floor(point.y / importSettings.filterDistance), (int)Math.Floor(point.z / importSettings.filterDistance));
+
+                        if (!occupiedCells.TryAdd(cell, 0))
+                        {
+                            continue; // cell already taken, skip this point
+                        }
+                    }
 
                     byte intensity = 0;
                     byte classification = 0;
