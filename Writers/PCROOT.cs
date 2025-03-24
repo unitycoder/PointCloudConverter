@@ -545,17 +545,16 @@ namespace PointCloudConverter.Writers
                     Tools.Shuffle(ref nodeTempZ);
 
                     // NOTE now we shuffle all arrays, even if not all are used?
-                    if (importSettings.importRGB == true || (importSettings.importIntensity == true || importSettings.importClassification))
+                    if (importSettings.importRGB == true || (importSettings.importIntensity == true || importSettings.importClassification == true))
                     {
                         Tools.Shuffle(ref nodeTempR);
                         Tools.Shuffle(ref nodeTempG);
                         Tools.Shuffle(ref nodeTempB);
+
                     }
-                    else
-                    {
-                        if (importSettings.importIntensity == true) Tools.Shuffle(ref nodeTempIntensity);
-                        if (importSettings.importClassification == true) Tools.Shuffle(ref nodeTempClassification);
-                    }
+
+                    if (importSettings.importIntensity == true) Tools.Shuffle(ref nodeTempIntensity);
+                    if (importSettings.importClassification == true) Tools.Shuffle(ref nodeTempClassification);
 
                     //if (importSettings.importRGB == true)
                     //{
