@@ -137,12 +137,21 @@ namespace PointCloudConverter
                             }
                         }
                     }
+                    catch (ReflectionTypeLoadException rex)
+                    {
+                        Log.Write($"Error loading plugin {pluginDLL}: {rex.Message}");
+
+                        foreach (var loaderException in rex.LoaderExceptions)
+                        {
+                            Log.Write(" - " + loaderException?.Message);
+                        }
+                    }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error loading plugin {pluginDLL}: {ex.Message}");
+                        Log.Write($"General error loading plugin {pluginDLL}: {ex.Message}");
                     }
                 }
-            }
+            } // if plugins folder exists
 
             //return;
 
