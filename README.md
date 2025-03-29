@@ -1,5 +1,5 @@
 # PointCloudConverter
-This is pointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp; Tools (Unity plugin)](https://assetstore.unity.com/packages/tools/utilities/point-cloud-viewer-and-tools-16019?aid=1101lGti)
+This is pointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp; Tools 3 (Unity plugin)](https://assetstore.unity.com/packages/tools/utilities/point-cloud-viewer-and-tools-3-310385?aid=1101lGti)
 
 ### Documentation
 - Check [Wiki](https://github.com/unitycoder/PointCloudConverter/wiki)
@@ -17,6 +17,7 @@ This is pointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp;
 ### Export Formats
 - UCPC (V2) for https://github.com/unitycoder/UnityPointCloudViewer
 - PCROOT (V3) for https://github.com/unitycoder/UnityPointCloudViewer
+- GLTF (GLB) output https://las2gltf.kelobyte.fi/ *Paid plugin
 
 ### Requirements
 - Windows 10 or later
@@ -28,7 +29,7 @@ This standalone converter is open-source, so you can create your own Forks and v
 Pull requests to improve this converter are welcome! (please create Issue first, so i/users can comment on it)
 
 ### Images
-![image](https://github.com/unitycoder/PointCloudConverter/assets/5438317/da7fb1ce-c4bb-49f5-930d-1c388ca1671b)
+![image](https://github.com/user-attachments/assets/4a116e52-e90e-436d-b315-d6311006c951)
 
 ### Building
 - Open project in VS2019 or later
