@@ -448,6 +448,7 @@ namespace PointCloudConverter
                                 }
                                 else
                                 {
+                                    Log.Write("files"+importSettings.inputFiles.Count+" i:"+i);
                                     Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
                                 }
                             }
@@ -1386,7 +1387,7 @@ namespace PointCloudConverter
             // select single file
             var dialog = new OpenFileDialog();
             dialog.Title = "Select file to import";
-            dialog.Filter = "LAS|*.las;*.laz";
+            dialog.Filter = "Point Cloud Files|*.las;*.laz;*.ply|LAS Files|*.las;*.laz|PLY Files|*.ply|All Files|*.*";
 
             // take folder from field
             if (string.IsNullOrEmpty(txtInputFile.Text) == false)

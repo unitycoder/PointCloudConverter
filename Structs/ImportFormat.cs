@@ -3,6 +3,7 @@
     public enum ImportFormat
     {
         Unknown,
-        LAS // and LAZ
+        LAS, // and LAZ
+        PLY
     }
 }
