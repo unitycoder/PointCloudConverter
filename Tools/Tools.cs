@@ -354,6 +354,7 @@ namespace PointCloudConverter
             Console.WriteLine("-output" + argSeparator + "yourfile.ucpc\t(Default is same folder as input file. For v3 you dont need to set file extension)");
             Console.WriteLine("-rgb" + argSeparator + "true or false\tReads RGB colors\tDefault is true");
             Console.WriteLine("-intensity" + argSeparator + "true or false\tReads Intensity as RGB color\tDefault is false");
+            Console.WriteLine("-classification" + argSeparator + "false\t\tImport classification data\tDefault is false");
             Console.WriteLine("-offset" + argSeparator + "true or false\tAuto-offsets cloud near 0,0,0 by using the first point as offset value\tDefault is true");
             Console.WriteLine("-gridsize" + argSeparator + "5\t\tGridsize in meters, splits cloud into tiles with this size. v3 only!\tDefault is 5, minimum is 0.1 (Note: values below 1 are not really tested)");
             Console.WriteLine("-minpoints" + argSeparator + "1000\t\tIf tile has less points than this value, its discarded. Good for removing straypoints. v3 only!\tDefault is 1000");
@@ -364,6 +365,7 @@ namespace PointCloudConverter
             Console.WriteLine("-limit" + argSeparator + "10000\t\tLoad only this many points (good for testing settings first)\tDefault is off");
             Console.WriteLine("-skip" + argSeparator + "0\t\t\tSkip every Nth point (For reducing point count)\tDefault is off");
             Console.WriteLine("-keep" + argSeparator + "0\t\t\tKeep only every Nth point (For reducing point count)\tDefault is off");
+            Console.WriteLine("-filter" + argSeparator + "0\t\t\tKeep only first point within this distance on world grid (In Unity units)\tDefault is off");
             Console.WriteLine("-maxfiles" + argSeparator + "10\t\t\tFor batch processing, parse only this many files (good for testing with few files first)\tDefault is parse all found files");
             // TODO Console.WriteLine("-decimate" + separator + "50\t\t\tRemoves 50% of the points (by skipping every x point)\tDefault is off");
             //Console.WriteLine("-version" + argSeparator + "2\t\t2=v2 .ucpc, 3=v3 .pcroot tiles\tDefault is 2");
@@ -378,6 +380,7 @@ namespace PointCloudConverter
             Console.WriteLine("-config" + argSeparator + "filename\t\tLoad arguments from text file (easier to handle separate settings for different projects)");
             Console.WriteLine("-usegrid" + argSeparator + "true\t\tSplits point cloud to grid (multiple files). Required for V3 format (automatically enabled if its off). \tDefault is true for v3");
             Console.WriteLine("-offsetmode" + argSeparator + "min\t\tGet auto-offset bounds, min=min from all bounds, legacy= first cloud min bounds\tDefault is min");
+
             Console.WriteLine("");
             Console.WriteLine("? /? -? help -help /help");
             Console.ForegroundColor = ConsoleColor.White;

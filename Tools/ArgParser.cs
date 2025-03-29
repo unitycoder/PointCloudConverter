@@ -216,6 +216,9 @@ namespace PointCloudConverter
                             case "-input":
                                 Log.Write("input = " + param);
 
+                                // remove quotes (needed for paths with spaces)
+                                param = param.Trim('"');
+
                                 // if relative folder, FIXME this fails on -input="C:\asdf\etryj\folder\" -importformat=las because backslash in \", apparently this https://stackoverflow.com/a/9288040/5452781
                                 if (Path.IsPathRooted(param) == false)
                                 {
@@ -761,7 +764,7 @@ namespace PointCloudConverter
                                 if (filterDistValue == false || tempFloat <= 0f)
 
                                 {
-                                    importSettings.errors.Add("Invalid filter value: " + param);
+                                    importSettings.errors.Add("Invalid filter value (must be greater than 0) : " + param);
                                 }
                                 else
                                 {

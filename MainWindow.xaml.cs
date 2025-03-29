@@ -29,7 +29,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "21.03.2025";
+        static readonly string version = "29.03.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -1083,7 +1083,14 @@ namespace PointCloudConverter
             var args = new List<string>();
 
             // add enabled args to list, TODO use binding later?
-            args.Add("-input=" + txtInputFile.Text);
+            string inputFile = txtInputFile.Text;
+            string outputFile = txtOutput.Text;
+
+            // add quotes, if contains space in path
+            if (inputFile.Contains(" ")) inputFile = "\"" + inputFile + "\"";
+            if (outputFile.Contains(" ")) outputFile = "\"" + outputFile + "\"";
+
+            args.Add("-input=" + inputFile);
 
             if (cmbImportFormat.SelectedItem != null)
             {
@@ -1093,7 +1100,8 @@ namespace PointCloudConverter
             {
                 args.Add("-exportformat=" + cmbExportFormat.SelectedItem.ToString());
             }
-            args.Add("-output=" + txtOutput.Text);
+
+            args.Add("-output=" + outputFile);
 
             // check if using autooffset
             //if ((bool)chkAutoOffset.IsChecked && !(bool)chkManualOffset.IsChecked)
