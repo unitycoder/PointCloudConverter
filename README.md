@@ -17,7 +17,7 @@ This is pointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp;
 ### Export Formats
 - UCPC (V2) for https://github.com/unitycoder/UnityPointCloudViewer
 - PCROOT (V3) for https://github.com/unitycoder/UnityPointCloudViewer
-- Paid plugin: GLTF (GLB) output https://las2gltf.kelobyte.fi/
+- GLTF (GLB) output https://las2gltf.kelobyte.fi/ *Paid plugin
 
 ### Requirements
 - Windows 10 or later
