@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PointCloudConverter"
         mc:Ignorable="d"
-        Title="PointCloudConverter" Height="720" Width="907" Background="#FF252222" Closing="Window_Closing" Loaded="Window_Loaded" MinWidth="920">
+        Title="PointCloudConverter" Height="737" Width="907" Background="#FF252222" Closing="Window_Closing" Loaded="Window_Loaded" MinWidth="920">
     <Grid Margin="0,0,2,0">
         <Button x:Name="btnBrowseInput" Content="..." HorizontalAlignment="Left" Margin="636,48,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseInput_Click" ToolTip="Browse for input file"/>
         <TextBox x:Name="txtInputFile" HorizontalAlignment="Left" AllowDrop="True" Height="23" Margin="20,48,0,0" VerticalAlignment="Top" Width="611" PreviewDrop="txtInputFile_Drop" PreviewDragOver="txtInputFile_DragEnter"/>
@@ -20,7 +20,7 @@
         <ComboBox x:Name="cmbExportFormat" HorizontalAlignment="Left" Margin="710,114,0,0" VerticalAlignment="Top" Width="163" IsReadOnly="True" SelectionChanged="cmbExportFormat_SelectionChanged"/>
         <Button x:Name="btnPlugins" Content=".." HorizontalAlignment="Left" VerticalAlignment="Top" ToolTip="Browse plugins folder" Margin="882,115,0,0" Width="16" Click="btnPlugins_Click"/>
 
-        <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="53" Margin="10,603,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="877" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
+        <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="67" Margin="10,603,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="877" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
 
         <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="10,577,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
         <Button x:Name="btnCopyToClipboard" Content="Copy" HorizontalAlignment="Left" VerticalAlignment="Top" Width="40" Height="20" ToolTip="Browse for output file" Margin="239,580,0,0" Click="btnCopyToClipboard_Click"/>
@@ -41,6 +41,7 @@
                     <StackPanel Orientation="Horizontal">
                         <CheckBox x:Name="chkImportRGB" Content="Read RGB" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads RGB color values" Checked="chkImportRGB_Checked" Unchecked="chkImportRGB_Unchecked"/>
                         <CheckBox x:Name="chkImportIntensity" Content="Read Intensity" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportIntensity_Checked" Unchecked="chkImportIntensity_Unchecked"/>
+                        <CheckBox x:Name="chkImportClassification" Content="Read Classification" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads Intensity as Color value" Checked="chkImportClassification_Checked" Unchecked="chkImportClassification_Unchecked"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <CheckBox x:Name="chkAutoOffset" Content="Auto-Offset, mode:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Auto-offsets cloud near 0,0,0 by using bounds min. as offset" Checked="chkAutoOffset_Checked"/>
@@ -82,23 +83,28 @@
                         <Label x:Name="label_Copyxx4" Content="point" HorizontalAlignment="Left" Margin="0" Foreground="{DynamicResource MainText}" VerticalAlignment="Top"/>
                     </StackPanel>
                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+                        <CheckBox x:Name="chkUseFilter" Content="Filter by distance:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Only 1 (first) point is kept within this distance (in world grid, Unity units)"/>
+                        <TextBox x:Name="txtFilterDistance" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="0.5"/>
+                        <Label x:Name="label_Copyxx5" Content="m" HorizontalAlignment="Left" Margin="0" Foreground="{DynamicResource MainText}" VerticalAlignment="Top"/>
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                         <CheckBox x:Name="chkUseMaxFileCount" Content="Maximum file count:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="For batch processing, parse only this many files (good for testing with few files first)"/>
                         <TextBox x:Name="txtMaxFileCount" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="92"/>
                     </StackPanel>
                     <CheckBox x:Name="chkRandomize" Content="Randomize" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Randomize point indexes, to use Dynamic resolution. Default is true (Always enabled for v3)"/>
                     <CheckBox x:Name="chkOpenOutputFolder" Content="Open output folder" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Open Explorer to Output folder after finished processing"/>
+
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="0,4,0,0">
                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                         <CheckBox x:Name="chkReadMetaData" Content="Import metadata" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="True" ToolTip="Reads LAs/LAZ metadata and saves into file"/>
                         <CheckBox x:Name="chkMetaDataOnly" Content="Read metadata only" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Doesnt process clouds, only reads metadata if import metadata is enabled"/>
                     </StackPanel>
-
                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                         <CheckBox x:Name="chkSetRandomSeed" Content="Use random seed:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="To use same random seed when converting same cloud with different import settings"/>
                         <TextBox x:Name="txtRandomSeed" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="42"/>
                     </StackPanel>
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" Margin="0,4,0,0">
                     <StackPanel Grid.Column="1" Margin="0,4,0,0">
                         <CheckBox x:Name="chkUseJSONLog" Content="Use JSON log *Used in commandline only" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Log messages are written in JSON format. Experimental, V3 format is better supported."/>
                     </StackPanel>

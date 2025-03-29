@@ -37,7 +37,8 @@ namespace PointCloudConverter.Writers
         Dictionary<string, List<float>> nodeR = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeIntensity = new Dictionary<string, List<float>>();
+        Dictionary<string, List<byte>> nodeIntensity = new Dictionary<string, List<byte>>();
+        Dictionary<string, List<byte>> nodeClassification = new Dictionary<string, List<byte>>();
         Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
 
         //int? taskID;
@@ -60,6 +61,19 @@ namespace PointCloudConverter.Writers
 
 
         private void ClearDictionary(Dictionary<string, List<float>> dictionary)
+        {
+            if (dictionary != null)
+            {
+                foreach (var list in dictionary.Values)
+                {
+                    list.Clear(); // Clear the list to free up memory
+                }
+                dictionary.Clear(); // Clear the dictionary itself
+                dictionary = null; // Help GC by removing reference
+            }
+        }
+
+        private void ClearDictionary(Dictionary<string, List<byte>> dictionary)
         {
             if (dictionary != null)
             {
@@ -101,6 +115,7 @@ namespace PointCloudConverter.Writers
                 ClearDictionary(nodeG);
                 ClearDictionary(nodeB);
                 ClearDictionary(nodeIntensity);
+                ClearDictionary(nodeClassification);
                 ClearDictionary(nodeTime);
 
                 keyCache.Clear();
@@ -141,8 +156,8 @@ namespace PointCloudConverter.Writers
             nodeG.Clear();
             nodeB.Clear();
             nodeIntensity.Clear();
+            nodeClassification.Clear();
             nodeTime.Clear();
-
             bsPoints = null;
             writerPoints = null;
             importSettings = (ImportSettings)(object)_importSettings;
@@ -252,7 +267,8 @@ namespace PointCloudConverter.Writers
             int versionID = importSettings.packColors ? 2 : 1; // (1 = original, 2 = packed v3 format)
             if (importSettings.packColors == true) versionID = 2;
             if (useLossyFiltering == true) versionID = 3;
-            if (importSettings.importIntensity == true && importSettings.importRGB && importSettings.packColors) versionID = 4; // new int packed format
+            if ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB && importSettings.packColors) versionID = 4; // new int packed format
+            if ((importSettings.importIntensity == true && importSettings.importClassification == true) && importSettings.importRGB && importSettings.packColors) versionID = 5; // new int packed format + classification
 
             bool addComments = false;
 
@@ -262,6 +278,7 @@ namespace PointCloudConverter.Writers
 
             string commentRow = "# version" + sep + "gridsize" + sep + "pointcount" + sep + "boundsMinX" + sep + "boundsMinY" + sep + "boundsMinZ" + sep + "boundsMaxX" + sep + "boundsMaxY" + sep + "boundsMaxZ" + sep + "autoOffsetX" + sep + "autoOffsetY" + sep + "autoOffsetZ" + sep + "packMagicValue";
             if (importSettings.importRGB == true && importSettings.importIntensity == true) commentRow += sep + "intensity";
+            if (importSettings.importRGB == true && importSettings.importClassification == true) commentRow += sep + "classification";
             if (addComments) tilerootdata.Insert(1, commentRow);
 
             // add global header settings to first row
@@ -351,8 +368,8 @@ namespace PointCloudConverter.Writers
             ClearDictionary(nodeG);
             ClearDictionary(nodeB);
             ClearDictionary(nodeIntensity);
+            ClearDictionary(nodeClassification);
             ClearDictionary(nodeTime);
-
             keyCache.Clear();
         }
 
@@ -361,7 +378,7 @@ namespace PointCloudConverter.Writers
 
         }
 
-        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, bool hasIntensity, float i, bool hasTime, double time)
+        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, byte intensity, double time, byte classification)
         {
             // get global all clouds bounds
             cloudMinX = Math.Min(cloudMinX, x);
@@ -406,8 +423,10 @@ namespace PointCloudConverter.Writers
                 nodeG[key].Add(g);
                 nodeB[key].Add(b);
 
-                if (hasIntensity == true) nodeIntensity[key].Add(i);
-                if (hasTime == true) nodeTime[key].Add(time);
+                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key].Add(intensity);
+                // TODO separate if rgb and or int?
+                if (importSettings.importRGB && importSettings.importClassification == true) nodeClassification[key].Add(classification);
+                if (importSettings.averageTimestamp == true) nodeTime[key].Add(time);
             }
             else // create new list for this key
             {
@@ -419,8 +438,9 @@ namespace PointCloudConverter.Writers
                 nodeG[key] = new List<float> { g };
                 nodeB[key] = new List<float> { b };
 
-                if (hasIntensity == true) nodeIntensity[key] = new List<float> { i };
-                if (hasTime == true) nodeTime[key] = new List<double> { time };
+                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key] = new List<byte> { intensity };
+                if (importSettings.importRGB && importSettings.importClassification == true) nodeClassification[key] = new List<byte> { classification };
+                if (importSettings.averageTimestamp == true) nodeTime[key] = new List<double> { time };
             }
         } // addpoint()
 
@@ -468,7 +488,8 @@ namespace PointCloudConverter.Writers
             List<float> nodeTempG;
             List<float> nodeTempB;
 
-            List<float> nodeTempIntensity = null;
+            List<byte> nodeTempIntensity = null;
+            List<byte> nodeTempClassification = null;
             List<double> nodeTempTime = null;
 
             List<string> outputFiles = new List<string>();
@@ -495,10 +516,17 @@ namespace PointCloudConverter.Writers
                 nodeTempG = nodeG[key];
                 nodeTempB = nodeB[key];
 
-                // collect both
+                // collect both rgb and intensity
                 if (importSettings.importRGB == true && importSettings.importIntensity == true)
+                //if (importSettings.importIntensity == true)
                 {
                     nodeTempIntensity = nodeIntensity[key];
+                }
+
+                // TODO separate?
+                if (importSettings.importRGB == true && importSettings.importClassification == true)
+                {
+                    nodeTempClassification = nodeClassification[key];
                 }
 
                 if (importSettings.averageTimestamp == true)
@@ -506,34 +534,77 @@ namespace PointCloudConverter.Writers
                     nodeTempTime = nodeTime[key];
                 }
 
-
-
                 // randomize points in this node
-                if (importSettings.randomize == true)
+                if (importSettings.randomize)
                 {
-                    if (importSettings.importRGB == true && importSettings.importIntensity == true)
+                    //ShuffleFlags flags = ShuffleFlags.None;
+                    //int rand = Tools.frnd.Next(0, index--);
+
+                    Tools.Shuffle(ref nodeTempX);
+                    Tools.Shuffle(ref nodeTempY);
+                    Tools.Shuffle(ref nodeTempZ);
+
+                    // NOTE now we shuffle all arrays, even if not all are used?
+                    if (importSettings.importRGB == true || (importSettings.importIntensity == true || importSettings.importClassification == true))
                     {
-                        if (importSettings.averageTimestamp == true)
-                        {
-                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity, ref nodeTempTime);
-                        }
-                        else
-                        {
-                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempIntensity);
-                        }
+                        Tools.Shuffle(ref nodeTempR);
+                        Tools.Shuffle(ref nodeTempG);
+                        Tools.Shuffle(ref nodeTempB);
+
                     }
-                    else
+
+                    if (importSettings.importIntensity == true) Tools.Shuffle(ref nodeTempIntensity);
+                    if (importSettings.importClassification == true) Tools.Shuffle(ref nodeTempClassification);
+
+                    //if (importSettings.importRGB == true)
+                    //{
+                    //    if (importSettings.packColors == true)
+                    //    {
+
+                    //    }
+                    //    else // not packed
+                    //    {
+                    //        //// intensity or classification are saved into rgb field if not packed
+                    //        //if (importSettings.importIntensity || importSettings.importClassification)
+                    //        //{
+                    //        //    Tools.Shuffle(ref nodeTempR);
+                    //        //    Tools.Shuffle(ref nodeTempG);
+                    //        //    Tools.Shuffle(ref nodeTempB);
+                    //        //}
+
+                    //        // if separate intensity
+                    //        if (importSettings.importIntensity)
+                    //        {
+                    //            Tools.Shuffle(ref nodeTempIntensity);
+                    //        }
+
+                    //        // if separate classification
+                    //        if (importSettings.importClassification)
+                    //        {
+                    //            Tools.Shuffle(ref nodeTempClassification);
+                    //        }
+                    //    }
+                    //}
+                    //else // no rgb
+                    //{
+                    //    if (importSettings.importIntensity)
+                    //    {
+                    //        Tools.Shuffle(ref nodeTempIntensity);
+                    //    }
+
+                    //    // if separate classification
+                    //    if (importSettings.importClassification)
+                    //    {
+                    //        Tools.Shuffle(ref nodeTempClassification);
+                    //    }
+                    //}
+
+                    if (importSettings.averageTimestamp)
                     {
-                        if (importSettings.averageTimestamp == true)
-                        {
-                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB, ref nodeTempTime);
-                        }
-                        else
-                        {
-                            Tools.Shuffle(ref nodeTempX, ref nodeTempY, ref nodeTempZ, ref nodeTempR, ref nodeTempG, ref nodeTempB);
-                        }
+                        Tools.Shuffle(ref nodeTempTime);
                     }
-                } // randomize
+                }
+
 
                 // get this node bounds, TODO but we know node(grid cell) x,y,z values?
                 float minX = float.PositiveInfinity;
@@ -597,7 +668,8 @@ namespace PointCloudConverter.Writers
                     float px = nodeTempX[i];
                     float py = nodeTempY[i];
                     float pz = nodeTempZ[i];
-                    int packed = 0;
+                    int packedX = 0;
+                    int packedY = 0;
                     // FIXME bounds is wrong if appended (but append is disabled now), should include previous data also, but now append is disabled.. also probably should use known cell xyz bounds directly
                     if (px < minX) minX = px;
                     if (px > maxX) maxX = px;
@@ -621,23 +693,55 @@ namespace PointCloudConverter.Writers
                         pz -= (cellZ * importSettings.gridSize);
 
                         // pack G, PY and INTensity
-                        if (importSettings.importRGB == true && importSettings.importIntensity == true)
+                        if (importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == false)
                         {
                             float c = py;
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
-                            byte br = (byte)(nodeTempG[i] * 255);
-                            byte bi = (byte)(nodeTempIntensity[i] * 255);
-                            packed = (br << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
+                            byte bg = (byte)(nodeTempG[i] * 255);
+                            byte bi = nodeTempIntensity[i];
+                            packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
+                        }
+                        else if (importSettings.importRGB == true && importSettings.importIntensity == false && importSettings.importClassification == true)
+                        {
+                            float c = py;
+                            int cIntegral = (int)c;
+                            int cFractional = (int)((c - cIntegral) * 255);
+                            byte bg = (byte)(nodeTempG[i] * 255);
+                            byte bc = nodeTempClassification[i];
+                            packedY = (bg << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
+                        }
+                        else if (importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == true)
+                        {
+                            float c = py;
+                            int cIntegral = (int)c;
+                            int cFractional = (int)((c - cIntegral) * 255);
+                            byte bg = (byte)(nodeTempG[i] * 255);
+                            byte bi = nodeTempIntensity[i];
+                            packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         }
                         else
                         {
-                            // pack green and y
+                            // pack green and y (note this is lossy, especially with *0.98)
                             py = Tools.SuperPacker(nodeTempG[i] * 0.98f, py, importSettings.gridSize * importSettings.packMagicValue);
                         }
 
-                        // pack red and x
-                        px = Tools.SuperPacker(nodeTempR[i] * 0.98f, px, importSettings.gridSize * importSettings.packMagicValue);
+                        // pack red, x and classification (since intensity is already in green)
+                        if (importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == true)
+                        {
+                            float c = px;
+                            int cIntegral = (int)c;
+                            int cFractional = (int)((c - cIntegral) * 255);
+                            byte br = (byte)(nodeTempR[i] * 255);
+                            byte bc = nodeTempClassification[i];
+                            packedX = (br << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
+                        }
+                        else
+                        {
+                            // pack red and x
+                            px = Tools.SuperPacker(nodeTempR[i] * 0.98f, px, importSettings.gridSize * importSettings.packMagicValue);
+                        }
+
                         // pack blue and z
                         pz = Tools.SuperPacker(nodeTempB[i] * 0.98f, pz, importSettings.gridSize * importSettings.packMagicValue);
 
@@ -740,17 +844,31 @@ namespace PointCloudConverter.Writers
                         //}
                         //writerPoints.Write(pz);
 
-                        FloatToBytes(px, pointBuffer, 0);
-
-                        if (importSettings.packColors == true && importSettings.importRGB == true && importSettings.importIntensity == true)
+                        // x, red, classification
+                        if (importSettings.packColors == true && importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == true)
                         {
-                            IntToBytes(packed, pointBuffer, 4);  // Convert int to bytes manually
+                            IntToBytes(packedX, pointBuffer, 0);  // Convert int to bytes manually
                         }
                         else
                         {
-                            FloatToBytes(py, pointBuffer, 4);    // Convert float to bytes manually
+                            // x, red
+                            FloatToBytes(px, pointBuffer, 0);
                         }
+
+                        if (importSettings.packColors == true && importSettings.importRGB == true && (importSettings.importIntensity == true || importSettings.importClassification == true))
+                        {
+                            // y, int, classification for now
+                            IntToBytes(packedY, pointBuffer, 4);
+                        }
+                        else
+                        {
+                            // y
+                            FloatToBytes(py, pointBuffer, 4);
+                        }
+
+                        // z
                         FloatToBytes(pz, pointBuffer, 8);
+
                         writerPoints.Write(pointBuffer);
                     } // wrote packed or unpacked xyz
 
@@ -758,7 +876,7 @@ namespace PointCloudConverter.Writers
                     {
                         //double ptime = 
                         totalTime += nodeTempTime[i]; // time for this single point
-                        //Console.WriteLine(ptime);
+                                                      //Console.WriteLine(ptime);
                     }
 
                     totalPointsWritten++;
@@ -826,15 +944,44 @@ namespace PointCloudConverter.Writers
                             //// keep points
                             //if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
-                            // TODO write as byte (not RGB floats)
-                            writerIntensity.Write(nodeTempIntensity[i]);
-                            writerIntensity.Write(nodeTempIntensity[i]);
-                            writerIntensity.Write(nodeTempIntensity[i]);
+                            // TODO write as byte (not RGB floats) and write all in one
+                            float c = nodeTempIntensity[i] / 255f;
+                            writerIntensity.Write(c);
+                            writerIntensity.Write(c);
+                            writerIntensity.Write(c);
                         } // loop all point in cell cells
 
                         // close tile/node
                         writerIntensity.Close();
                         bsIntensity.Dispose();
+                    }
+
+                    // TEST separate classification
+                    if (importSettings.importRGB == true && importSettings.importClassification == true)
+                    {
+                        BufferedStream bsClassification;
+                        bsClassification = new BufferedStream(new FileStream(fullpath + ".cla", FileMode.Create));
+                        var writerClassification = new BinaryWriter(bsClassification);
+
+                        // output all points within that node cell
+                        for (int i = 0, len = nodeTempX.Count; i < len; i++)
+                        {
+                            //// skip points
+                            //if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
+
+                            //// keep points
+                            //if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
+
+                            // TODO write as byte (not RGB floats)
+                            float c = nodeTempClassification[i] / 255f;
+                            writerClassification.Write(c);
+                            writerClassification.Write(c);
+                            writerClassification.Write(c);
+                        } // loop all point in cell cells
+
+                        // close tile/node
+                        writerClassification.Close();
+                        bsClassification.Dispose();
                     }
 
                 } // if packColors == false && useLossyFiltering == false

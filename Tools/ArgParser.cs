@@ -216,6 +216,9 @@ namespace PointCloudConverter
                             case "-input":
                                 Log.Write("input = " + param);
 
+                                // remove quotes (needed for paths with spaces)
+                                param = param.Trim('"');
+
                                 // if relative folder, FIXME this fails on -input="C:\asdf\etryj\folder\" -importformat=las because backslash in \", apparently this https://stackoverflow.com/a/9288040/5452781
                                 if (Path.IsPathRooted(param) == false)
                                 {
@@ -727,7 +730,20 @@ namespace PointCloudConverter
                                     importSettings.importIntensity = (param == "true");
                                 }
                                 break;
-                            
+
+                            case "-classification":
+                                Log.Write("classification = " + param);
+
+                                if (param != "false" && param != "true")
+                                {
+                                    importSettings.errors.Add("Invalid classification parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.importClassification = (param == "true");
+                                }
+                                break;
+
                             case "-offsetmode":
                                 Log.Write("offsetmode = " + param);
 
@@ -738,6 +754,22 @@ namespace PointCloudConverter
                                 else
                                 {
                                     importSettings.offsetMode = param;
+                                }
+                                break;
+
+                            case "-filter":
+                                Log.Write("filter = " + param);
+
+                                bool filterDistValue = float.TryParse(param, out tempFloat);
+                                if (filterDistValue == false || tempFloat <= 0f)
+
+                                {
+                                    importSettings.errors.Add("Invalid filter value (must be greater than 0) : " + param);
+                                }
+                                else
+                                {
+                                    importSettings.useFilter = true;
+                                    importSettings.filterDistance = tempFloat;
                                 }
                                 break;
 
@@ -862,9 +894,15 @@ namespace PointCloudConverter
             //}            
 
             // must have at least one
-            if (importSettings.importRGB == false && importSettings.importIntensity == false)
+            if (importSettings.importRGB == false && importSettings.importIntensity == false && importSettings.importClassification == false)
             {
-                importSettings.errors.Add("Must have -rgb OR -intensity enabled");
+                importSettings.errors.Add("Must have -rgb OR -intensity OR -classification enabled");
+            }
+
+            // but cannot have int and class only
+            if (importSettings.importRGB == false && importSettings.importIntensity == true && importSettings.importClassification == true)
+            {
+                importSettings.errors.Add("Cannot have -intensity and -classification enabled without -rgb");
             }
 
             if (importSettings.exportFormat == ExportFormat.UCPC && importSettings.maxThreads > 1)

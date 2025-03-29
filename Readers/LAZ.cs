@@ -44,13 +44,13 @@ namespace PointCloudConverter.Readers
             int res = 1;
             //try
             //{
-                //Log.WriteLine("--------------------- initreader: " + fileIndex + " taskID: " + taskID);
-                // TODO check errors
-                var file = importSettings.inputFiles[fileIndex];
-                //importRGB = importSettings.importRGB;
-                //importIntensity = importSettings.importIntensity;
-                customIntensityRange = importSettings.useCustomIntensityRange;
-                res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
+            //Log.WriteLine("--------------------- initreader: " + fileIndex + " taskID: " + taskID);
+            // TODO check errors
+            var file = importSettings.inputFiles[fileIndex];
+            //importRGB = importSettings.importRGB;
+            //importIntensity = importSettings.importIntensity;
+            customIntensityRange = importSettings.useCustomIntensityRange;
+            res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
             //}
             //catch (Exception e)
             //{
@@ -112,7 +112,7 @@ namespace PointCloudConverter.Readers
                     vlr.Description = System.Text.Encoding.UTF8.GetString(lazReader.header.vlrs[i].description);
                     vlr.Description = vlr.Description.Replace("\0", string.Empty);
 
-                    //Get WKT (Well Known Text String)
+                    // Get WKT (Well Known Text String)
                     if (vlr.RecordID == 2112)
                     {
                         string wkt = Encoding.ASCII.GetString(lazReader.header.vlrs[i].data);
@@ -152,7 +152,6 @@ namespace PointCloudConverter.Readers
                                 h.ProjectionID = newEntry.Value_Offset;
                                 h.Projection = newEntry.Value_OffsetString;
                             }
-
                             gk.KeyEntries.Add(newEntry);
 
                             //gk.KeyEntries.Add(new sKeyEntry
@@ -178,8 +177,39 @@ namespace PointCloudConverter.Readers
                     h.VariableLengthRecords.Add(vlr);
                 }
             }
+
+            // additional data for LAS 1.3/1.4
+
+            // LAS 1.3 and higher: waveform data packet record pointer.
+            if (h.VersionMajor > 1 || (h.VersionMajor == 1 && h.VersionMinor >= 3))
+            {
+                h.StartOfWaveformDataPacketRecord = lazReader.header.start_of_waveform_data_packet_record;
+            }
+
+            // LAS 1.4 and higher: extended VLRs and extended point record counts.
+            if (h.VersionMajor > 1 || (h.VersionMajor == 1 && h.VersionMinor >= 4))
+            {
+                h.StartOfFirstExtendedVariableLengthRecord = lazReader.header.start_of_first_extended_variable_length_record;
+                h.NumberOfExtendedVariableLengthRecords = lazReader.header.number_of_extended_variable_length_records;
+                h.ExtendedNumberOfPointRecords = lazReader.header.extended_number_of_point_records;
+                h.ExtendedNumberOfPointsByReturn = lazReader.header.extended_number_of_points_by_return;
+            }
+
+            // optional user data in header
+            if (lazReader.header.user_data_in_header_size > 0)
+            {
+                h.UserDataInHeader = lazReader.header.user_data_in_header;
+            }
+
+            // optional user data after header
+            if (lazReader.header.user_data_after_header_size > 0)
+            {
+                h.UserDataAfterHeader = lazReader.header.user_data_after_header;
+            }
+
             return h;
         }
+
 
         public GeoKeys ParseGeoKeysFromByteArray(byte[] byteArray)
         {
@@ -310,8 +340,6 @@ namespace PointCloudConverter.Readers
 
             // get point reference
             var p = lazReader.point;
-            // TODO get timestamp
-            //var pointTime = lazReader.point.gps_time;
 
             if (p.rgb[0] > 255 || p.rgb[1] > 255 || p.rgb[2] > 255)
             {
@@ -329,25 +357,44 @@ namespace PointCloudConverter.Readers
             return c;
         }
 
-        Color IReader.GetIntensity()
+        byte IReader.GetIntensity()
         {
-            var c = new Color();
+            //var c = new Color();
 
             // get point reference
             var p = lazReader.point;
 
-            float i = 0;
+            byte i = 0;
             if (customIntensityRange == true) // NOTE now only supports 65535 as custom range
             {
-                i = Tools.LUT255[(byte)(p.intensity / 255f)];
+                //i = Tools.LUT255[(byte)(p.intensity / 255f)];
+                i = (byte)(p.intensity / 255f);
             }
             else
             {
-                i = Tools.LUT255[(byte)(p.intensity)];
+                //i = Tools.LUT255[(byte)(p.intensity)];
+                i = (byte)(p.intensity);
             }
-            c.r = i;
-            c.g = i;
-            c.b = i;
+            //c.r = i;
+            //c.g = i;
+            //c.b = i;
+            return i;
+        }
+
+        byte IReader.GetClassification()
+        {
+            //float c = new Color();
+            // get point reference
+            var p = lazReader.point;
+            //c.r = (Remap(p.extended_classification, 2, 112, 0, 1)); // works, but we dont know range ahead of time, unless read first all values in all files?
+            //c.r = (Remap(p.extended_classification, 0, 255, 0, 1));
+            byte c = p.extended_classification;// / 255f;
+            //c.r = p.classification;
+            //c.r = p.extended_classification;
+            //float c = Tools.LUT255[(byte)(p.classification)];
+            //Console.WriteLine(c.r);
+            //c.g = c.r;
+            //c.b = c.r;
             return c;
         }
 

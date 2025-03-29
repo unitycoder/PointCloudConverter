@@ -29,7 +29,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "21.10.2024";
+        static readonly string version = "29.03.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -65,6 +65,10 @@ namespace PointCloudConverter
         public static string lastStatusMessage = "";
         public static int errorCounter = 0; // how many errors when importing or reading files (single file could have multiple errors)
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+
+        // filter by distance
+        private readonly float cellSize = 0.5f;
+        private static ConcurrentDictionary<(int, int, int), byte> occupiedCells = new();
 
         // plugins
         string externalFileFormats = "";
@@ -259,6 +263,9 @@ namespace PointCloudConverter
 
             List<Float3> boundsListTemp = new List<Float3>();
 
+            // clear filter by distance
+            occupiedCells.Clear();
+
             // get all file bounds, if in batch mode and RGB+INT+PACK
             // TODO: check what happens if its too high? over 128/256?
             //if (importSettings.useAutoOffset == true && importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false)
@@ -268,7 +275,7 @@ namespace PointCloudConverter
             //Log.Write(istrue1 ? "1" : "0");
             //Log.Write(istrue2 ? "1" : "0");
 
-            if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
+            if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
             {
                 int iterations = importSettings.offsetMode == "min" ? importSettings.maxFiles : 1; // 1 for legacy mode
 
@@ -426,7 +433,14 @@ namespace PointCloudConverter
                             }
                             else
                             {
-                                Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                                if (cancellationToken.IsCancellationRequested)
+                                {
+                                    Log.Write("Task was canceled.");
+                                }
+                                else
+                                {
+                                    Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
+                                }
                             }
                         }
                     }
@@ -767,7 +781,7 @@ namespace PointCloudConverter
                 // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds?
 
                 // dont use these bounds, in this case
-                if (importSettings.useAutoOffset == true || (importSettings.importIntensity == true && importSettings.importRGB == true && importSettings.packColors == true))
+                if (importSettings.useAutoOffset == true || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true))
                 {
                     // TODO add manual offset here still?
                     // we use global bounds or Y offset to fix negative Y
@@ -857,7 +871,6 @@ namespace PointCloudConverter
                         rgb = taskReader.GetRGB();
                     }
 
-
                     // skip points
                     if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
 
@@ -897,22 +910,65 @@ namespace PointCloudConverter
                         point.x = -point.x;
                     }
 
+                    // filtering is done after scaling and offsets
+                    if (importSettings.useFilter)
+                    {
+                        var cell = ((int)Math.Floor(point.x / importSettings.filterDistance), (int)Math.Floor(point.y / importSettings.filterDistance), (int)Math.Floor(point.z / importSettings.filterDistance));
 
-                    Color intensity = (default);
+                        if (!occupiedCells.TryAdd(cell, 0))
+                        {
+                            continue; // cell already taken, skip this point
+                        }
+                    }
+
+                    byte intensity = 0;
+                    byte classification = 0;
                     double time = 0;
 
-                    // TODO get intensity as separate value, TODO is this float or rgb?
+                    // TODO get intensity as separate value
                     if (importSettings.importIntensity == true)
                     {
                         intensity = taskReader.GetIntensity();
-                        //if (i < 100) Console.WriteLine(intensity.r);
+                        // works here
+                        //intensity = taskReader.GetClassification();
+                        //if (i < 20000) Log.Write("int: " + intensity);
 
                         // if no rgb, then replace RGB with intensity
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = intensity.r;
-                            rgb.g = intensity.r;
-                            rgb.b = intensity.r;
+                            rgb.r = intensity/255f;
+                            rgb.g = rgb.r;
+                            rgb.b = rgb.r;
+                        }
+                    }
+
+                    // FIXME cannot have both classification and intensity, because both save into RGB here
+
+                    if (importSettings.importClassification == true)
+                    {
+                        classification = taskReader.GetClassification();
+                        //classification = taskReader.GetIntensity();
+                        //if (classification<0 || classification>1) Log.Write("****: " + classification.ToString());
+
+                        //if (i < 20000) Log.Write("class: " + classification.ToString());
+                        //classification = 0;
+                        //if (intensity.r < minInt)
+                        //{
+                        //    minInt = intensity.r;
+                        //    Log.Write("Min: " + minInt + " Max: " + maxInt);
+                        //}
+                        //if (intensity.r > maxInt)
+                        //{
+                        //    maxInt = intensity.r;
+                        //    Log.Write("Min: " + minInt + " Max: " + maxInt);
+                        //}
+
+                        // if no rgb, then replace RGB with intensity
+                        if (importSettings.importRGB == false)
+                        {
+                            rgb.r = classification/255f;
+                            rgb.g = rgb.r;
+                            rgb.b = rgb.r;
                         }
                     }
 
@@ -926,7 +982,7 @@ namespace PointCloudConverter
                     // collect this point XYZ and RGB into node, optionally intensity also
                     //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     // TODO can remove importsettings, its already passed on init
-                    taskWriter.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
+                    taskWriter.AddPoint(index: i, x: (float)point.x, y: (float)point.y, z: (float)point.z, r: rgb.r, g: rgb.g, b: rgb.b, intensity: intensity, time: time, classification: classification);
                     //progressPoint = i;
                     progressInfo.CurrentValue = i;
                 } // for all points
@@ -962,6 +1018,9 @@ namespace PointCloudConverter
             //Log.Write("taskid: " + taskId + " done");
             return true;
         } // ParseFile
+
+        static float maxInt = 0;
+        static float minInt = 999999;
 
         private void btnConvert_Click(object sender, RoutedEventArgs e)
         {
@@ -1024,7 +1083,14 @@ namespace PointCloudConverter
             var args = new List<string>();
 
             // add enabled args to list, TODO use binding later?
-            args.Add("-input=" + txtInputFile.Text);
+            string inputFile = txtInputFile.Text;
+            string outputFile = txtOutput.Text;
+
+            // add quotes, if contains space in path
+            if (inputFile.Contains(" ")) inputFile = "\"" + inputFile + "\"";
+            if (outputFile.Contains(" ")) outputFile = "\"" + outputFile + "\"";
+
+            args.Add("-input=" + inputFile);
 
             if (cmbImportFormat.SelectedItem != null)
             {
@@ -1034,7 +1100,8 @@ namespace PointCloudConverter
             {
                 args.Add("-exportformat=" + cmbExportFormat.SelectedItem.ToString());
             }
-            args.Add("-output=" + txtOutput.Text);
+
+            args.Add("-output=" + outputFile);
 
             // check if using autooffset
             //if ((bool)chkAutoOffset.IsChecked && !(bool)chkManualOffset.IsChecked)
@@ -1050,6 +1117,8 @@ namespace PointCloudConverter
 
             args.Add("-rgb=" + (bool)chkImportRGB.IsChecked);
             args.Add("-intensity=" + (bool)chkImportIntensity.IsChecked);
+            args.Add("-classification=" + (bool)chkImportClassification.IsChecked);
+
 
             bool isPCROOT = (cmbExportFormat.SelectedItem.ToString() == "PCROOT");
             bool isGLTF = (cmbExportFormat.SelectedItem.ToString().ToUpper() == "GLTF" || cmbExportFormat.SelectedItem.ToString().ToUpper() == "GLB");
@@ -1076,6 +1145,8 @@ namespace PointCloudConverter
             if ((bool)chkGetAvgTileTimestamp.IsChecked) args.Add("-averagetimestamp=true");
             if ((bool)chkCalculateOverlappingTiles.IsChecked) args.Add("-checkoverlap=true");
             args.Add("-maxthreads=" + txtMaxThreads.Text);
+
+            if ((bool)chkUseFilter.IsChecked) args.Add("-filter=" + txtFilterDistance.Text);
 
             if (isGLTF == true) args.Add(("-usegrid=" + (bool)chkUseGrid.IsChecked).ToLower());
 
@@ -1189,6 +1260,9 @@ namespace PointCloudConverter
                             break;
                         case "intensity":
                             chkImportIntensity.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "classification":
+                            chkImportClassification.IsChecked = value.ToLower() == "true";
                             break;
                         case "gridsize":
                             txtGridSize.Text = value;
@@ -1429,6 +1503,7 @@ namespace PointCloudConverter
 
             chkImportRGB.IsChecked = Properties.Settings.Default.importRGB;
             chkImportIntensity.IsChecked = Properties.Settings.Default.importIntensity;
+            chkImportClassification.IsChecked = Properties.Settings.Default.importClassification;
 
             chkAutoOffset.IsChecked = Properties.Settings.Default.useAutoOffset;
             txtGridSize.Text = Properties.Settings.Default.gridSize.ToString();
@@ -1467,6 +1542,8 @@ namespace PointCloudConverter
             txtMaxThreads.Text = Properties.Settings.Default.maxThreads;
             chkUseGrid.IsChecked = Properties.Settings.Default.useGrid;
             txtOffsetMode.Text = Properties.Settings.Default.offsetMode;
+            chkUseFilter.IsChecked = Properties.Settings.Default.useFilter;
+            txtFilterDistance.Text = Properties.Settings.Default.filterDistance.ToString();
             isInitialiazing = false;
         }
 
@@ -1518,6 +1595,8 @@ namespace PointCloudConverter
             Properties.Settings.Default.maxThreads = txtMaxThreads.Text;
             Properties.Settings.Default.useGrid = (bool)chkUseGrid.IsChecked;
             Properties.Settings.Default.offsetMode = txtOffsetMode.Text;
+            Properties.Settings.Default.useFilter = (bool)chkUseFilter.IsChecked;
+            Properties.Settings.Default.filterDistance = Tools.ParseFloat(txtFilterDistance.Text);
             Properties.Settings.Default.Save();
         }
 
@@ -1590,6 +1669,16 @@ namespace PointCloudConverter
             Properties.Settings.Default.Save();
         }
 
+        private void chkImportRGB_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (isInitialiazing == true) return;
+            Properties.Settings.Default.importRGB = false;
+
+            //chkImportIntensity.IsChecked = true;
+            //Properties.Settings.Default.importIntensity = true;
+            Properties.Settings.Default.Save();
+        }
+
         private void chkImportIntensity_Checked(object sender, RoutedEventArgs e)
         {
             if (isInitialiazing == true) return;
@@ -1604,20 +1693,29 @@ namespace PointCloudConverter
             if (isInitialiazing == true) return;
             Properties.Settings.Default.importIntensity = false;
 
-            chkImportRGB.IsChecked = true;
-            Properties.Settings.Default.importRGB = true;
+            //chkImportRGB.IsChecked = true;
+            //Properties.Settings.Default.importRGB = true;
+            Properties.Settings.Default.importIntensity = false;
             Properties.Settings.Default.Save();
         }
 
-        private void chkImportRGB_Unchecked(object sender, RoutedEventArgs e)
+        private void chkImportClassification_Checked(object sender, RoutedEventArgs e)
         {
             if (isInitialiazing == true) return;
-            Properties.Settings.Default.importRGB = false;
 
-            chkImportIntensity.IsChecked = true;
-            Properties.Settings.Default.importIntensity = true;
+            // TODO for now only can import classification as RGB color
+            Properties.Settings.Default.importClassification = true;
             Properties.Settings.Default.Save();
         }
+
+        private void chkImportClassification_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (isInitialiazing == true) return;
+            // TODO for now only can import classification as RGB color
+            Properties.Settings.Default.importClassification = false;
+            Properties.Settings.Default.Save();
+        }
+
 
         private void txtInputFile_DragEnter(object sender, DragEventArgs e)
         {
@@ -1752,5 +1850,6 @@ namespace PointCloudConverter
             }
             Process.Start(new ProcessStartInfo("explorer.exe", pluginsFolder));
         }
+
     } // class
 } // namespace

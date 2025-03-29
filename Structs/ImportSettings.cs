@@ -173,8 +173,9 @@ namespace PointCloudConverter
         // FIXME default values will be used unless otherwise specified.. randomize = true 
         // TODO these should be export settings..
 
-        public bool importRGB { get; set; } = true; // this or intensity must be on
+        public bool importRGB { get; set; } = true;
         public bool importIntensity { get; set; } = false;
+        public bool importClassification { get; set; } = false;
         public bool useAutoOffset { get; set; } = true;
         public bool swapYZ { get; set; } = true;
         public bool invertX { get; set; } = false;
@@ -210,6 +211,8 @@ namespace PointCloudConverter
         public bool checkoverlap { get; set; } = false; // check if tile overlaps with other tiles (save into pcroot)
         public bool useGrid { get; set; } = false; // required for PCROOT format (will be automatically enabled for v3)
         public string offsetMode { get; set; } = "min"; // TODO use enum: "min" or "legacy" now (legacy is first bounds min only)
+        public bool useFilter { get; set; } = false; // filter by distance
+        public float filterDistance { get; set; } = 0.5f;
 
         public override string ToString()
         {
@@ -223,6 +226,7 @@ namespace PointCloudConverter
             t += "\n invertZ=" + invertZ;
             t += "\n readRGB=" + importRGB;
             t += "\n readIntensity=" + importIntensity;
+            t += "\n readClassification=" + importClassification;
             //t += "\n metaData=" + importIntensity;
             t += "\n useAutoOffset=" + useAutoOffset;
             t += "\n offsetX=" + offsetX;
