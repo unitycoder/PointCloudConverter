@@ -178,7 +178,7 @@ namespace PointCloudConverter
         public float scale { get; set; } = 1f;
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public ImportFormat importFormat { get; set; } = ImportFormat.LAS; //default to las for now
+        public ImportFormat importFormat { get; set; } = ImportFormat.Unknown; //default to las for now
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ExportFormat exportFormat { get; set; }
 

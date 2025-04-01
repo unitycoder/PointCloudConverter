@@ -1100,12 +1100,13 @@ namespace PointCloudConverter
             if (inputFile.Contains(" ")) inputFile = "\"" + inputFile + "\"";
             if (outputFile.Contains(" ")) outputFile = "\"" + outputFile + "\"";
 
-            args.Add("-input=" + inputFile);
-
             if (cmbImportFormat.SelectedItem != null)
             {
                 args.Add("-importformat=" + cmbImportFormat.SelectedItem.ToString());
             }
+
+            args.Add("-input=" + inputFile);
+
             if (cmbExportFormat.SelectedItem != null)
             {
                 args.Add("-exportformat=" + cmbExportFormat.SelectedItem.ToString());

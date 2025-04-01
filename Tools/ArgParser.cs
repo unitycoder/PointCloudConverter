@@ -245,18 +245,29 @@ namespace PointCloudConverter
 
                                     // TODO get file extension from commandline param? but then need to set -format before input.. for now only LAS/LAZ
                                     // TODO parse/sort args in required order, not in given order
-                                    var filePaths = Directory.GetFiles(param).Where(file => Regex.IsMatch(file, @"^.+\.(las|laz|ply)$", RegexOptions.IgnoreCase)).ToArray();
 
-
-                                    for (int j = 0; j < filePaths.Length; j++)
+                                    if (importSettings.importFormat == ImportFormat.Unknown)
                                     {
-                                        Console.ForegroundColor = ConsoleColor.Gray;
-                                        Log.Write("Found file: " + filePaths[j]);
-                                        Console.ForegroundColor = ConsoleColor.White;
-                                        importSettings.inputFiles.Add(filePaths[j]);
+                                        importSettings.errors.Add("Import format not defined before -input folder for batch (use -importformat" + argValueSeparator + "LAS or PLY)");
                                     }
+                                    else
+                                    {
+                                        string importExtensions = "";
+                                        if (importSettings.importFormat == ImportFormat.LAS) importExtensions = "las|laz";
+                                        if (importSettings.importFormat == ImportFormat.PLY) importExtensions = "ply";
+                                        var filePaths = Directory.GetFiles(param).Where(file => Regex.IsMatch(file, @"^.+\.(" + importExtensions + ")$", RegexOptions.IgnoreCase)).ToArray();
 
+                                        for (int j = 0; j < filePaths.Length; j++)
+                                        {
+                                            Console.ForegroundColor = ConsoleColor.Gray;
+                                            Log.Write("Found file: " + filePaths[j]);
+                                            Console.ForegroundColor = ConsoleColor.White;
+                                            importSettings.inputFiles.Add(filePaths[j]);
+                                        }
+
+                                    }
                                     importSettings.batch = true;
+
                                 }
                                 else // single file
                                 {
