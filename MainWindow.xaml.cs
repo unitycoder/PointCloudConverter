@@ -448,7 +448,7 @@ namespace PointCloudConverter
                                 }
                                 else
                                 {
-                                    Log.Write("files"+importSettings.inputFiles.Count+" i:"+i);
+                                    Log.Write("files" + importSettings.inputFiles.Count + " i:" + i);
                                     Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
                                 }
                             }
@@ -946,7 +946,7 @@ namespace PointCloudConverter
                         // if no rgb, then replace RGB with intensity
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = intensity/255f;
+                            rgb.r = intensity / 255f;
                             rgb.g = rgb.r;
                             rgb.b = rgb.r;
                         }
@@ -976,7 +976,7 @@ namespace PointCloudConverter
                         // if no rgb, then replace RGB with intensity
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = classification/255f;
+                            rgb.r = classification / 255f;
                             rgb.g = rgb.r;
                             rgb.b = rgb.r;
                         }
@@ -1388,7 +1388,27 @@ namespace PointCloudConverter
             // select single file
             var dialog = new OpenFileDialog();
             dialog.Title = "Select file to import";
-            dialog.Filter = "Point Cloud Files|*.las;*.laz;*.ply|LAS Files|*.las;*.laz|PLY Files|*.ply|All Files|*.*";
+
+            if (cmbImportFormat.SelectedItem != null)
+            {
+                var format = cmbImportFormat.SelectedItem.ToString();
+                if (format == "LAS" || format == "LAZ")
+                {
+                    dialog.Filter = "LAS Files|*.las;*.laz|All Files|*.*";
+                }
+                else if (format == "PLY")
+                {
+                    dialog.Filter = "PLY Files|*.ply|All Files|*.*";
+                }
+                else
+                {
+                    dialog.Filter = "All Files|*.*";
+                }
+            }
+            else
+            {
+                dialog.Filter = "Point Cloud Files|*.las;*.laz;*.ply|LAS Files|*.las;*.laz|PLY Files|*.ply|All Files|*.*";
+            }
 
             // take folder from field
             if (string.IsNullOrEmpty(txtInputFile.Text) == false)
