@@ -38,3 +38,4 @@ Pull requests to improve this converter are welcome! (please create Issue first,
 
 ### Notes
 - See Project/PointCloudConverter Properties.. > Build Events / Post build: Small robocopy script is used to move output files into lib/ folder (so that executable is alone in the root folder)
+
