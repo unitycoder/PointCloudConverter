@@ -2,6 +2,7 @@
 
 using PointCloudConverter.Logger;
 using System;
+using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -537,71 +538,26 @@ namespace PointCloudConverter.Writers
                 // randomize points in this node
                 if (importSettings.randomize)
                 {
-                    //ShuffleFlags flags = ShuffleFlags.None;
-                    //int rand = Tools.frnd.Next(0, index--);
+                    var listsToShuffle = new List<IList> { nodeTempX, nodeTempY, nodeTempZ };
 
-                    Tools.Shuffle(ref nodeTempX);
-                    Tools.Shuffle(ref nodeTempY);
-                    Tools.Shuffle(ref nodeTempZ);
-
-                    // NOTE now we shuffle all arrays, even if not all are used?
-                    if (importSettings.importRGB == true || (importSettings.importIntensity == true || importSettings.importClassification == true))
+                    if (importSettings.importRGB)
                     {
-                        Tools.Shuffle(ref nodeTempR);
-                        Tools.Shuffle(ref nodeTempG);
-                        Tools.Shuffle(ref nodeTempB);
+                        listsToShuffle.Add(nodeTempR);
+                        listsToShuffle.Add(nodeTempG);
+                        listsToShuffle.Add(nodeTempB);
                     }
 
-                    if (importSettings.importIntensity == true) Tools.Shuffle(ref nodeTempIntensity);
-                    if (importSettings.importClassification == true) Tools.Shuffle(ref nodeTempClassification);
+                    if (importSettings.importIntensity)
+                        listsToShuffle.Add(nodeTempIntensity);
 
-                    //if (importSettings.importRGB == true)
-                    //{
-                    //    if (importSettings.packColors == true)
-                    //    {
-
-                    //    }
-                    //    else // not packed
-                    //    {
-                    //        //// intensity or classification are saved into rgb field if not packed
-                    //        //if (importSettings.importIntensity || importSettings.importClassification)
-                    //        //{
-                    //        //    Tools.Shuffle(ref nodeTempR);
-                    //        //    Tools.Shuffle(ref nodeTempG);
-                    //        //    Tools.Shuffle(ref nodeTempB);
-                    //        //}
-
-                    //        // if separate intensity
-                    //        if (importSettings.importIntensity)
-                    //        {
-                    //            Tools.Shuffle(ref nodeTempIntensity);
-                    //        }
-
-                    //        // if separate classification
-                    //        if (importSettings.importClassification)
-                    //        {
-                    //            Tools.Shuffle(ref nodeTempClassification);
-                    //        }
-                    //    }
-                    //}
-                    //else // no rgb
-                    //{
-                    //    if (importSettings.importIntensity)
-                    //    {
-                    //        Tools.Shuffle(ref nodeTempIntensity);
-                    //    }
-
-                    //    // if separate classification
-                    //    if (importSettings.importClassification)
-                    //    {
-                    //        Tools.Shuffle(ref nodeTempClassification);
-                    //    }
-                    //}
+                    if (importSettings.importClassification)
+                        listsToShuffle.Add(nodeTempClassification);
 
                     if (importSettings.averageTimestamp)
-                    {
-                        Tools.Shuffle(ref nodeTempTime);
-                    }
+                        listsToShuffle.Add(nodeTempTime);
+
+                    Tools.ShuffleInPlace(listsToShuffle.ToArray());
+
                 }
 
 
