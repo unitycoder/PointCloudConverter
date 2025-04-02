@@ -70,6 +70,10 @@ namespace PointCloudConverter
         private readonly float cellSize = 0.5f;
         private static ConcurrentDictionary<(int, int, int), byte> occupiedCells = new();
 
+        // classification stats
+        static byte minClass = 255;
+        static byte maxClass = 0;
+
         // plugins
         string externalFileFormats = "";
 
@@ -197,6 +201,10 @@ namespace PointCloudConverter
 
                 // get elapsed time using time
                 var startTime = DateTime.Now;
+
+                // classification minmax
+                minClass = 255;
+                maxClass = 0;
 
                 // if have files, process them
                 if (importSettings.errors.Count == 0)
@@ -753,12 +761,6 @@ namespace PointCloudConverter
                 return false;
             }
 
-            if (importSettings.importMetadata == true)
-            {
-                var metaData = taskReader.GetMetaData(importSettings, fileIndex);
-                lasHeaders.Add(metaData);
-            }
-
             if (importSettings.importMetadataOnly == false)
             {
                 int fullPointCount = taskReader.GetPointCount();
@@ -957,10 +959,16 @@ namespace PointCloudConverter
                     if (importSettings.importClassification == true)
                     {
                         classification = taskReader.GetClassification();
-                        //classification = taskReader.GetIntensity();
+
+                        // get min and max
+                        if (classification < minClass) minClass = classification;
+                        if (classification > maxClass) maxClass = classification;
+
+                        //classification = (byte)255;
+
                         //if (classification<0 || classification>1) Log.Write("****: " + classification.ToString());
 
-                        //if (i < 20000) Log.Write("class: " + classification.ToString());
+                        //if (i < 10000) Log.Write("class: " + classification.ToString() + " minClass: " + minClass + " maxClass: " + maxClass);
                         //classification = 0;
                         //if (intensity.r < minInt)
                         //{
@@ -1023,7 +1031,27 @@ namespace PointCloudConverter
 
                 //Log.Write(jsonString, LogEvent.File);
 
-            } // if importMetadataOnly == false
+                if (importSettings.importMetadata == true)
+                {
+                    var metaData = taskReader.GetMetaData(importSettings, fileIndex);
+                    // NOTE now its added to every file..
+                    metaData.ConverterVersion = version;
+                    metaData.MinClassification = minClass;
+                    metaData.MaxClassification = maxClass;
+                    lasHeaders.Add(metaData);
+                }
+
+            } // if importMetadataOnly == false ^
+            else // only metadata:
+            {
+                if (importSettings.importMetadata == true)
+                {
+                    var metaData = taskReader.GetMetaData(importSettings, fileIndex);
+                    // NOTE now its added to every file..
+                    metaData.ConverterVersion = version;
+                    lasHeaders.Add(metaData);
+                }
+            }
 
             //Log.Write("taskid: " + taskId + " done");
             return true;
