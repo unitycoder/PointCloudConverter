@@ -152,18 +152,29 @@ namespace PointCloudConverter
 
                                 string importFormatParsed = param.ToUpper();
 
-                                // TODO check what reader interfaces are available
-                                if (string.IsNullOrEmpty(importFormatParsed) == true || (importFormatParsed != "LAS" && importFormatParsed != "LAZ"))
+                                if (string.IsNullOrEmpty(importFormatParsed) ||
+                                    (importFormatParsed != "LAS" && importFormatParsed != "LAZ" && importFormatParsed != "PLY"))
                                 {
                                     importSettings.errors.Add("Unsupported import format: " + param);
                                     importSettings.importFormat = ImportFormat.Unknown;
                                 }
                                 else
                                 {
-                                    importSettings.importFormat = ImportFormat.LAS;
-                                    importSettings.reader = new LAZ(null);
+                                    switch (importFormatParsed)
+                                    {
+                                        case "LAS":
+                                        case "LAZ":
+                                            importSettings.importFormat = ImportFormat.LAS;
+                                            importSettings.reader = new LAZ(null);
+                                            break;
+                                        case "PLY":
+                                            importSettings.importFormat = ImportFormat.PLY;
+                                            importSettings.reader = new PLY();
+                                            break;
+                                    }
                                 }
                                 break;
+
                             case "-exportformat":
                                 Log.Write("exportformat = " + param);
 
@@ -234,18 +245,29 @@ namespace PointCloudConverter
 
                                     // TODO get file extension from commandline param? but then need to set -format before input.. for now only LAS/LAZ
                                     // TODO parse/sort args in required order, not in given order
-                                    var filePaths = Directory.GetFiles(param).Where(file => Regex.IsMatch(file, @"^.+\.(las|laz)$", RegexOptions.IgnoreCase)).ToArray();
 
-
-                                    for (int j = 0; j < filePaths.Length; j++)
+                                    if (importSettings.importFormat == ImportFormat.Unknown)
                                     {
-                                        Console.ForegroundColor = ConsoleColor.Gray;
-                                        Log.Write("Found file: " + filePaths[j]);
-                                        Console.ForegroundColor = ConsoleColor.White;
-                                        importSettings.inputFiles.Add(filePaths[j]);
+                                        importSettings.errors.Add("Import format not defined before -input folder for batch (use -importformat" + argValueSeparator + "LAS or PLY)");
                                     }
+                                    else
+                                    {
+                                        string importExtensions = "";
+                                        if (importSettings.importFormat == ImportFormat.LAS) importExtensions = "las|laz";
+                                        if (importSettings.importFormat == ImportFormat.PLY) importExtensions = "ply";
+                                        var filePaths = Directory.GetFiles(param).Where(file => Regex.IsMatch(file, @"^.+\.(" + importExtensions + ")$", RegexOptions.IgnoreCase)).ToArray();
 
+                                        for (int j = 0; j < filePaths.Length; j++)
+                                        {
+                                            Console.ForegroundColor = ConsoleColor.Gray;
+                                            Log.Write("Found file: " + filePaths[j]);
+                                            Console.ForegroundColor = ConsoleColor.White;
+                                            importSettings.inputFiles.Add(filePaths[j]);
+                                        }
+
+                                    }
                                     importSettings.batch = true;
+
                                 }
                                 else // single file
                                 {
@@ -854,9 +876,9 @@ namespace PointCloudConverter
                             {
                                 importSettings.errors.Add("(E) PCROOT Requires some output filename (example: output.pcroot)");
                             }
-                            if (importSettings.exportFormat == ExportFormat.External)
+                            if (importSettings.exportFormat == ExportFormat.External && importSettings.batch == false)
                             {
-                                importSettings.errors.Add("(E2) External formats require some output filename (example: basefilename)");
+                                importSettings.errors.Add("(E2) External formats require some output filename for non-batch operations (example: basefilename)");
                             }
                         }
                     }
@@ -936,6 +958,12 @@ namespace PointCloudConverter
                 importSettings.importFormat = ImportFormat.LAS;
                 importSettings.reader = new LAZ(null);
                 Log.Write("No import format defined, using Default: " + importSettings.importFormat.ToString());
+            }
+
+            if (importSettings.importFormat == ImportFormat.PLY)
+            {
+                if (importSettings.importIntensity || importSettings.importClassification) Log.Write("PLY doesnt support intensity or classification importing.");
+                if (importSettings.packColors) Log.Write("PLY doesnt support color packing.");
             }
 
             if (importSettings.exportFormat == ExportFormat.PCROOT && importSettings.useGrid == false)

@@ -29,7 +29,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "29.03.2025";
+        static readonly string version = "03.04.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -69,6 +69,10 @@ namespace PointCloudConverter
         // filter by distance
         private readonly float cellSize = 0.5f;
         private static ConcurrentDictionary<(int, int, int), byte> occupiedCells = new();
+
+        // classification stats
+        static byte minClass = 255;
+        static byte maxClass = 0;
 
         // plugins
         string externalFileFormats = "";
@@ -197,6 +201,10 @@ namespace PointCloudConverter
 
                 // get elapsed time using time
                 var startTime = DateTime.Now;
+
+                // classification minmax
+                minClass = 255;
+                maxClass = 0;
 
                 // if have files, process them
                 if (importSettings.errors.Count == 0)
@@ -448,6 +456,7 @@ namespace PointCloudConverter
                                 }
                                 else
                                 {
+                                    Log.Write("files" + importSettings.inputFiles.Count + " i:" + i);
                                     Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
                                 }
                             }
@@ -752,12 +761,6 @@ namespace PointCloudConverter
                 return false;
             }
 
-            if (importSettings.importMetadata == true)
-            {
-                var metaData = taskReader.GetMetaData(importSettings, fileIndex);
-                lasHeaders.Add(metaData);
-            }
-
             if (importSettings.importMetadataOnly == false)
             {
                 int fullPointCount = taskReader.GetPointCount();
@@ -945,7 +948,7 @@ namespace PointCloudConverter
                         // if no rgb, then replace RGB with intensity
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = intensity/255f;
+                            rgb.r = intensity / 255f;
                             rgb.g = rgb.r;
                             rgb.b = rgb.r;
                         }
@@ -956,10 +959,16 @@ namespace PointCloudConverter
                     if (importSettings.importClassification == true)
                     {
                         classification = taskReader.GetClassification();
-                        //classification = taskReader.GetIntensity();
+
+                        // get min and max
+                        if (classification < minClass) minClass = classification;
+                        if (classification > maxClass) maxClass = classification;
+
+                        //classification = (byte)255;
+
                         //if (classification<0 || classification>1) Log.Write("****: " + classification.ToString());
 
-                        //if (i < 20000) Log.Write("class: " + classification.ToString());
+                        //if (i < 10000) Log.Write("class: " + classification.ToString() + " minClass: " + minClass + " maxClass: " + maxClass);
                         //classification = 0;
                         //if (intensity.r < minInt)
                         //{
@@ -975,7 +984,7 @@ namespace PointCloudConverter
                         // if no rgb, then replace RGB with intensity
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = classification/255f;
+                            rgb.r = classification / 255f;
                             rgb.g = rgb.r;
                             rgb.b = rgb.r;
                         }
@@ -1022,7 +1031,27 @@ namespace PointCloudConverter
 
                 //Log.Write(jsonString, LogEvent.File);
 
-            } // if importMetadataOnly == false
+                if (importSettings.importMetadata == true)
+                {
+                    var metaData = taskReader.GetMetaData(importSettings, fileIndex);
+                    // NOTE now its added to every file..
+                    metaData.ConverterVersion = version;
+                    metaData.MinClassification = minClass;
+                    metaData.MaxClassification = maxClass;
+                    lasHeaders.Add(metaData);
+                }
+
+            } // if importMetadataOnly == false ^
+            else // only metadata:
+            {
+                if (importSettings.importMetadata == true)
+                {
+                    var metaData = taskReader.GetMetaData(importSettings, fileIndex);
+                    // NOTE now its added to every file..
+                    metaData.ConverterVersion = version;
+                    lasHeaders.Add(metaData);
+                }
+            }
 
             //Log.Write("taskid: " + taskId + " done");
             return true;
@@ -1099,12 +1128,13 @@ namespace PointCloudConverter
             if (inputFile.Contains(" ")) inputFile = "\"" + inputFile + "\"";
             if (outputFile.Contains(" ")) outputFile = "\"" + outputFile + "\"";
 
-            args.Add("-input=" + inputFile);
-
             if (cmbImportFormat.SelectedItem != null)
             {
                 args.Add("-importformat=" + cmbImportFormat.SelectedItem.ToString());
             }
+
+            args.Add("-input=" + inputFile);
+
             if (cmbExportFormat.SelectedItem != null)
             {
                 args.Add("-exportformat=" + cmbExportFormat.SelectedItem.ToString());
@@ -1386,7 +1416,27 @@ namespace PointCloudConverter
             // select single file
             var dialog = new OpenFileDialog();
             dialog.Title = "Select file to import";
-            dialog.Filter = "LAS|*.las;*.laz";
+
+            if (cmbImportFormat.SelectedItem != null)
+            {
+                var format = cmbImportFormat.SelectedItem.ToString();
+                if (format == "LAS" || format == "LAZ")
+                {
+                    dialog.Filter = "LAS Files|*.las;*.laz|All Files|*.*";
+                }
+                else if (format == "PLY")
+                {
+                    dialog.Filter = "PLY Files|*.ply|All Files|*.*";
+                }
+                else
+                {
+                    dialog.Filter = "All Files|*.*";
+                }
+            }
+            else
+            {
+                dialog.Filter = "Point Cloud Files|*.las;*.laz;*.ply|LAS Files|*.las;*.laz|PLY Files|*.ply|All Files|*.*";
+            }
 
             // take folder from field
             if (string.IsNullOrEmpty(txtInputFile.Text) == false)

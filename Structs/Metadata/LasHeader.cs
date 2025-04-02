@@ -6,6 +6,7 @@ namespace PointCloudConverter.Structs
     [Serializable]
     public class LasHeader
     {
+        public string ConverterVersion { get; set; }
         public string FileName { get; set; }
         // v1.2
         public ushort ProjectionID { get; set; } // these are duplicate data from the VLR (just for convenience)
@@ -43,6 +44,8 @@ namespace PointCloudConverter.Structs
         public double MinY { get; set; }
         public double MaxZ { get; set; }
         public double MinZ { get; set; }
+        public byte MinClassification { get; set; }
+        public byte MaxClassification { get; set; }
         public List<LasVariableLengthRecord> VariableLengthRecords { get; set; }
         public ulong StartOfWaveformDataPacketRecord { get; internal set; }
         public ulong StartOfFirstExtendedVariableLengthRecord { get; internal set; }

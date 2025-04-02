@@ -383,19 +383,13 @@ namespace PointCloudConverter.Readers
 
         byte IReader.GetClassification()
         {
-            //float c = new Color();
-            // get point reference
             var p = lazReader.point;
-            //c.r = (Remap(p.extended_classification, 2, 112, 0, 1)); // works, but we dont know range ahead of time, unless read first all values in all files?
-            //c.r = (Remap(p.extended_classification, 0, 255, 0, 1));
-            byte c = p.extended_classification;// / 255f;
-            //c.r = p.classification;
-            //c.r = p.extended_classification;
-            //float c = Tools.LUT255[(byte)(p.classification)];
-            //Console.WriteLine(c.r);
-            //c.g = c.r;
-            //c.b = c.r;
-            return c;
+            // now reads both, we dont know which one is enabled?
+            byte classification = p.classification;
+            byte extended = p.extended_classification;
+            // Choose extended if it's valid and not equal to default "unclassified"
+            byte finalClassification = (extended > 0 && extended != classification) ? extended : classification;
+            return finalClassification;
         }
 
         Float3 IReader.GetXYZ()

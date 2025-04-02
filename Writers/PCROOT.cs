@@ -2,6 +2,7 @@
 
 using PointCloudConverter.Logger;
 using System;
+using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -537,72 +538,26 @@ namespace PointCloudConverter.Writers
                 // randomize points in this node
                 if (importSettings.randomize)
                 {
-                    //ShuffleFlags flags = ShuffleFlags.None;
-                    //int rand = Tools.frnd.Next(0, index--);
+                    var listsToShuffle = new List<IList> { nodeTempX, nodeTempY, nodeTempZ };
 
-                    Tools.Shuffle(ref nodeTempX);
-                    Tools.Shuffle(ref nodeTempY);
-                    Tools.Shuffle(ref nodeTempZ);
-
-                    // NOTE now we shuffle all arrays, even if not all are used?
-                    if (importSettings.importRGB == true || (importSettings.importIntensity == true || importSettings.importClassification == true))
+                    if (importSettings.importRGB)
                     {
-                        Tools.Shuffle(ref nodeTempR);
-                        Tools.Shuffle(ref nodeTempG);
-                        Tools.Shuffle(ref nodeTempB);
-
+                        listsToShuffle.Add(nodeTempR);
+                        listsToShuffle.Add(nodeTempG);
+                        listsToShuffle.Add(nodeTempB);
                     }
 
-                    if (importSettings.importIntensity == true) Tools.Shuffle(ref nodeTempIntensity);
-                    if (importSettings.importClassification == true) Tools.Shuffle(ref nodeTempClassification);
+                    if (importSettings.importIntensity)
+                        listsToShuffle.Add(nodeTempIntensity);
 
-                    //if (importSettings.importRGB == true)
-                    //{
-                    //    if (importSettings.packColors == true)
-                    //    {
-
-                    //    }
-                    //    else // not packed
-                    //    {
-                    //        //// intensity or classification are saved into rgb field if not packed
-                    //        //if (importSettings.importIntensity || importSettings.importClassification)
-                    //        //{
-                    //        //    Tools.Shuffle(ref nodeTempR);
-                    //        //    Tools.Shuffle(ref nodeTempG);
-                    //        //    Tools.Shuffle(ref nodeTempB);
-                    //        //}
-
-                    //        // if separate intensity
-                    //        if (importSettings.importIntensity)
-                    //        {
-                    //            Tools.Shuffle(ref nodeTempIntensity);
-                    //        }
-
-                    //        // if separate classification
-                    //        if (importSettings.importClassification)
-                    //        {
-                    //            Tools.Shuffle(ref nodeTempClassification);
-                    //        }
-                    //    }
-                    //}
-                    //else // no rgb
-                    //{
-                    //    if (importSettings.importIntensity)
-                    //    {
-                    //        Tools.Shuffle(ref nodeTempIntensity);
-                    //    }
-
-                    //    // if separate classification
-                    //    if (importSettings.importClassification)
-                    //    {
-                    //        Tools.Shuffle(ref nodeTempClassification);
-                    //    }
-                    //}
+                    if (importSettings.importClassification)
+                        listsToShuffle.Add(nodeTempClassification);
 
                     if (importSettings.averageTimestamp)
-                    {
-                        Tools.Shuffle(ref nodeTempTime);
-                    }
+                        listsToShuffle.Add(nodeTempTime);
+
+                    Tools.ShuffleInPlace(listsToShuffle.ToArray());
+
                 }
 
 
@@ -692,7 +647,7 @@ namespace PointCloudConverter.Writers
                         py -= (cellY * importSettings.gridSize);
                         pz -= (cellZ * importSettings.gridSize);
 
-                        // pack G, PY and INTensity
+                        // pack G, Py and INTensity
                         if (importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == false)
                         {
                             float c = py;
@@ -701,7 +656,7 @@ namespace PointCloudConverter.Writers
                             byte bg = (byte)(nodeTempG[i] * 255);
                             byte bi = nodeTempIntensity[i];
                             packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
-                        }
+                        } // pack G, Py, CLASSification
                         else if (importSettings.importRGB == true && importSettings.importIntensity == false && importSettings.importClassification == true)
                         {
                             float c = py;
@@ -710,7 +665,7 @@ namespace PointCloudConverter.Writers
                             byte bg = (byte)(nodeTempG[i] * 255);
                             byte bc = nodeTempClassification[i];
                             packedY = (bg << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
-                        }
+                        } // pack G, Py, INTensity, CLASSification
                         else if (importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == true)
                         {
                             float c = py;
@@ -720,13 +675,13 @@ namespace PointCloudConverter.Writers
                             byte bi = nodeTempIntensity[i];
                             packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         }
-                        else
+                        else // pack G and Py
                         {
                             // pack green and y (note this is lossy, especially with *0.98)
                             py = Tools.SuperPacker(nodeTempG[i] * 0.98f, py, importSettings.gridSize * importSettings.packMagicValue);
                         }
 
-                        // pack red, x and classification (since intensity is already in green)
+                        // pack Red, Px, CLASSification (since intensity is already in green)
                         if (importSettings.importRGB == true && importSettings.importIntensity == true && importSettings.importClassification == true)
                         {
                             float c = px;
@@ -736,9 +691,8 @@ namespace PointCloudConverter.Writers
                             byte bc = nodeTempClassification[i];
                             packedX = (br << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
                         }
-                        else
+                        else // pack Red and Px
                         {
-                            // pack red and x
                             px = Tools.SuperPacker(nodeTempR[i] * 0.98f, px, importSettings.gridSize * importSettings.packMagicValue);
                         }
 
@@ -849,20 +803,19 @@ namespace PointCloudConverter.Writers
                         {
                             IntToBytes(packedX, pointBuffer, 0);  // Convert int to bytes manually
                         }
-                        else
+                        else // x, red
                         {
-                            // x, red
                             FloatToBytes(px, pointBuffer, 0);
                         }
 
+                        // packed: y, green, intensity AND/OR classification
                         if (importSettings.packColors == true && importSettings.importRGB == true && (importSettings.importIntensity == true || importSettings.importClassification == true))
                         {
                             // y, int, classification for now
                             IntToBytes(packedY, pointBuffer, 4);
                         }
-                        else
+                        else // y
                         {
-                            // y
                             FloatToBytes(py, pointBuffer, 4);
                         }
 

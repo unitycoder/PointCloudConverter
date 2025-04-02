@@ -1,5 +1,6 @@
 ﻿using PointCloudConverter.Structs;
 using SharpNeatLib.Maths;
+using System.Collections;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
@@ -139,6 +140,32 @@ namespace PointCloudConverter
         //    return (ax * bx + ay * by + az * bz);
         //}
 
+        public static void ShuffleInPlace(params IList[] arrays)
+        {
+            //ResetRandom();
+
+            // Assume all lists are the same length
+            if (arrays.Length == 0 || arrays[0] == null)
+                return;
+
+            int count = arrays[0].Count;
+
+            for (int i = count - 1; i > 0; i--)
+            {
+                int rand = frnd.Next(0, i + 1);
+
+                foreach (var list in arrays)
+                {
+                    if (list == null || list.Count <= i || list.Count <= rand)
+                        continue;
+
+                    object temp = list[i];
+                    list[i] = list[rand];
+                    list[rand] = temp;
+                }
+            }
+        }
+
 
         public static void Shuffle(ref List<float> array)
         {
@@ -149,8 +176,8 @@ namespace PointCloudConverter
                 int rand = frnd.Next(0, index--);
                 (array[index], array[rand]) = (array[rand], array[index]);
             }
-        }        
-        
+        }
+
         public static void Shuffle(ref List<byte> array)
         {
             ResetRandom();

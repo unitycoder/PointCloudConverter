@@ -21,7 +21,7 @@ namespace PointCloudConverter
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public Logger.LogEvent @event { get; set; }
 
-        public IReader reader = new LAZ(null); // single threaded reader
+        public IReader reader; // single threaded reader
         //public Dictionary<int?, IReader> Readers { get; set; } = new Dictionary<int?, IReader>();
         public ConcurrentDictionary<int?, IReader> Readers { get; set; } = new ConcurrentDictionary<int?, IReader>();
         public IWriter writer = new UCPC();
@@ -48,9 +48,26 @@ namespace PointCloudConverter
         // Method to get or create a reader for a specific task ID
         public IReader GetOrCreateReader(int? taskId)
         {
+            //Log.Write(">>>>> Getting or creating reader for task ID: " + taskId+" format: "+importFormat);
+
             if (!Readers.ContainsKey(taskId))
             {
-                Readers[taskId] = new LAZ(taskId);
+                IReader readerInstance;
+
+                switch (importFormat)
+                {
+                    case ImportFormat.LAS:
+                        readerInstance = new LAZ(taskId);
+                        break;
+                    case ImportFormat.PLY:
+                        readerInstance = new PLY(); // no taskId needed here
+                        break;
+                    default:
+                        Log.Write($"Unsupported import format: {importFormat}", LogEvent.Error);
+                        throw new NotSupportedException($"Unsupported import format: {importFormat}");
+                }
+
+                Readers[taskId] = readerInstance;
             }
 
             //Log.Write(">>>>> Total Readers in dictionary: " + Readers.Count);
@@ -161,7 +178,7 @@ namespace PointCloudConverter
         public float scale { get; set; } = 1f;
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public ImportFormat importFormat { get; set; } = ImportFormat.LAS; //default to las for now
+        public ImportFormat importFormat { get; set; } = ImportFormat.Unknown; //default to las for now
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ExportFormat exportFormat { get; set; }
 
