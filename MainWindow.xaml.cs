@@ -949,6 +949,7 @@ namespace PointCloudConverter
                     // TODO get intensity as separate value
                     if (importSettings.importIntensity == true)
                     {
+                        //intensity = 0;
                         intensity = taskReader.GetIntensity();
 
                         //if (i < 20000) Log.Write("int: " + intensity);
@@ -957,6 +958,7 @@ namespace PointCloudConverter
                         {
                             // check if intensity is 0-255 or 0-65535
                             isCustomIntensityRange = intensity > 255;
+                            //Log.Write("Detecting intensity range " + intensity + " " + (isCustomIntensityRange ? "************" : "")+" "+ importSettings.inputFiles[fileIndex]);
                         }
 
                         // if no rgb, then replace RGB with intensity, NOTE this doesnt work correctly if using detect intensity range! (since raw value is now ushort, can be 0-65k)
@@ -1058,8 +1060,6 @@ namespace PointCloudConverter
                 if (importSettings.importMetadata == true)
                 {
                     var metaData = taskReader.GetMetaData(importSettings, fileIndex);
-                    // NOTE now its added to every file..
-                    metaData.ConverterVersion = version;
                     jobMetadata.lasHeaders.Add(metaData);
                 }
             }
@@ -1067,9 +1067,6 @@ namespace PointCloudConverter
             //Log.Write("taskid: " + taskId + " done");
             return true;
         } // ParseFile
-
-        static float maxInt = 0;
-        static float minInt = 999999;
 
         private void btnConvert_Click(object sender, RoutedEventArgs e)
         {

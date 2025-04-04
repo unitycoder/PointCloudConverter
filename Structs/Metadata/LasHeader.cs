@@ -6,7 +6,6 @@ namespace PointCloudConverter.Structs
     [Serializable]
     public class LasHeader
     {
-        public string ConverterVersion { get; set; }
         public string FileName { get; set; }
         // v1.2
         public ushort ProjectionID { get; set; } // these are duplicate data from the VLR (just for convenience)
