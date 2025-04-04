@@ -18,11 +18,11 @@ namespace PointCloudConverter.Readers
         // retrieve single point scan time
         double GetTime();
 
-        // close filestream
         void Close();
         byte GetIntensity();
         byte GetClassification();
         LasHeader GetMetaData(ImportSettings importSettings, int fileIndex);
+
         void Dispose();
     }
 }

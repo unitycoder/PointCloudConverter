@@ -184,6 +184,9 @@ namespace PointCloudConverter.Writers
         // for pcroot, this is saving the rootfile
         void IWriter.Close()
         {
+            // this happens if imported metadata only?
+            if (importSettings == null) return;
+
             // save rootfile
             // only save after last file, TODO should save this if process fails or user cancels, so no need to start from 0 again.. but then needs some merge or continue from index n feature
             // if (isLastTask == true)

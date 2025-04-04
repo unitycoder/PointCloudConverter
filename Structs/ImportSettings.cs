@@ -15,16 +15,22 @@ namespace PointCloudConverter
 {
     public class ImportSettings
     {
-        // filled in by program (so that json serializer is easier)
-        public string version { get; set; } = "0.0.0";
+        // filled in by program (so that json serializer is easier), not used
+        //public string version { get; set; } = "0.0.0";
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public Logger.LogEvent @event { get; set; }
-
+        
+        [JsonIgnore] // FIXME doesnt ígnore it
         public IReader reader; // single threaded reader
         //public Dictionary<int?, IReader> Readers { get; set; } = new Dictionary<int?, IReader>();
         public ConcurrentDictionary<int?, IReader> Readers { get; set; } = new ConcurrentDictionary<int?, IReader>();
+        [JsonIgnore] 
         public IWriter writer = new UCPC();
+
+        public string ReaderType => reader?.GetType().Name;
+        public string WriterType => writer?.GetType().Name;
+
         //public Dictionary<int?, IWriter> Writers { get; set; } = new Dictionary<int?, IWriter>();
         //public ConcurrentDictionary<int?, WeakReference<IWriter>> Writers { get; set; } = new ConcurrentDictionary<int?, WeakReference<IWriter>>();
         private readonly ConcurrentBag<IWriter> _writerPool = new ConcurrentBag<IWriter>();

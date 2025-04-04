@@ -24,12 +24,13 @@ using PointCloudConverter.Writers;
 using System.Reflection;
 using System.Globalization;
 using System.Windows.Media;
+using PointCloudConverter.Structs.Metadata;
 
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "03.04.2025";
+        static readonly string version = "04.04.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -54,7 +55,7 @@ namespace PointCloudConverter
         public static MainWindow mainWindowStatic;
         bool isInitialiazing = true;
 
-        static List<LasHeader> lasHeaders = new List<LasHeader>();
+        static JobMetadata jobMetadata = new JobMetadata();
 
         // progress bar data
         static int progressPoint = 0;
@@ -69,10 +70,6 @@ namespace PointCloudConverter
         // filter by distance
         private readonly float cellSize = 0.5f;
         private static ConcurrentDictionary<(int, int, int), byte> occupiedCells = new();
-
-        // classification stats
-        static byte minClass = 255;
-        static byte maxClass = 0;
 
         // plugins
         string externalFileFormats = "";
@@ -201,10 +198,6 @@ namespace PointCloudConverter
 
                 // get elapsed time using time
                 var startTime = DateTime.Now;
-
-                // classification minmax
-                minClass = 255;
-                maxClass = 0;
 
                 // if have files, process them
                 if (importSettings.errors.Count == 0)
@@ -343,7 +336,15 @@ namespace PointCloudConverter
                 importSettings.offsetZ = lowestZ;
             } // if useAutoOffset
 
-            lasHeaders.Clear();
+
+            //lasHeaders.Clear();
+            jobMetadata.Job = new Job
+            {
+                ConverterVersion = version,
+                ImportSettings = importSettings,
+                StartTime = DateTime.Now
+            };
+            jobMetadata.lasHeaders.Clear();
             progressFile = 0;
 
             //for (int i = 0, len = importSettings.maxFiles; i < len; i++)
@@ -505,7 +506,11 @@ namespace PointCloudConverter
                 StringEscapeHandling = StringEscapeHandling.Default // This prevents escaping of characters and write the WKT string properly
             };
 
-            string jsonMeta = JsonConvert.SerializeObject(lasHeaders, settings);
+            // add job date
+            jobMetadata.Job.EndTime = DateTime.Now;
+            jobMetadata.Job.Elapsed = jobMetadata.Job.EndTime - jobMetadata.Job.StartTime;
+
+            string jsonMeta = JsonConvert.SerializeObject(jobMetadata, settings);
 
             // var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
             //Log.Write("MetaData: " + jsonMeta);
@@ -666,8 +671,8 @@ namespace PointCloudConverter
                                 progressBar.Maximum = maxValue;
                                 progressBar.Value = currentValue;
                                 progressBar.Foreground = ((currentValue + 1 >= maxValue) ? Brushes.Lime : Brushes.Red); //+1 hack fix
-                                //progressBar.ToolTip = $"Thread {index} - {currentValue} / {maxValue}"; // not visible, because modal dialog
-                                //Log.Write("ProgressTick: " + index + " " + currentValue + " / " + maxValue);
+                                                                                                                        //progressBar.ToolTip = $"Thread {index} - {currentValue} / {maxValue}"; // not visible, because modal dialog
+                                                                                                                        //Log.Write("ProgressTick: " + index + " " + currentValue + " / " + maxValue);
 
                                 // print json progress
                                 if (progressInfo.UseJsonLog) // TODO now same bool value is for each progressinfo..
@@ -686,12 +691,12 @@ namespace PointCloudConverter
                         }
                     } // foreach progressinfo
                 } // lock
-                //}
-                //else //  finished ?
-                //{
-                //    Log.Write("*************** ProgressTick: progressTotalPoints is 0, finishing..");
-                //    mainWindowStatic.progressBarFiles.Value = 0;
-                //    mainWindowStatic.lblStatus.Content = "";
+                  //}
+                  //else //  finished ?
+                  //{
+                  //    Log.Write("*************** ProgressTick: progressTotalPoints is 0, finishing..");
+                  //    mainWindowStatic.progressBarFiles.Value = 0;
+                  //    mainWindowStatic.lblStatus.Content = "";
 
                 //    foreach (UIElement element in mainWindowStatic.ProgressBarsContainer.Children)
                 //    {
@@ -960,10 +965,6 @@ namespace PointCloudConverter
                     {
                         classification = taskReader.GetClassification();
 
-                        // get min and max
-                        if (classification < minClass) minClass = classification;
-                        if (classification > maxClass) maxClass = classification;
-
                         //classification = (byte)255;
 
                         //if (classification<0 || classification>1) Log.Write("****: " + classification.ToString());
@@ -1034,11 +1035,7 @@ namespace PointCloudConverter
                 if (importSettings.importMetadata == true)
                 {
                     var metaData = taskReader.GetMetaData(importSettings, fileIndex);
-                    // NOTE now its added to every file..
-                    metaData.ConverterVersion = version;
-                    metaData.MinClassification = minClass;
-                    metaData.MaxClassification = maxClass;
-                    lasHeaders.Add(metaData);
+                    jobMetadata.lasHeaders.Add(metaData);
                 }
 
             } // if importMetadataOnly == false ^
@@ -1049,7 +1046,7 @@ namespace PointCloudConverter
                     var metaData = taskReader.GetMetaData(importSettings, fileIndex);
                     // NOTE now its added to every file..
                     metaData.ConverterVersion = version;
-                    lasHeaders.Add(metaData);
+                    jobMetadata.lasHeaders.Add(metaData);
                 }
             }
 

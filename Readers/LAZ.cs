@@ -30,6 +30,11 @@ namespace PointCloudConverter.Readers
         //bool importIntensity = false;
         bool customIntensityRange = false;
 
+        byte minClassification = 255;
+        byte maxClassification = 0;
+        byte minIntensity = 255;
+        byte maxIntensity = 0;
+
         int? taskID;
 
         // add constructor
@@ -50,6 +55,12 @@ namespace PointCloudConverter.Readers
             //importRGB = importSettings.importRGB;
             //importIntensity = importSettings.importIntensity;
             customIntensityRange = importSettings.useCustomIntensityRange;
+
+            minClassification = 255;
+            maxClassification = 0;
+            minIntensity = 255;
+            maxIntensity = 0;
+
             res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
             //}
             //catch (Exception e)
@@ -63,6 +74,7 @@ namespace PointCloudConverter.Readers
         LasHeader IReader.GetMetaData(ImportSettings importSettings, int fileIndex)
         {
             var h = new LasHeader();
+
             h.FileName = importSettings.inputFiles[fileIndex];
             h.FileSourceID = lazReader.header.file_source_ID;
             h.GlobalEncoding = lazReader.header.global_encoding;
@@ -97,6 +109,18 @@ namespace PointCloudConverter.Readers
             h.MaxY = lazReader.header.max_y;
             h.MinZ = lazReader.header.min_z;
             h.MaxZ = lazReader.header.max_z;
+
+            if (importSettings.importClassification)
+            {
+                h.MinClassification = minClassification;
+                h.MaxClassification = maxClassification;
+            }
+
+            if (importSettings.importIntensity)
+            {
+                h.MinIntensity = minIntensity;
+                h.MaxIntensity = maxIntensity;
+            }
 
             if (h.NumberOfVariableLengthRecords > 0)
             {
@@ -378,6 +402,12 @@ namespace PointCloudConverter.Readers
             //c.r = i;
             //c.g = i;
             //c.b = i;
+
+            // get min and max
+            if (i < minIntensity) minIntensity = i;
+            if (i > maxIntensity) maxIntensity = i;
+
+
             return i;
         }
 
@@ -389,6 +419,11 @@ namespace PointCloudConverter.Readers
             byte extended = p.extended_classification;
             // Choose extended if it's valid and not equal to default "unclassified"
             byte finalClassification = (extended > 0 && extended != classification) ? extended : classification;
+
+            // get min and max
+            if (finalClassification < minClassification) minClassification = finalClassification;
+            if (finalClassification > maxClassification) maxClassification = finalClassification;
+
             return finalClassification;
         }
 
@@ -427,6 +462,16 @@ namespace PointCloudConverter.Readers
             // NOTE this is probably the "raw" time value, not adjusted/corrected based on GPS week data
             return lazReader.point.gps_time;
         }
+
+        //(byte, byte) IReader.GetClassificationRange()
+        //{
+        //    return (minClassification, maxClassification);
+        //}
+
+        //(byte, byte) IReader.GetIntensityRange()
+        //{
+        //    return (minIntensity, maxIntensity);
+        //}
 
         void IReader.Close()
         {
