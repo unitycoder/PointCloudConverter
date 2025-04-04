@@ -518,7 +518,14 @@ namespace PointCloudConverter
             // write metadata to file
             if (importSettings.importMetadata == true)
             {
-                var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), Path.GetFileNameWithoutExtension(importSettings.outputFile) + ".json");
+                string filename = Path.GetFileNameWithoutExtension(importSettings.outputFile);
+                // for gltf, there is no output filename
+                if (string.IsNullOrEmpty(filename))
+                {
+                    // get last folder name
+                    filename = Path.GetFileName(Path.GetDirectoryName(importSettings.inputFiles[0]));
+                }
+                var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), filename + ".json");
                 Log.Write("Writing metadata to file: " + jsonFile);
                 File.WriteAllText(jsonFile, jsonMeta);
             }
