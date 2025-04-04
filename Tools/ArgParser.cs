@@ -922,6 +922,38 @@ namespace PointCloudConverter
                 importSettings.errors.Add("No export format defined (Example: -exportformat" + argValueSeparator + "PCROOT)");
             }
 
+            // check that files are in correct format
+            if (importSettings.inputFiles != null && importSettings.inputFiles.Count > 0)
+            {
+                var currentExtension = importSettings.importFormat.ToString().ToLower();
+                bool wrongExtension = false;
+
+                for (int i = 0; i < importSettings.inputFiles.Count; i++)
+                {
+                    var ext = Path.GetExtension(importSettings.inputFiles[i]).ToLower();
+
+                    if (currentExtension == "las")
+                    {
+                        if (ext != ".las" && ext != ".laz")
+                        {
+                            wrongExtension = true;
+                            break;
+                        }
+                    }
+                    else if (currentExtension == "ply")
+                    {
+                        if (ext != ".ply")
+                        {
+                            wrongExtension = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (wrongExtension) importSettings.errors.Add("Input files are not in the selected format (" + importSettings.importFormat + ")");
+            }
+
+
             // cannot have both rgb & intensity
             //if (importSettings.importRGB == true && importSettings.importIntensity == true)
             //{

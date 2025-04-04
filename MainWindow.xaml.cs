@@ -447,8 +447,11 @@ namespace PointCloudConverter
                             Interlocked.Increment(ref errorCounter); // thread-safe error counter increment
                             if (importSettings.useJSONLog)
                             {
-                                //Trace.WriteLine("useJSONLoguseJSONLoguseJSONLoguseJSONLog");
-                                Log.Write("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                                // if canceled, we dont want to log this (causes nullref)
+                                if (cancellationToken.IsCancellationRequested == false)
+                                {
+                                    Log.Write("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                                }
                             }
                             else
                             {
