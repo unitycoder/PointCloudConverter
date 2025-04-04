@@ -32,8 +32,8 @@ namespace PointCloudConverter.Readers
 
         byte minClassification = 255;
         byte maxClassification = 0;
-        byte minIntensity = 255;
-        byte maxIntensity = 0;
+        ushort minIntensity = 65535;
+        ushort maxIntensity = 0;
 
         int? taskID;
 
@@ -58,7 +58,7 @@ namespace PointCloudConverter.Readers
 
             minClassification = 255;
             maxClassification = 0;
-            minIntensity = 255;
+            minIntensity = 65535;
             maxIntensity = 0;
 
             res = lazReader.open_reader(file, out compressedLAZ); // 0 = ok, 1 = error
@@ -68,6 +68,7 @@ namespace PointCloudConverter.Readers
             //    Log.WriteLine("Error in LAZ.InitReader: " + e.Message);
             //    throw;
             //}
+
             return (res == 0);
         }
 
@@ -110,13 +111,13 @@ namespace PointCloudConverter.Readers
             h.MinZ = lazReader.header.min_z;
             h.MaxZ = lazReader.header.max_z;
 
-            if (importSettings.importClassification)
+            if (importSettings.importClassification && importSettings.importMetadataOnly == false)
             {
                 h.MinClassification = minClassification;
                 h.MaxClassification = maxClassification;
             }
 
-            if (importSettings.importIntensity)
+            if (importSettings.importIntensity && importSettings.importMetadataOnly == false)
             {
                 h.MinIntensity = minIntensity;
                 h.MaxIntensity = maxIntensity;
@@ -381,32 +382,23 @@ namespace PointCloudConverter.Readers
             return c;
         }
 
-        byte IReader.GetIntensity()
+        ushort IReader.GetIntensity()
         {
-            //var c = new Color();
-
-            // get point reference
             var p = lazReader.point;
 
-            byte i = 0;
-            if (customIntensityRange == true) // NOTE now only supports 65535 as custom range
-            {
-                //i = Tools.LUT255[(byte)(p.intensity / 255f)];
-                i = (byte)(p.intensity / 255f);
-            }
-            else
-            {
-                //i = Tools.LUT255[(byte)(p.intensity)];
-                i = (byte)(p.intensity);
-            }
-            //c.r = i;
-            //c.g = i;
-            //c.b = i;
+            ushort i = p.intensity;
+            //if (customIntensityRange == true) // NOTE now only supports 65535 as custom range
+            //{
+            //    i = (byte)(p.intensity / 257f);
+            //}
+            //else
+            //{
+            //    i = (byte)(p.intensity);
+            //}
 
             // get min and max
             if (i < minIntensity) minIntensity = i;
             if (i > maxIntensity) maxIntensity = i;
-
 
             return i;
         }

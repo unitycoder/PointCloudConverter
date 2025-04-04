@@ -130,6 +130,7 @@
                     <TextBox x:Name="txtPackMagic" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="64"/>
                 </StackPanel>
                 <CheckBox x:Name="chkCustomIntensityRange" Content="Custom intensity range (0-65535)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Expected default range is 0-255, but often it can be 0-65535"/>
+                <CheckBox x:Name="chkDetectIntensityRange" Content="Detect intensity range" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Scans file for 0-255 or 0-65535 intensity range (per file)"/>
             </StackPanel>
         </GroupBox>
 

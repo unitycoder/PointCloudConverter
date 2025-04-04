@@ -19,7 +19,7 @@ namespace PointCloudConverter.Readers
         double GetTime();
 
         void Close();
-        byte GetIntensity();
+        ushort GetIntensity();
         byte GetClassification();
         LasHeader GetMetaData(ImportSettings importSettings, int fileIndex);
 

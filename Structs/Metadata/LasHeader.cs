@@ -47,8 +47,8 @@ namespace PointCloudConverter.Structs
 
         public byte MinClassification { get; set; }
         public byte MaxClassification { get; set; }
-        public byte MinIntensity { get; set; }
-        public byte MaxIntensity { get; set; }
+        public ushort MinIntensity { get; set; }
+        public ushort MaxIntensity { get; set; }
 
         public List<LasVariableLengthRecord> VariableLengthRecords { get; set; }
         public ulong StartOfWaveformDataPacketRecord { get; internal set; }

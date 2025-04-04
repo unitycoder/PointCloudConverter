@@ -634,5 +634,17 @@ namespace PointCloudConverter.Properties {
                 this["filterDistance"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool detectIntensityRange {
+            get {
+                return ((bool)(this["detectIntensityRange"]));
+            }
+            set {
+                this["detectIntensityRange"] = value;
+            }
+        }
     }
 }

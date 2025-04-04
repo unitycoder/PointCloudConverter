@@ -176,5 +176,10 @@ namespace PointCloudConverter.Readers
                 bounds.maxZ = Math.Max(bounds.maxZ, z);
             }
         }
+
+        ushort IReader.GetIntensity()
+        {
+            return GetIntensity();
+        }
     }
 }

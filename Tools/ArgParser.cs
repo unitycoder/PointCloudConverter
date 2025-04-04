@@ -418,6 +418,19 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-detectintensityrange":
+                                Log.Write("detectintensityrange = " + param);
+
+                                if (param != "true" && param != "false")
+                                {
+                                    importSettings.errors.Add("Invalid detectintensityrange parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.detectIntensityRange = param == "true";
+                                }
+                                break;
+
                             case "-invertx":
                                 Log.Write("invertx = " + param);
 
@@ -973,6 +986,10 @@ namespace PointCloudConverter
                 importSettings.useGrid = true;
             }
 
+            if (importSettings.useCustomIntensityRange == true && importSettings.detectIntensityRange == true)
+            {
+                importSettings.errors.Add("Cannot use -customintensityrange and -detectintensityrange at the same time");
+            }
 
             // disable this error, if user really wants to use it
             //if (importSettings.randomize == false && importSettings.exportFormat == ExportFormat.PCROOT)

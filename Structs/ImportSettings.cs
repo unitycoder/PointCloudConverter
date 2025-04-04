@@ -224,6 +224,7 @@ namespace PointCloudConverter
         public float manualOffsetY { get; set; } = 0;
         public float manualOffsetZ { get; set; } = 0;
         public bool useCustomIntensityRange { get; set; } = false; // if false, 0-255 range is used, if ture: 0-65535
+        public bool detectIntensityRange { get; set; } = false; // if true, reads some points from file to detect min/max intensity range 0-255 or 0-65535
         public int seed { get; set; } = -1; // random seed for shuffling
         public int maxThreads { get; set; }
 

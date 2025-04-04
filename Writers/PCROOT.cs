@@ -18,7 +18,7 @@ namespace PointCloudConverter.Writers
 
         BufferedStream bsPoints = null;
         BinaryWriter writerPoints = null;
-        ImportSettings importSettings;
+        ImportSettings importSettings; // this is per file here
 
         static List<PointCloudTile> nodeBounds = new List<PointCloudTile>(); // for all tiles
         static float cloudMinX = float.PositiveInfinity;
@@ -38,7 +38,7 @@ namespace PointCloudConverter.Writers
         Dictionary<string, List<float>> nodeR = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
         Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
-        Dictionary<string, List<byte>> nodeIntensity = new Dictionary<string, List<byte>>();
+        Dictionary<string, List<ushort>> nodeIntensity = new Dictionary<string, List<ushort>>();
         Dictionary<string, List<byte>> nodeClassification = new Dictionary<string, List<byte>>();
         Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
 
@@ -75,6 +75,19 @@ namespace PointCloudConverter.Writers
         }
 
         private void ClearDictionary(Dictionary<string, List<byte>> dictionary)
+        {
+            if (dictionary != null)
+            {
+                foreach (var list in dictionary.Values)
+                {
+                    list.Clear(); // Clear the list to free up memory
+                }
+                dictionary.Clear(); // Clear the dictionary itself
+                dictionary = null; // Help GC by removing reference
+            }
+        }
+
+        private void ClearDictionary(Dictionary<string, List<ushort>> dictionary)
         {
             if (dictionary != null)
             {
@@ -382,7 +395,7 @@ namespace PointCloudConverter.Writers
 
         }
 
-        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, byte intensity, double time, byte classification)
+        void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, ushort intensity, double time, byte classification)
         {
             // get global all clouds bounds
             cloudMinX = Math.Min(cloudMinX, x);
@@ -442,7 +455,7 @@ namespace PointCloudConverter.Writers
                 nodeG[key] = new List<float> { g };
                 nodeB[key] = new List<float> { b };
 
-                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key] = new List<byte> { intensity };
+                if (importSettings.importRGB && importSettings.importIntensity == true) nodeIntensity[key] = new List<ushort> { intensity };
                 if (importSettings.importRGB && importSettings.importClassification == true) nodeClassification[key] = new List<byte> { classification };
                 if (importSettings.averageTimestamp == true) nodeTime[key] = new List<double> { time };
             }
@@ -492,7 +505,7 @@ namespace PointCloudConverter.Writers
             List<float> nodeTempG;
             List<float> nodeTempB;
 
-            List<byte> nodeTempIntensity = null;
+            List<ushort> nodeTempIntensity = null;
             List<byte> nodeTempClassification = null;
             List<double> nodeTempTime = null;
 
@@ -657,7 +670,7 @@ namespace PointCloudConverter.Writers
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
                             byte bg = (byte)(nodeTempG[i] * 255);
-                            byte bi = nodeTempIntensity[i];
+                            byte bi = importSettings.useCustomIntensityRange ? (byte)(nodeTempIntensity[i] / 257) : (byte)nodeTempIntensity[i];
                             packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         } // pack G, Py, CLASSification
                         else if (importSettings.importRGB == true && importSettings.importIntensity == false && importSettings.importClassification == true)
@@ -675,7 +688,8 @@ namespace PointCloudConverter.Writers
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
                             byte bg = (byte)(nodeTempG[i] * 255);
-                            byte bi = nodeTempIntensity[i];
+                            byte bi = importSettings.useCustomIntensityRange ? (byte)(nodeTempIntensity[i] / 257) : (byte)nodeTempIntensity[i];
+                            //                            byte bi = nodeTempIntensity[i];
                             packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         }
                         else // pack G and Py
@@ -1017,5 +1031,9 @@ namespace PointCloudConverter.Writers
             if (h < 0) h += 360;
         }
 
+        public void SetIntensityRange(bool isCustomRange)
+        {
+            importSettings.useCustomIntensityRange = isCustomRange;
+        }
     } // class
 } // namespace

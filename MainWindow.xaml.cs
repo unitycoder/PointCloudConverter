@@ -318,6 +318,7 @@ namespace PointCloudConverter
                     }
                 }
 
+                // NOTE this fails with some files? returns 0,0,0 for some reason
                 // find lowest bounds from boundsListTemp
                 float lowestX = float.MaxValue;
                 float lowestY = float.MaxValue;
@@ -861,6 +862,9 @@ namespace PointCloudConverter
 
                 int checkCancelEvery = fullPointCount / 128;
 
+                // detect is 0-255 or 0-65535 range
+                bool isCustomIntensityRange = false;
+
                 // Loop all points
                 // FIXME: would be nicer, if use different STEP value for skip, keep and limit..(to collect points all over the file, not just start)
                 int maxPointIterations = importSettings.useLimit ? pointCount : fullPointCount;
@@ -938,7 +942,7 @@ namespace PointCloudConverter
                         }
                     }
 
-                    byte intensity = 0;
+                    ushort intensity = 0;
                     byte classification = 0;
                     double time = 0;
 
@@ -946,14 +950,19 @@ namespace PointCloudConverter
                     if (importSettings.importIntensity == true)
                     {
                         intensity = taskReader.GetIntensity();
-                        // works here
-                        //intensity = taskReader.GetClassification();
+
                         //if (i < 20000) Log.Write("int: " + intensity);
 
-                        // if no rgb, then replace RGB with intensity
+                        if (importSettings.detectIntensityRange && isCustomIntensityRange == false)
+                        {
+                            // check if intensity is 0-255 or 0-65535
+                            isCustomIntensityRange = intensity > 255;
+                        }
+
+                        // if no rgb, then replace RGB with intensity, NOTE this doesnt work correctly if using detect intensity range! (since raw value is now ushort, can be 0-65k)
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = intensity / 255f;
+                            rgb.r = intensity / 255f; // convert byte to float
                             rgb.g = rgb.r;
                             rgb.b = rgb.r;
                         }
@@ -1008,6 +1017,11 @@ namespace PointCloudConverter
 
                 // hack for missing 100% progress
                 progressInfo.CurrentValue = maxPointIterations;
+
+                if (importSettings.detectIntensityRange == true)
+                {
+                    taskWriter.SetIntensityRange(isCustomIntensityRange);
+                }
 
                 lastStatusMessage = "Saving files..";
                 //importSettings.writer.Save(fileIndex);
@@ -1187,6 +1201,7 @@ namespace PointCloudConverter
             if (isGLTF == true) args.Add(("-usegrid=" + (bool)chkUseGrid.IsChecked).ToLower());
 
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
+            if (((bool)chkDetectIntensityRange.IsChecked) && ((bool)chkDetectIntensityRange.IsChecked)) args.Add("-detectintensityrange=True");
 
             // check input files
             //Trace.WriteLine("loggeris:" + Log.GetType().ToString());
@@ -1583,6 +1598,7 @@ namespace PointCloudConverter
             txtMaxFileCount.Text = Properties.Settings.Default.maxFileCount.ToString();
             chkRandomize.IsChecked = Properties.Settings.Default.randomize;
             chkCustomIntensityRange.IsChecked = Properties.Settings.Default.customintensityrange;
+            chkDetectIntensityRange.IsChecked = Properties.Settings.Default.detectIntensityRange;
             chkOpenOutputFolder.IsChecked = Properties.Settings.Default.openOutputFolder;
             chkManualOffset.IsChecked = Properties.Settings.Default.useManualOffset;
             txtOffsetX.Text = Properties.Settings.Default.manualOffsetX.ToString();
@@ -1631,6 +1647,7 @@ namespace PointCloudConverter
             Properties.Settings.Default.maxFileCount = Tools.ParseInt(txtMaxFileCount.Text);
             Properties.Settings.Default.randomize = (bool)chkRandomize.IsChecked;
             Properties.Settings.Default.customintensityrange = (bool)chkCustomIntensityRange.IsChecked;
+            Properties.Settings.Default.detectIntensityRange = (bool)chkDetectIntensityRange.IsChecked;
             Properties.Settings.Default.openOutputFolder = (bool)chkOpenOutputFolder.IsChecked;
             Properties.Settings.Default.useManualOffset = (bool)chkManualOffset.IsChecked;
             float.TryParse(txtOffsetX.Text.Replace(",", "."), NumberStyles.Float, CultureInfo.InvariantCulture, out float offsetX);
