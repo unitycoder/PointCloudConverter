@@ -395,7 +395,6 @@ namespace PointCloudConverter.Readers
             //{
             //    i = (byte)(p.intensity);
             //}
-
             // get min and max
             if (i < minIntensity) minIntensity = i;
             if (i > maxIntensity) maxIntensity = i;

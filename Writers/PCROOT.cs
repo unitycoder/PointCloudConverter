@@ -590,13 +590,15 @@ namespace PointCloudConverter.Writers
                 string fullpathFileOnly = fileOnly + "_" + fileIndex + "_" + key + tileExtension;
 
                 // if batch mode (more than 1 file), FIXME generates new unique filename..but why not overwrite?
-                if (fileIndex > 0 && File.Exists(fullpath))
-                {
-                    //Console.WriteLine("File already exists! " + fullpath);
-                    Int32 unixTimestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-                    fullpath = Path.Combine(baseFolder, fileOnly) + "_" + fileIndex + "_" + key + "_r" + (unixTimestamp) + tileExtension;
-                    fullpathFileOnly = fileOnly + "_" + fileIndex + "_" + key + tileExtension;
-                }
+                // THIS is now disabled, it didnt really work since pcroot was not updated with new file names!
+                //if (fileIndex > 0 && File.Exists(fullpath))
+                //{
+                //Log.Write("File already exists! " + fullpath);
+                ////Console.WriteLine("File already exists! " + fullpath);
+                //Int32 unixTimestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+                //fullpath = Path.Combine(baseFolder, fileOnly) + "_" + fileIndex + "_" + key + "_r" + (unixTimestamp) + tileExtension;
+                //fullpathFileOnly = fileOnly + "_" + fileIndex + "_" + key + tileExtension;
+                //}
 
                 // save this tile
                 //Log.Write("*** Saving tile: " + fullpathFileOnly + " (" + nodeTempX.Count + " points)");
