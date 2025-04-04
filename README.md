@@ -29,7 +29,7 @@ This standalone converter is open-source, so you can create your own Forks and v
 Pull requests to improve this converter are welcome! (please create Issue first, so i/users can comment on it)
 
 ### Images
-![image](https://github.com/user-attachments/assets/4a116e52-e90e-436d-b315-d6311006c951)
+![image](https://github.com/user-attachments/assets/8b5c47cf-3532-4bc6-8b4e-1bfd3347d8a4)
 
 ### Building
 - Open project in VS2019 or later
