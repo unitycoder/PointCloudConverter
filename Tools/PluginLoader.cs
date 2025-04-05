@@ -13,24 +13,31 @@ namespace PointCloudConverter.Plugins
 {
     public static class PluginLoader
     {
-        static readonly string pluginDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Plugins");
+        // Resolve plugin folder relative to the .exe location instead of current working directory
+        static readonly string pluginDirectory = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Plugins");
 
         // TODO add logger, if needed
-        //static ILogger Log;
+        // static ILogger Log;
 
         public static IWriter LoadWriter(string pluginName)
         {
-            //Log = logger;
+            // Log = logger;
 
+            // Build the full path to the plugin DLL
             string pluginPath = Path.Combine(pluginDirectory, pluginName + ".dll");
-            //Log.Write($"Loading plugin at {pluginPath}");
-            if (File.Exists(pluginPath) == false) throw new FileNotFoundException($"The plugin at {pluginPath} could not be found.");
 
-            // Load the plugin assembly
+            // Log.Write($"Loading plugin at {pluginPath}");
+
+            // Check if the plugin DLL exists
+            if (File.Exists(pluginPath) == false)
+                throw new FileNotFoundException($"The plugin at {pluginPath} could not be found.");
+
+            // Load the plugin assembly from the DLL
             var pluginAssembly = Assembly.LoadFrom(pluginPath);
 
-            // Find the specific type 'PointCloudConverter.Writers.GLTF'
-            var writerType = pluginAssembly.GetType("PointCloudConverter.Writers.GLB");
+            // Find the specific type 'PointCloudConverter.Writers.<PluginName>'
+            // This assumes the type name inside the DLL matches the filename
+            var writerType = pluginAssembly.GetType("PointCloudConverter.Writers." + pluginName);
 
             if (writerType == null)
                 throw new InvalidOperationException($"No valid implementation of IWriter found in {pluginPath}");

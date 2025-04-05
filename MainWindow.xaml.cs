@@ -30,7 +30,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "04.04.2025";
+        static readonly string version = "05.04.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -104,7 +104,11 @@ namespace PointCloudConverter
             ////testwriter.Close();
             //externalWriters = AppDomain.CurrentDomain.GetAssemblies().SelectMany(assembly => assembly.GetTypes()).Where(type => typeof(IWriter).IsAssignableFrom(type) && !type.IsInterface);
 
-            var pluginsDirectory = "plugins";
+            // Get the directory of the running executable
+            var exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            // Build absolute path to plugins folder
+            var pluginsDirectory = Path.Combine(exeDir, "plugins");
 
             if (Directory.Exists(pluginsDirectory))
             {
