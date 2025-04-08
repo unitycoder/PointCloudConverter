@@ -30,7 +30,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "05.04.2025";
+        static readonly string version = "08.04.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -1865,11 +1865,8 @@ namespace PointCloudConverter
 
         private void btnCopyToClipboard_Click(object sender, RoutedEventArgs e)
         {
-            // copy console to clipboard
-            System.Windows.Clipboard.SetText(txtConsole.Text);
-            // focus
+            Clipboard.SetText(txtConsole.Text);
             txtConsole.Focus();
-            // select all text
             txtConsole.SelectAll();
             e.Handled = true;
         }

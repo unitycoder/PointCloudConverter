@@ -227,6 +227,12 @@ namespace PointCloudConverter
                             case "-input":
                                 Log.Write("input = " + param);
 
+                                if (string.IsNullOrEmpty(param.Trim()))
+                                {
+                                    importSettings.errors.Add("Input file not defined: " + param);
+                                    break;
+                                }
+
                                 // remove quotes (needed for paths with spaces)
                                 param = param.Trim('"');
 
@@ -290,6 +296,14 @@ namespace PointCloudConverter
 
                             case "-output":
                                 Log.Write("output = " + param);
+
+                                if (string.IsNullOrEmpty(param.Trim()))
+                                {
+                                    importSettings.errors.Add("Output not defined: " + param);
+                                    break;
+                                }
+
+                                param = param.Trim('"');
 
                                 // check if relative or not
                                 if (Path.IsPathRooted(param) == false)
@@ -663,7 +677,7 @@ namespace PointCloudConverter
                                     }
                                     else
                                     {
-                                        importSettings.errors.Add("Invalid offset parameter: " + param);
+                                        importSettings.errors.Add("Invalid offset parameter (Use: min or legacy): " + param);
                                     }
                                 }
                                 else // autooffset
@@ -784,7 +798,7 @@ namespace PointCloudConverter
 
                                 if (param != "legacy" && param != "min")
                                 {
-                                    importSettings.errors.Add("Invalid offsetmode parameter: " + param);
+                                    importSettings.errors.Add("Invalid offset parameter:  (Use: min or legacy)" + param);
                                 }
                                 else
                                 {
@@ -846,6 +860,9 @@ namespace PointCloudConverter
             {
                 Tools.PrintHelpAndExit(argValueSeparator, waitEnter: true);
             }
+
+
+            // *** VALIDATE SETTINGS ***
 
             // check that we had input
             if (importSettings.inputFiles.Count == 0 || string.IsNullOrEmpty(importSettings.inputFiles[0]) == true)
@@ -915,6 +932,7 @@ namespace PointCloudConverter
                     }
                 }
             } // have input
+
 
             // check required settings
             if (importSettings.exportFormat == ExportFormat.Unknown)
