@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using Color = PointCloudConverter.Structs.Color;
 using System.Diagnostics;
+using static Ply.Net.PlyParser;
+using System.Collections.Immutable;
 
 namespace PointCloudConverter.Readers
 {
@@ -15,8 +17,13 @@ namespace PointCloudConverter.Readers
         private int pointIndex;
         private int pointCount;
 
-        private PlyParser.PropertyData px, py, pz;
-        private PlyParser.PropertyData pr, pg, pb;
+        private List<ElementData> vertexChunks;
+        private int currentChunkIndex;
+        private int currentPointInChunk;
+
+        private PropertyData px, py, pz;
+        private PropertyData pr, pg, pb;
+
         //private PlyParser.PropertyData pintensity, pclass, ptime;
 
         private Float3 currentPoint;
@@ -29,39 +36,26 @@ namespace PointCloudConverter.Readers
         public bool InitReader(ImportSettings importSettings, int fileIndex)
         {
             var file = importSettings.inputFiles[fileIndex];
+
             using var stream = File.OpenRead(file);
-            dataset = PlyParser.Parse(stream, 1024);
+            dataset = PlyParser.Parse(stream, 4096);
 
-            //var info = PlyParser.ParseHeader(file);
-            //var infoVertices = info.Elements.FirstOrDefault(x => x.Type == PlyParser.ElementType.Vertex);
-            //Trace.WriteLine($"PLY: {file} has {infoVertices?.Count} vertices");
+            vertexChunks = dataset.Data
+                .Where(d => d.Element.Type == ElementType.Vertex)
+                .ToList();
 
-            var vertexElement = dataset.Data.FirstOrDefault(d => d.Element.Type == PlyParser.ElementType.Vertex);
-            if (vertexElement == null) return false;
+            if (vertexChunks.Count == 0) return false;
 
-            pointCount = vertexElement.Data[0].Data.Length;
+            pointCount = vertexChunks.Sum(chunk => ((Array)chunk.Data[0].Data).Length);
+            currentChunkIndex = 0;
+            currentPointInChunk = 0;
 
-            px = vertexElement["x"] ?? throw new Exception("Missing 'x' property in PLY file");
-            py = vertexElement["y"] ?? throw new Exception("Missing 'y' property in PLY file");
-            pz = vertexElement["z"] ?? throw new Exception("Missing 'z' property in PLY file");
-
-            pr = vertexElement["red"];
-            pg = vertexElement["green"];
-            pb = vertexElement["blue"];
-
-            Debug.WriteLine($"PLY: {file} has {pointCount} points");
-            Debug.WriteLine($"PLY: {file} has {pr.Data.Length} pr values");
-
-
-            //pa = vertexElement["alpha"];
-            //            pintensity = vertexElement["intensity"] ?? vertexElement["scalar_intensity"];
-            //            pclass = vertexElement["classification"] ?? vertexElement["scalar_classification"];
-            //            ptime = vertexElement["time"];
+            SetCurrentChunkProperties(); // helper method to cache px, py, pz, etc.
 
             CalculateBounds();
-            pointIndex = 0;
 
             return true;
+
         }
 
         public int GetPointCount() => pointCount;
@@ -70,35 +64,39 @@ namespace PointCloudConverter.Readers
 
         public Float3 GetXYZ()
         {
-            if (pointIndex >= pointCount)
+            if (currentChunkIndex >= vertexChunks.Count)
                 return new Float3 { hasError = true };
+
+            int chunkSize = ((Array)px.Data).Length;
+            if (currentPointInChunk >= chunkSize)
+            {
+                currentChunkIndex++;
+                if (currentChunkIndex >= vertexChunks.Count)
+                    return new Float3 { hasError = true };
+
+                currentPointInChunk = 0;
+                SetCurrentChunkProperties();
+            }
 
             currentPoint = new Float3
             {
-                x = Convert.ToSingle(px.Data.GetValue(pointIndex)),
-                y = Convert.ToSingle(py.Data.GetValue(pointIndex)),
-                z = Convert.ToSingle(pz.Data.GetValue(pointIndex)),
+                x = Convert.ToSingle(px.Data.GetValue(currentPointInChunk)),
+                y = Convert.ToSingle(py.Data.GetValue(currentPointInChunk)),
+                z = Convert.ToSingle(pz.Data.GetValue(currentPointInChunk)),
                 hasError = false
             };
 
-            //Trace.WriteLine($"PLY: {pointIndex} {pr.Data.GetValue(pointIndex)} {pg.Data.GetValue(pointIndex)} {pb.Data.GetValue(pointIndex)}");
             currentColor = new Color
             {
-                r = pr != null ? Convert.ToSingle(Convert.ToByte(pr.Data.GetValue(pointIndex))) / 255f : 1f,
-                g = pg != null ? Convert.ToSingle(Convert.ToByte(pg.Data.GetValue(pointIndex))) / 255f : 1f,
-                b = pb != null ? Convert.ToSingle(Convert.ToByte(pb.Data.GetValue(pointIndex))) / 255f : 1f
+                r = Convert.ToSingle(Convert.ToByte(pr.Data.GetValue(currentPointInChunk))) / 255f,
+                g = Convert.ToSingle(Convert.ToByte(pg.Data.GetValue(currentPointInChunk))) / 255f,
+                b = Convert.ToSingle(Convert.ToByte(pb.Data.GetValue(currentPointInChunk))) / 255f
             };
 
-
-            //Trace.WriteLine($"PLY: {pointIndex} {currentColor.r} {currentColor.g} {currentColor.b}");
-
-            //            currentIntensity = pintensity != null ? Convert.ToByte(pintensity.Data.GetValue(pointIndex)) : (byte)0;
-            //            currentClassification = pclass != null ? Convert.ToByte(pclass.Data.GetValue(pointIndex)) : (byte)0;
-            //            currentTime = ptime != null ? Convert.ToDouble(ptime.Data.GetValue(pointIndex)) : 0.0;
-
-            pointIndex++;
+            currentPointInChunk++;
             return currentPoint;
         }
+
 
         public Color GetRGB()
         {
@@ -149,9 +147,6 @@ namespace PointCloudConverter.Readers
 
         private void CalculateBounds()
         {
-            // NOTE doesnt support BINARY ply
-
-            // need to calculate manually
             bounds = new Bounds
             {
                 minX = float.MaxValue,
@@ -162,24 +157,46 @@ namespace PointCloudConverter.Readers
                 maxZ = float.MinValue
             };
 
-            for (int i = 0; i < pointCount; i++)
+            foreach (var chunk in vertexChunks)
             {
-                float x = Convert.ToSingle(px.Data.GetValue(i));
-                float y = Convert.ToSingle(py.Data.GetValue(i));
-                float z = Convert.ToSingle(pz.Data.GetValue(i));
+                var cx = chunk["x"]!;
+                var cy = chunk["y"]!;
+                var cz = chunk["z"]!;
+                int count = ((Array)cx.Data).Length;
 
-                bounds.minX = Math.Min(bounds.minX, x);
-                bounds.maxX = Math.Max(bounds.maxX, x);
-                bounds.minY = Math.Min(bounds.minY, y);
-                bounds.maxY = Math.Max(bounds.maxY, y);
-                bounds.minZ = Math.Min(bounds.minZ, z);
-                bounds.maxZ = Math.Max(bounds.maxZ, z);
+                for (int i = 0; i < count; i++)
+                {
+                    float x = Convert.ToSingle(cx.Data.GetValue(i));
+                    float y = Convert.ToSingle(cy.Data.GetValue(i));
+                    float z = Convert.ToSingle(cz.Data.GetValue(i));
+
+                    bounds.minX = Math.Min(bounds.minX, x);
+                    bounds.maxX = Math.Max(bounds.maxX, x);
+                    bounds.minY = Math.Min(bounds.minY, y);
+                    bounds.maxY = Math.Max(bounds.maxY, y);
+                    bounds.minZ = Math.Min(bounds.minZ, z);
+                    bounds.maxZ = Math.Max(bounds.maxZ, z);
+                }
             }
         }
+
 
         ushort IReader.GetIntensity()
         {
             return GetIntensity();
         }
+
+        private void SetCurrentChunkProperties()
+        {
+            var chunk = vertexChunks[currentChunkIndex];
+            px = chunk["x"] ?? throw new Exception("Missing 'x' property");
+            py = chunk["y"] ?? throw new Exception("Missing 'y' property");
+            pz = chunk["z"] ?? throw new Exception("Missing 'z' property");
+            pr = chunk["red"] ?? throw new Exception("Missing 'red' property");
+            pg = chunk["green"] ?? throw new Exception("Missing 'green' property");
+            pb = chunk["blue"] ?? throw new Exception("Missing 'blue' property");
+        }
+
+
     }
 }
