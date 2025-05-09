@@ -12,6 +12,7 @@ This is pointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp;
 
 ### Import Formats
 - LAZ/LAS
+- PLY (ascii/binary) *Initial version
 - (more to be added)
 
 ### Export Formats
