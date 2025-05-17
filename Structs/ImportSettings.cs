@@ -62,6 +62,9 @@ namespace PointCloudConverter
                     case ImportFormat.PLY:
                         readerInstance = new PLY(); // no taskId needed here
                         break;
+                    case ImportFormat.E57:
+                        readerInstance = new E57();
+                        break;
                     default:
                         Log.Write($"Unsupported import format: {importFormat}", LogEvent.Error);
                         throw new NotSupportedException($"Unsupported import format: {importFormat}");

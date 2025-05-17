@@ -26,6 +26,14 @@ namespace PointCloudConverter.Readers
         //        private byte currentClassification;
         private Bounds bounds;
 
+
+        //int? taskID;
+        //// add constructor
+        //public PLY(int? _taskID)
+        //{
+        //    taskID = _taskID;
+        //}
+
         public bool InitReader(ImportSettings importSettings, int fileIndex)
         {
             var file = importSettings.inputFiles[fileIndex];
