@@ -115,6 +115,9 @@ namespace PointCloudConverter.Readers
 
                 currentChunk = chunkEnumerator.Current;
                 currentPointIndex = 0;
+
+                // clear cachedColors when chunk changes
+                cachedColors = null;
             }
 
             var p = currentChunk.Positions[currentPointIndex];
@@ -132,7 +135,9 @@ namespace PointCloudConverter.Readers
         public Color GetRGB()
         {
             if (cachedColors == null && currentChunk?.Colors != null)
+            {
                 cachedColors = currentChunk.Colors;
+            }
 
             int i = currentPointIndex - 1;
             if (cachedColors != null && i >= 0 && i < cachedColors.Length)
