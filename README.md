@@ -13,12 +13,14 @@ This is pointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp;
 ### Import Formats
 - LAZ/LAS
 - PLY (ascii/binary) *Initial version
+- E57 *Experimental version
 - (more to be added)
 
 ### Export Formats
 - UCPC (V2) for https://github.com/unitycoder/UnityPointCloudViewer
 - PCROOT (V3) for https://github.com/unitycoder/UnityPointCloudViewer
 - GLTF (GLB) output https://las2gltf.kelobyte.fi/ *Paid plugin
+- (more to be added)
 
 ### Requirements
 - Windows 10 or later
