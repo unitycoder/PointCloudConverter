@@ -154,7 +154,7 @@ namespace PointCloudConverter.Readers
             return default;
         }
 
-        public byte GetIntensity()
+        public ushort GetIntensity()
         {
             var i = currentPointIndex - 1;
             if (currentChunk?.Intensities != null && i >= 0 && i < currentChunk.Intensities.Length)
