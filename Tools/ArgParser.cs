@@ -153,7 +153,7 @@ namespace PointCloudConverter
                                 string importFormatParsed = param.ToUpper();
 
                                 if (string.IsNullOrEmpty(importFormatParsed) ||
-                                    (importFormatParsed != "LAS" && importFormatParsed != "LAZ" && importFormatParsed != "PLY"))
+                                    (importFormatParsed != "LAS" && importFormatParsed != "LAZ" && importFormatParsed != "PLY") && importFormatParsed != "E57")
                                 {
                                     importSettings.errors.Add("Unsupported import format: " + param);
                                     importSettings.importFormat = ImportFormat.Unknown;
@@ -170,6 +170,10 @@ namespace PointCloudConverter
                                         case "PLY":
                                             importSettings.importFormat = ImportFormat.PLY;
                                             importSettings.reader = new PLY();
+                                            break;
+                                        case "E57":
+                                            importSettings.importFormat = ImportFormat.E57;
+                                            importSettings.reader = new E57();
                                             break;
                                     }
                                 }

@@ -4,6 +4,7 @@
     {
         Unknown,
         LAS, // and LAZ
-        PLY
+        PLY,
+        E57
     }
 }
