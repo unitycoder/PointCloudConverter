@@ -24,7 +24,7 @@ This is pointCloud converter (commandline and GUI) for [Point Cloud Viewer &amp;
 
 ### Requirements
 - Windows 10 or later
-- Visual Studio 2017 or later
+- Visual Studio 2022 or later
 - To view converted Point Clouds inside Unity, this viewer is required: from Unity Asset Store: https://github.com/unitycoder/UnityPointCloudViewer
 
 ### Pull Request
