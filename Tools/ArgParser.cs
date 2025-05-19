@@ -258,13 +258,14 @@ namespace PointCloudConverter
 
                                     if (importSettings.importFormat == ImportFormat.Unknown)
                                     {
-                                        importSettings.errors.Add("Import format not defined before -input folder for batch (use -importformat" + argValueSeparator + "LAS or PLY)");
+                                        importSettings.errors.Add("Import format not defined before -input folder for batch (use -importformat" + argValueSeparator + "LAS or PLY or E57)");
                                     }
                                     else
                                     {
                                         string importExtensions = "";
                                         if (importSettings.importFormat == ImportFormat.LAS) importExtensions = "las|laz";
                                         if (importSettings.importFormat == ImportFormat.PLY) importExtensions = "ply";
+                                        if (importSettings.importFormat == ImportFormat.E57) importExtensions = "e57";
                                         var filePaths = Directory.GetFiles(param).Where(file => Regex.IsMatch(file, @"^.+\.(" + importExtensions + ")$", RegexOptions.IgnoreCase)).ToArray();
 
                                         for (int j = 0; j < filePaths.Length; j++)
@@ -794,6 +795,19 @@ namespace PointCloudConverter
                                 else
                                 {
                                     importSettings.importClassification = (param == "true");
+                                }
+                                break;
+
+                            case "-srgb":
+                                Log.Write("srgb = " + param);
+
+                                if (param != "false" && param != "true")
+                                {
+                                    importSettings.errors.Add("Invalid srgb parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.sRGB = (param == "true");
                                 }
                                 break;
 

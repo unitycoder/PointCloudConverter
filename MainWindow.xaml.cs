@@ -904,6 +904,14 @@ namespace PointCloudConverter
                     if (importSettings.importRGB == true)
                     {
                         rgb = taskReader.GetRGB();
+
+                        // convert from srg to linear (if your model seems too bright)
+                        if (importSettings.sRGB)
+                        {
+                            rgb.r = Tools.SRGBToLinear(rgb.r);
+                            rgb.g = Tools.SRGBToLinear(rgb.g);
+                            rgb.b = Tools.SRGBToLinear(rgb.b);
+                        }
                     }
 
                     // skip points
@@ -1208,6 +1216,8 @@ namespace PointCloudConverter
             args.Add("-maxthreads=" + txtMaxThreads.Text);
 
             if ((bool)chkUseFilter.IsChecked) args.Add("-filter=" + txtFilterDistance.Text);
+            if ((bool)chkConvertSRGB.IsChecked) args.Add("-srgb=true");
+
 
             if (isGLTF == true) args.Add(("-usegrid=" + (bool)chkUseGrid.IsChecked).ToLower());
 
@@ -1627,6 +1637,7 @@ namespace PointCloudConverter
             txtOffsetMode.Text = Properties.Settings.Default.offsetMode;
             chkUseFilter.IsChecked = Properties.Settings.Default.useFilter;
             txtFilterDistance.Text = Properties.Settings.Default.filterDistance.ToString();
+            chkConvertSRGB.IsChecked = Properties.Settings.Default.useSRGB;
             isInitialiazing = false;
         }
 
@@ -1681,6 +1692,7 @@ namespace PointCloudConverter
             Properties.Settings.Default.offsetMode = txtOffsetMode.Text;
             Properties.Settings.Default.useFilter = (bool)chkUseFilter.IsChecked;
             Properties.Settings.Default.filterDistance = Tools.ParseFloat(txtFilterDistance.Text);
+            Properties.Settings.Default.useSRGB = (bool)chkConvertSRGB.IsChecked;
             Properties.Settings.Default.Save();
         }
 

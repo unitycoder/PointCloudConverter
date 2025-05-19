@@ -45,19 +45,35 @@ namespace PointCloudConverter.Readers
                 header = ASTM_E57.E57FileHeader.Parse(stream, new FileInfo(filePath).Length, false);
                 stream.Close();
 
-                var pose = header.E57Root.Data3D[0].Pose;
+                var data3D = header.E57Root.Data3D[0];
+                var pose = data3D.Pose;
 
                 metaData = new E57MetaData
                 {
-                    Name = header.E57Root.Data3D[0].Name,
-                    X = pose.Translation.X,
-                    Y = importSettings.swapYZ ? pose.Translation.Z : pose.Translation.Y,
-                    Z = importSettings.swapYZ ? pose.Translation.Y : pose.Translation.Z,
-                    RX = pose.Rotation.X,
-                    RY = importSettings.swapYZ ? pose.Rotation.Z : pose.Rotation.Y,
-                    RZ = importSettings.swapYZ ? pose.Rotation.Y : pose.Rotation.Z,
-                    RW = pose.Rotation.W
+                    Name = data3D.Name
                 };
+
+                if (pose != null)
+                {
+                    metaData.X = pose.Translation.X;
+                    metaData.Y = importSettings.swapYZ ? pose.Translation.Z : pose.Translation.Y;
+                    metaData.Z = importSettings.swapYZ ? pose.Translation.Y : pose.Translation.Z;
+
+                    metaData.RX = pose.Rotation.X;
+                    metaData.RY = importSettings.swapYZ ? pose.Rotation.Z : pose.Rotation.Y;
+                    metaData.RZ = importSettings.swapYZ ? pose.Rotation.Y : pose.Rotation.Z;
+                    metaData.RW = pose.Rotation.W;
+                }
+                else
+                {
+                    // Optional: assign default values or log warning
+                    metaData.X = metaData.Y = metaData.Z = 0;
+                    metaData.RX = metaData.RY = metaData.RZ = 0;
+                    metaData.RW = 1;
+
+                    Console.WriteLine("Warning: E57 scan pose is null.");
+                }
+
 
                 var chunks = ChunksFull(filePath, ParseConfig.Default);
                 chunkEnumerator = chunks.GetEnumerator();
@@ -140,6 +156,7 @@ namespace PointCloudConverter.Readers
             }
 
             int i = currentPointIndex - 1;
+
             if (cachedColors != null && i >= 0 && i < cachedColors.Length)
             {
                 var c = cachedColors[i];

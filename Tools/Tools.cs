@@ -361,6 +361,11 @@ namespace PointCloudConverter
             return f;
         }
 
+        public static float SRGBToLinear(float c)
+        {
+            return c <= 0.04045f ? c / 12.92f : MathF.Pow((c + 0.055f) / 1.055f, 2.4f);
+        }
+
         public static void PrintHelpAndExit(char argSeparator, bool waitEnter = false)
         {
             Console.ForegroundColor = ConsoleColor.Gray;
@@ -407,6 +412,8 @@ namespace PointCloudConverter
             Console.WriteLine("-config" + argSeparator + "filename\t\tLoad arguments from text file (easier to handle separate settings for different projects)");
             Console.WriteLine("-usegrid" + argSeparator + "true\t\tSplits point cloud to grid (multiple files). Required for V3 format (automatically enabled if its off). \tDefault is true for v3");
             Console.WriteLine("-offsetmode" + argSeparator + "min\t\tGet auto-offset bounds, min=min from all bounds, legacy= first cloud min bounds\tDefault is min");
+            Console.WriteLine("-srgb" + argSeparator + "false\t\tConvert raw sRGB values to Linear RGB\tDefault is false, enable this is your model seems too bright");
+
 
             Console.WriteLine("");
             Console.WriteLine("? /? -? help -help /help");

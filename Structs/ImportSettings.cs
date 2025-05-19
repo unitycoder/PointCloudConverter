@@ -240,6 +240,7 @@ namespace PointCloudConverter
         public string offsetMode { get; set; } = "min"; // TODO use enum: "min" or "legacy" now (legacy is first bounds min only)
         public bool useFilter { get; set; } = false; // filter by distance
         public float filterDistance { get; set; } = 0.5f;
+        public bool sRGB { get; set; } = false; // use sRGB color space for RGB values
 
         public override string ToString()
         {
@@ -285,6 +286,12 @@ namespace PointCloudConverter
             t += "\n checkoverlap=" + checkoverlap;
             t += "\n useGrid=" + useGrid;
             t += "\n offsetMode=" + offsetMode;
+            t += "\n useFilter=" + useFilter;
+            t += "\n filterDistance=" + filterDistance;
+            t += "\n sRGB=" + sRGB;
+            t += "\n importFormat=" + importFormat;
+            t += "\n exportFormat=" + exportFormat;
+            t += "\n maxThreads=" + maxThreads;
             return t;
         }
 

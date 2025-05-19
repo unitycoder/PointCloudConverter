@@ -646,5 +646,17 @@ namespace PointCloudConverter.Properties {
                 this["detectIntensityRange"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool useSRGB {
+            get {
+                return ((bool)(this["useSRGB"]));
+            }
+            set {
+                this["useSRGB"] = value;
+            }
+        }
     }
 }
