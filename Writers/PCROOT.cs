@@ -463,6 +463,9 @@ namespace PointCloudConverter.Writers
             }
         }
 
+        private readonly List<IList> _shuffleListBuffer = new(4096*4);
+
+        private readonly List<float>[] _tempArray = new List<float>[4096 * 4];
 
         // returns list of saved files
         void IWriter.Save(int fileIndex)
@@ -536,29 +539,55 @@ namespace PointCloudConverter.Writers
                 }
 
                 // randomize points in this node
+                //if (importSettings.randomize)
+                //{
+                //    var listsToShuffle = new List<IList> { nodeTempX, nodeTempY, nodeTempZ };
+
+                //    if (importSettings.importRGB)
+                //    {
+                //        listsToShuffle.Add(nodeTempR);
+                //        listsToShuffle.Add(nodeTempG);
+                //        listsToShuffle.Add(nodeTempB);
+                //    }
+
+                //    if (importSettings.importIntensity)
+                //        listsToShuffle.Add(nodeTempIntensity);
+
+                //    if (importSettings.importClassification)
+                //        listsToShuffle.Add(nodeTempClassification);
+
+                //    if (importSettings.averageTimestamp)
+                //        listsToShuffle.Add(nodeTempTime);
+
+                //    Tools.ShuffleInPlace(listsToShuffle.ToArray());
+                //}
+
                 if (importSettings.randomize)
                 {
-                    var listsToShuffle = new List<IList> { nodeTempX, nodeTempY, nodeTempZ };
+                    _shuffleListBuffer.Clear();
+                    _shuffleListBuffer.Add(nodeTempX);
+                    _shuffleListBuffer.Add(nodeTempY);
+                    _shuffleListBuffer.Add(nodeTempZ);
 
                     if (importSettings.importRGB)
                     {
-                        listsToShuffle.Add(nodeTempR);
-                        listsToShuffle.Add(nodeTempG);
-                        listsToShuffle.Add(nodeTempB);
+                        _shuffleListBuffer.Add(nodeTempR);
+                        _shuffleListBuffer.Add(nodeTempG);
+                        _shuffleListBuffer.Add(nodeTempB);
                     }
 
                     if (importSettings.importIntensity)
-                        listsToShuffle.Add(nodeTempIntensity);
+                        _shuffleListBuffer.Add(nodeTempIntensity);
 
                     if (importSettings.importClassification)
-                        listsToShuffle.Add(nodeTempClassification);
+                        _shuffleListBuffer.Add(nodeTempClassification);
 
                     if (importSettings.averageTimestamp)
-                        listsToShuffle.Add(nodeTempTime);
+                        _shuffleListBuffer.Add(nodeTempTime);
 
-                    Tools.ShuffleInPlace(listsToShuffle.ToArray());
-
+                    Tools.ShuffleInPlaceDynamic(_shuffleListBuffer, nodeTempX.Count);
                 }
+
 
 
                 // get this node bounds, TODO but we know node(grid cell) x,y,z values?

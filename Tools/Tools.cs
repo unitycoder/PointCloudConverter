@@ -140,31 +140,60 @@ namespace PointCloudConverter
         //    return (ax * bx + ay * by + az * bz);
         //}
 
-        public static void ShuffleInPlace(params IList[] arrays)
+        //public static void ShuffleInPlace(params IList[] arrays)
+        //{
+        //    //ResetRandom();
+
+        //    // Assume all lists are the same length
+        //    if (arrays.Length == 0 || arrays[0] == null)
+        //        return;
+
+        //    int count = arrays[0].Count;
+
+        //    for (int i = count - 1; i > 0; i--)
+        //    {
+        //        int rand = frnd.Next(0, i + 1);
+
+        //        foreach (var list in arrays)
+        //        {
+        //            if (list == null || list.Count <= i || list.Count <= rand)
+        //                continue;
+
+        //            object temp = list[i];
+        //            list[i] = list[rand];
+        //            list[rand] = temp;
+        //        }
+        //    }
+        //}
+
+        public static void ShuffleInPlaceDynamic(List<IList> arrays, int count)
         {
-            //ResetRandom();
+            foreach (var list in arrays)
+            {
+                Type type = list.GetType().GetGenericArguments()[0];
 
-            // Assume all lists are the same length
-            if (arrays.Length == 0 || arrays[0] == null)
-                return;
+                if (type == typeof(float))
+                    ShuffleInPlace((List<float>)list, count);
+                else if (type == typeof(ushort))
+                    ShuffleInPlace((List<ushort>)list, count);
+                else if (type == typeof(byte))
+                    ShuffleInPlace((List<byte>)list, count);
+                else if (type == typeof(double))
+                    ShuffleInPlace((List<double>)list, count);
+                else
+                    throw new NotSupportedException($"Shuffle not supported for {type}");
+            }
+        }
 
-            int count = arrays[0].Count;
-
+        private static void ShuffleInPlace<T>(List<T> list, int count)
+        {
             for (int i = count - 1; i > 0; i--)
             {
                 int rand = frnd.Next(0, i + 1);
-
-                foreach (var list in arrays)
-                {
-                    if (list == null || list.Count <= i || list.Count <= rand)
-                        continue;
-
-                    object temp = list[i];
-                    list[i] = list[rand];
-                    list[rand] = temp;
-                }
+                (list[i], list[rand]) = (list[rand], list[i]);
             }
         }
+
 
 
         public static void Shuffle(ref List<float> array)
