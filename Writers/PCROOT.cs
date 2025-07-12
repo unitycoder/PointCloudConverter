@@ -48,6 +48,9 @@ namespace PointCloudConverter.Writers
         static int skippedPointsCounter = 0; // FIXME, not used in regular mode, only for lossy filtering, TODO can calculate from importsetting values
         static bool useLossyFiltering = false; //not used, for testing only
 
+        private readonly List<IList> _shuffleListBuffer = new(4096 * 4);
+        private readonly List<float>[] _tempArray = new List<float>[4096 * 4];
+
         public void Dispose()
         {
             //Log.Write("Memory used: " + GC.GetTotalMemory(false));
@@ -554,27 +557,18 @@ namespace PointCloudConverter.Writers
                 // randomize points in this node
                 if (importSettings.randomize)
                 {
-                    var listsToShuffle = new List<IList> { nodeTempX, nodeTempY, nodeTempZ };
-
-                    if (importSettings.importRGB)
-                    {
-                        listsToShuffle.Add(nodeTempR);
-                        listsToShuffle.Add(nodeTempG);
-                        listsToShuffle.Add(nodeTempB);
-                    }
-
-                    if (importSettings.importIntensity)
-                        listsToShuffle.Add(nodeTempIntensity);
-
-                    if (importSettings.importClassification)
-                        listsToShuffle.Add(nodeTempClassification);
-
-                    if (importSettings.averageTimestamp)
-                        listsToShuffle.Add(nodeTempTime);
-
-                    Tools.ShuffleInPlace(listsToShuffle.ToArray());
-
+                    Tools.ShufflePointAttributes(
+                        nodeTempX.Count,
+                        nodeTempX, nodeTempY, nodeTempZ,
+                        importSettings.importRGB ? nodeTempR : null,
+                        importSettings.importRGB ? nodeTempG : null,
+                        importSettings.importRGB ? nodeTempB : null,
+                        importSettings.importIntensity ? nodeTempIntensity : null,
+                        importSettings.importClassification ? nodeTempClassification : null,
+                        importSettings.averageTimestamp ? nodeTempTime : null
+                    );
                 }
+
 
 
                 // get this node bounds, TODO but we know node(grid cell) x,y,z values?
