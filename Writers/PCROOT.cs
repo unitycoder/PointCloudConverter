@@ -157,7 +157,7 @@ namespace PointCloudConverter.Writers
 
         static ILogger Log;
 
-        public bool InitWriter(dynamic _importSettings, int pointCount, ILogger logger)
+        public bool InitWriter(dynamic _importSettings, long pointCount, ILogger logger)
         {
             //Log.Write("--------------------- initwriter for taskID: " + taskID);
             var res = true;

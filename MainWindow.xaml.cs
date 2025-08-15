@@ -30,7 +30,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "13.07.2025";
+        static readonly string version = "15.08.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -291,7 +291,7 @@ namespace PointCloudConverter
 
             if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
             {
-                int iterations = importSettings.offsetMode == "min" ? importSettings.maxFiles : 1; // 1 for legacy mode
+                int iterations = importSettings.offsetMode == "min" ? importSettings.maxFiles : 1; // 1 for legacy mode (first cloud only)
 
                 for (int i = 0, len = iterations; i < len; i++)
                 {
@@ -604,8 +604,8 @@ namespace PointCloudConverter
         public class ProgressInfo
         {
             public int Index { get; internal set; }        // Index of the ProgressBar in the UI
-            public int CurrentValue { get; internal set; } // Current progress value
-            public int MaxValue { get; internal set; }     // Maximum value for the progress
+            public long CurrentValue { get; internal set; } // Current progress value
+            public long MaxValue { get; internal set; }     // Maximum value for the progress
             public string FilePath { get; internal set; }
             public bool UseJsonLog { get; internal set; }
         }
@@ -675,8 +675,8 @@ namespace PointCloudConverter
                     foreach (var progressInfo in progressInfos)
                     {
                         int index = progressInfo.Index;
-                        int currentValue = progressInfo.CurrentValue;
-                        int maxValue = progressInfo.MaxValue;
+                        long currentValue = progressInfo.CurrentValue;
+                        long maxValue = progressInfo.MaxValue;
 
                         // Access ProgressBar directly from the StackPanel.Children using its index
                         if (index >= 0 && index < mainWindowStatic.ProgressBarsContainer.Children.Count)
@@ -783,8 +783,8 @@ namespace PointCloudConverter
 
             if (importSettings.importMetadataOnly == false)
             {
-                int fullPointCount = taskReader.GetPointCount();
-                int pointCount = fullPointCount;
+                long fullPointCount = taskReader.GetPointCount();
+                long pointCount = fullPointCount;
 
                 // show stats for decimations
                 if (importSettings.skipPoints == true)
@@ -874,14 +874,14 @@ namespace PointCloudConverter
 
                 Log.Write(jsonString, LogEvent.File);
 
-                int checkCancelEvery = fullPointCount / 128;
+                long checkCancelEvery = fullPointCount / 128;
 
                 // detect is 0-255 or 0-65535 range
                 bool isCustomIntensityRange = false;
 
                 // Loop all points
                 // FIXME: would be nicer, if use different STEP value for skip, keep and limit..(to collect points all over the file, not just start)
-                int maxPointIterations = importSettings.useLimit ? pointCount : fullPointCount;
+                long maxPointIterations = importSettings.useLimit ? pointCount : fullPointCount;
                 for (int i = 0; i < maxPointIterations; i++)
                 {
                     // check for cancel every 1% of points

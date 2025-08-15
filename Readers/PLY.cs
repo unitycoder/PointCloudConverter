@@ -15,7 +15,7 @@ namespace PointCloudConverter.Readers
     {
         private PlyParser.Dataset dataset;
         private int pointIndex;
-        private int pointCount;
+        private long pointCount;
 
         private List<ElementData> vertexChunks;
         private int currentChunkIndex;
@@ -66,7 +66,7 @@ namespace PointCloudConverter.Readers
 
         }
 
-        public int GetPointCount() => pointCount;
+        public long GetPointCount() => pointCount;
 
         public Bounds GetBounds() => bounds;
 

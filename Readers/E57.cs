@@ -117,9 +117,9 @@ namespace PointCloudConverter.Readers
             };
         }
 
-        public int GetPointCount()
+        public long GetPointCount()
         {
-            return (int)(header?.E57Root?.Data3D?[0]?.Points?.RecordCount ?? 0);
+            return header?.E57Root?.Data3D?[0]?.Points?.RecordCount ?? 0;
         }
 
         public Float3 GetXYZ()

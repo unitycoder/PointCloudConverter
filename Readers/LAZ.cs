@@ -347,7 +347,7 @@ namespace PointCloudConverter.Readers
             return b;
         }
 
-        int IReader.GetPointCount()
+        long IReader.GetPointCount()
         {
             // get gps week offset from header
 
@@ -356,7 +356,7 @@ namespace PointCloudConverter.Readers
             // check alternative point counts
             if (count == 0) count = (int)lazReader.header.extended_number_of_point_records;
             if (count == 0) count = lazReader.header.number_of_point_records;
-            return (int)count;
+            return count;
         }
 
         Color IReader.GetRGB()
