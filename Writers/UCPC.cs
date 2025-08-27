@@ -46,12 +46,18 @@ namespace PointCloudConverter.Writers
 
         static ILogger Log;
 
-        bool IWriter.InitWriter(dynamic _importSettings, int _pointCount, ILogger logger)
+        bool IWriter.InitWriter(dynamic _importSettings, long _pointCount, ILogger logger)
         {
             importSettings = (ImportSettings)(object)_importSettings;
             Log = logger;
 
-            pointCount = _pointCount;
+            if (_pointCount > int.MaxValue)
+            {
+                Log.Write("Point count exceeds maximum value of int: " + _pointCount, LogEvent.Error);
+                return false;
+            }
+
+            pointCount = (int)_pointCount;
 
             pointsTempFile = importSettings.outputFile + "_PointsTemp";
             colorsTempFile = importSettings.outputFile + "_ColorsTemp";

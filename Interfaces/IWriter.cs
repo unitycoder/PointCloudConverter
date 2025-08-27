@@ -6,7 +6,7 @@ namespace PointCloudConverter.Writers
     {
         // create output filestream, called before looping through points
         //bool InitWriter<TSettings>(TSettings importSettings, int pointCount);
-        bool InitWriter(dynamic importSettings, int pointCount, ILogger logger);
+        bool InitWriter(dynamic importSettings, long pointCount, ILogger logger);
         // optional: if need to create special file header
         void CreateHeader(int pointCount);
         // output point X,Y,Z values to file

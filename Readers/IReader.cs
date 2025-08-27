@@ -8,7 +8,7 @@ namespace PointCloudConverter.Readers
         // open filestream
         bool InitReader(ImportSettings importSettings, int fileIndex);
         // returns total point count, this is required to correctly read all points
-        int GetPointCount();
+        long GetPointCount();
         // bounds are used for AutoOffset
         Bounds GetBounds();
         // retrieve single point X,Y,Z coordinates (float)
