@@ -483,7 +483,11 @@ namespace PointCloudConverter.Readers
         {
             if (disposing)
             {
-                lazReader = null;
+                if (lazReader != null)
+                {
+                    lazReader.close_reader();
+                    lazReader = null;
+                }
             }
         }
 

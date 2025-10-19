@@ -153,7 +153,7 @@ namespace PointCloudConverter
                 //  Log.Write("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
                 // Clean up the writer if necessary
                 writer?.Cleanup(0);
-                //writer?.Dispose();
+                //writer?.Dispose(); // not disposing, just cleaning up for reuse
                 // Return the writer to the pool for reuse
                 _writerPool.Add(writer);
                 // Log.Write("ReleaseWriter >>> Memory used: " + GC.GetTotalMemory(false));
@@ -171,7 +171,7 @@ namespace PointCloudConverter
                 if (Readers.TryRemove(taskId, out var reader))
                 {
                     reader?.Close();
-                    // reader?.Dispose();
+                    (reader as IDisposable)?.Dispose();
                 }
                 else
                 {

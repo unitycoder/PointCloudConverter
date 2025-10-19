@@ -3,6 +3,7 @@
 using PointCloudConverter.Logger;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -20,27 +21,74 @@ namespace PointCloudConverter.Writers
         BinaryWriter writerPoints = null;
         ImportSettings importSettings; // this is per file here
 
-        static List<PointCloudTile> nodeBounds = new List<PointCloudTile>(); // for all tiles
-        static float cloudMinX = float.PositiveInfinity;
-        static float cloudMinY = float.PositiveInfinity;
-        static float cloudMinZ = float.PositiveInfinity;
-        static float cloudMaxX = float.NegativeInfinity;
-        static float cloudMaxY = float.NegativeInfinity;
-        static float cloudMaxZ = float.NegativeInfinity;
+        static ConcurrentBag<PointCloudTile> nodeBoundsBag = new ConcurrentBag<PointCloudTile>(); // for all tiles
+
+        BoundsAcc localBounds;
+        struct BoundsAcc
+        {
+            public float minX, minY, minZ, maxX, maxY, maxZ;
+            public void Init()
+            {
+                minX = minY = minZ = float.PositiveInfinity;
+                maxX = maxY = maxZ = float.NegativeInfinity;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Acc(float x, float y, float z)
+            {
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y; 
+                if (y > maxY) maxY = y;
+                if (z < minZ) minZ = z; 
+                if (z > maxZ) maxZ = z;
+            }
+        }
+
+        // global aggregator
+        static class GlobalBounds
+        {
+            private static readonly object _lock = new();
+            public static float minX = float.PositiveInfinity, minY = float.PositiveInfinity, minZ = float.PositiveInfinity;
+            public static float maxX = float.NegativeInfinity, maxY = float.NegativeInfinity, maxZ = float.NegativeInfinity;
+
+            public static void Merge(in BoundsAcc b)
+            {
+                lock (_lock)
+                {
+                    if (b.minX < minX) minX = b.minX; 
+                    if (b.maxX > maxX) maxX = b.maxX;
+                    if (b.minY < minY) minY = b.minY; 
+                    if (b.maxY > maxY) maxY = b.maxY;
+                    if (b.minZ < minZ) minZ = b.minZ; 
+                    if (b.maxZ > maxZ) maxZ = b.maxZ;
+                }
+            }
+        }
 
         StringBuilder keyBuilder = new StringBuilder(32);
-        Dictionary<string, (int, int, int)> keyCache = new Dictionary<string, (int, int, int)>();
+        //Dictionary<string, (int, int, int)> keyCache = new Dictionary<string, (int, int, int)>();
+        Dictionary<(int x, int y, int z), List<float>> nodeX = new();
+        Dictionary<(int x, int y, int z), List<float>> nodeY = new();
+        Dictionary<(int x, int y, int z), List<float>> nodeZ = new();
+        Dictionary<(int x, int y, int z), List<float>> nodeR = new();
+        Dictionary<(int x, int y, int z), List<float>> nodeG = new();
+        Dictionary<(int x, int y, int z), List<float>> nodeB = new();
+        Dictionary<(int x, int y, int z), List<ushort>> nodeIntensity = new();
+        Dictionary<(int x, int y, int z), List<byte>> nodeClassification = new();
+        Dictionary<(int x, int y, int z), List<double>> nodeTime = new();
+
 
         // our nodes (=tiles, =grid cells), string is tileID and float are X,Y,Z,R,G,B values
-        Dictionary<string, List<float>> nodeX = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeY = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeZ = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeR = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
-        Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
-        Dictionary<string, List<ushort>> nodeIntensity = new Dictionary<string, List<ushort>>();
-        Dictionary<string, List<byte>> nodeClassification = new Dictionary<string, List<byte>>();
-        Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
+        //Dictionary<string, List<float>> nodeX = new Dictionary<string, List<float>>();
+        //        Dictionary<string, List<float>> nodeY = new Dictionary<string, List<float>>();
+        //        Dictionary<string, List<float>> nodeZ = new Dictionary<string, List<float>>();
+        //        Dictionary<string, List<float>> nodeR = new Dictionary<string, List<float>>();
+        //        Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
+        //        Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
+        //        Dictionary<string, List<ushort>> nodeIntensity = new Dictionary<string, List<ushort>>();
+        //        Dictionary<string, List<byte>> nodeClassification = new Dictionary<string, List<byte>>();
+        //        Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
 
         //int? taskID;
 
@@ -50,6 +98,9 @@ namespace PointCloudConverter.Writers
 
         private readonly List<IList> _shuffleListBuffer = new(4096 * 4);
         private readonly List<float>[] _tempArray = new List<float>[4096 * 4];
+
+        private byte[] pointBuffer = new byte[12];
+        private byte[] colorBuffer = new byte[12];
 
         public void Dispose()
         {
@@ -124,19 +175,29 @@ namespace PointCloudConverter.Writers
                 bsPoints?.Dispose();
                 writerPoints?.Dispose();
 
-                // Clear and dispose instance dictionaries
-                ClearDictionary(nodeX);
-                ClearDictionary(nodeY);
-                ClearDictionary(nodeZ);
-                ClearDictionary(nodeR);
-                ClearDictionary(nodeG);
-                ClearDictionary(nodeB);
-                ClearDictionary(nodeIntensity);
-                ClearDictionary(nodeClassification);
-                ClearDictionary(nodeTime);
+                nodeX.Clear();
+                nodeY.Clear();
+                nodeZ.Clear();
+                nodeR.Clear();
+                nodeG.Clear();
+                nodeB.Clear();
+                nodeIntensity.Clear();
+                nodeClassification.Clear();
+                nodeTime.Clear();
 
-                keyCache.Clear();
-                keyCache = null;
+                // Clear and dispose instance dictionaries
+                //ClearDictionary(nodeX);
+                //ClearDictionary(nodeY);
+                //ClearDictionary(nodeZ);
+                //ClearDictionary(nodeR);
+                //ClearDictionary(nodeG);
+                //ClearDictionary(nodeB);
+                //ClearDictionary(nodeIntensity);
+                //ClearDictionary(nodeClassification);
+                //ClearDictionary(nodeTime);
+
+                //                keyCache.Clear();
+                //                keyCache = null;
             }
 
             // If there were unmanaged resources, you'd clean them up here
@@ -165,7 +226,6 @@ namespace PointCloudConverter.Writers
             Log = logger;
 
             // clear old nodes
-            keyCache.Clear();
             nodeX.Clear();
             nodeY.Clear();
             nodeZ.Clear();
@@ -178,6 +238,9 @@ namespace PointCloudConverter.Writers
             bsPoints = null;
             writerPoints = null;
             importSettings = (ImportSettings)(object)_importSettings;
+
+            localBounds = new BoundsAcc();
+            localBounds.Init();
 
             return res;
         }
@@ -197,7 +260,7 @@ namespace PointCloudConverter.Writers
 
         }
 
-        // for pcroot, this is saving the rootfile
+        // for pcroot, this is saving the rootfile (just once)
         void IWriter.Close()
         {
             // this happens if imported metadata only?
@@ -210,6 +273,9 @@ namespace PointCloudConverter.Writers
             // {
             //Log.Write(" *****************************  save this only after last file from all threads ***************************** ");
             // check if any tile overlaps with other tiles
+
+            var nodeBounds = nodeBoundsBag.ToList();
+
             if (importSettings.checkoverlap == true)
             {
                 for (int i = 0, len = nodeBounds.Count; i < len; i++)
@@ -301,8 +367,17 @@ namespace PointCloudConverter.Writers
             if (importSettings.importRGB == true && importSettings.importClassification == true) commentRow += sep + "classification";
             if (addComments) tilerootdata.Insert(1, commentRow);
 
+            // get global bounds from static
+            GlobalBounds.Merge(localBounds);
+            float cloudMinX = GlobalBounds.minX;
+            float cloudMinY = GlobalBounds.minY;
+            float cloudMinZ = GlobalBounds.minZ;
+            float cloudMaxX = GlobalBounds.maxX;
+            float cloudMaxY = GlobalBounds.maxY;
+            float cloudMaxZ = GlobalBounds.maxZ;
+
             // add global header settings to first row
-            //               version,          gridsize,                   pointcount,             boundsMinX,       boundsMinY,       boundsMinZ,       boundsMaxX,       boundsMaxY,       boundsMaxZ
+            //                  version,          gridsize,                                  pointcount,             boundsMinX,       boundsMinY,       boundsMinZ,       boundsMaxX,       boundsMaxY,       boundsMaxZ
             string globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep + cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep + cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
             //                  autoOffsetX,             globalOffsetY,           globalOffsetZ,           packMagic 
             globalData += sep + importSettings.offsetX + sep + importSettings.offsetY + sep + importSettings.offsetZ + sep + importSettings.packMagicValue;
@@ -344,15 +419,18 @@ namespace PointCloudConverter.Writers
                 Console.ForegroundColor = ConsoleColor.White;
             }
 
-            // cleanup after last file
+            // cleanup after last file (cannot clear for each file, since its static for all files)
             nodeBounds.Clear();
 
-            cloudMinX = float.PositiveInfinity;
-            cloudMinY = float.PositiveInfinity;
-            cloudMinZ = float.PositiveInfinity;
-            cloudMaxX = float.NegativeInfinity;
-            cloudMaxY = float.NegativeInfinity;
-            cloudMaxZ = float.NegativeInfinity;
+            //localBounds = new BoundsAcc();
+            localBounds.Init();
+
+            //cloudMinX = float.PositiveInfinity;
+            //cloudMinY = float.PositiveInfinity;
+            //cloudMinZ = float.PositiveInfinity;
+            //cloudMaxX = float.NegativeInfinity;
+            //cloudMaxY = float.NegativeInfinity;
+            //cloudMaxZ = float.NegativeInfinity;
             //   } // if last file
 
             // clear all lists
@@ -365,7 +443,6 @@ namespace PointCloudConverter.Writers
             //nodeB.Clear();
             //nodeIntensity.Clear();
             //nodeTime.Clear();
-
 
             // dispose
             bsPoints?.Dispose();
@@ -380,17 +457,15 @@ namespace PointCloudConverter.Writers
             bsPoints?.Dispose();
             writerPoints?.Dispose();
 
-            // Clear and dispose instance dictionaries
-            ClearDictionary(nodeX);
-            ClearDictionary(nodeY);
-            ClearDictionary(nodeZ);
-            ClearDictionary(nodeR);
-            ClearDictionary(nodeG);
-            ClearDictionary(nodeB);
-            ClearDictionary(nodeIntensity);
-            ClearDictionary(nodeClassification);
-            ClearDictionary(nodeTime);
-            keyCache.Clear();
+            nodeX.Clear();
+            nodeY.Clear();
+            nodeZ.Clear();
+            nodeR.Clear();
+            nodeG.Clear();
+            nodeB.Clear();
+            nodeIntensity.Clear();
+            nodeClassification.Clear();
+            nodeTime.Clear();
         }
 
         void IWriter.Randomize()
@@ -400,13 +475,8 @@ namespace PointCloudConverter.Writers
 
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, ushort intensity, double time, byte classification)
         {
-            // get global all clouds bounds
-            cloudMinX = Math.Min(cloudMinX, x);
-            cloudMaxX = Math.Max(cloudMaxX, x);
-            cloudMinY = Math.Min(cloudMinY, y);
-            cloudMaxY = Math.Max(cloudMaxY, y);
-            cloudMinZ = Math.Min(cloudMinZ, z);
-            cloudMaxZ = Math.Max(cloudMaxZ, z);
+            // collect global all clouds bounds
+            localBounds.Acc(x, y, z);
 
             float gridSize = importSettings.gridSize;
 
@@ -422,15 +492,18 @@ namespace PointCloudConverter.Writers
             keyBuilder.Append(cellY);
             keyBuilder.Append('_');
             keyBuilder.Append(cellZ);
-            string key = keyBuilder.ToString();
+            //string key = keyBuilder.ToString();
+            var key = (cellX, cellY, cellZ);
 
             if (importSettings.packColors == true)
             {
-                if (keyCache.TryGetValue(key, out _) == false)
-                {
-                    keyCache.Add(key, (cellX, cellY, cellZ)); // or if useLossyFiltering
-                }
+                //if (keyCache.TryGetValue(key, out _) == false)
+                //{
+                //    keyCache.Add(key, (cellX, cellY, cellZ)); // or if useLossyFiltering
+                //}
             }
+
+            //if (!nodeX.TryGetValue(key, out var xs)) nodeX[key] = xs = new List<float>();
 
             // if already exists, add to existing list
             if (nodeX.TryGetValue(key, out _))
@@ -514,9 +587,13 @@ namespace PointCloudConverter.Writers
 
             List<string> outputFiles = new List<string>();
 
+            // merge local bounds to global
+            GlobalBounds.Merge(in localBounds);
+
             // process all tiles
             //foreach (KeyValuePair<int, List<float>> nodeData in nodeX)
-            foreach (KeyValuePair<string, List<float>> nodeData in nodeX)
+            //foreach (KeyValuePair<string, List<float>> nodeData in nodeX)
+            foreach (KeyValuePair<(int x, int y, int z), List<float>> nodeData in nodeX)
             {
                 if (nodeData.Value.Count < importSettings.minimumPointCount)
                 {
@@ -526,7 +603,7 @@ namespace PointCloudConverter.Writers
 
                 nodeTempX = nodeData.Value;
 
-                string key = nodeData.Key;
+                var key = nodeData.Key;
                 //int key = nodeData.Key;
 
                 nodeTempY = nodeY[key];
@@ -620,7 +697,6 @@ namespace PointCloudConverter.Writers
                 //Console.WriteLine("nodeTempX.Count="+ nodeTempX.Count);
 
                 double totalTime = 0; // for average timestamp
-                byte[] pointBuffer = new byte[12]; // hold floats as bytes
 
                 // loop and output all points within that node/tile
                 for (int i = 0, len = nodeTempX.Count; i < len; i++)
@@ -649,7 +725,10 @@ namespace PointCloudConverter.Writers
                     {
                         // get local coords within tile
                         //var keys = nodeData.Key.Split('_');
-                        (cellX, cellY, cellZ) = keyCache[key];
+                        //(cellX, cellY, cellZ) = keyCache[key];
+                        cellX = key.x;
+                        cellY = key.y;
+                        cellZ = key.z;
                         // TODO no need to parse, we should know these values?
                         //cellX = int.Parse(keys[0]);
                         //cellY = int.Parse(keys[1]);
@@ -733,7 +812,10 @@ namespace PointCloudConverter.Writers
                         //cellX = int.Parse(keys[0]);
                         //cellY = int.Parse(keys[1]);
                         //cellZ = int.Parse(keys[2]);
-                        (cellX, cellY, cellZ) = keyCache[key];
+                        //(cellX, cellY, cellZ) = keyCache[key];
+                        cellX = key.x;
+                        cellY = key.y;
+                        cellZ = key.z;
                         // offset point inside local tile
                         //(int restoredX, int restoredY, int restoredZ) = Unhash(nodeData.Key);
                         //cellX = restoredX;
@@ -866,7 +948,6 @@ namespace PointCloudConverter.Writers
                         //int keepEveryN = importSettings.keepEveryN;
 
                         int len = nodeTempX.Count;
-                        byte[] colorBuffer = new byte[12]; // Buffer to hold the RGB values as bytes
 
                         //unsafe void FloatToBytes(float value, byte[] buffer, int offset)
                         //{
@@ -979,7 +1060,7 @@ namespace PointCloudConverter.Writers
                     cb.averageTimeStamp = averageTime;
                 }
 
-                nodeBounds.Add(cb);
+                nodeBoundsBag.Add(cb);
             } // loop all nodes/tiles foreach
 
             // finished this file

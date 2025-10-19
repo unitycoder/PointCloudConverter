@@ -414,18 +414,7 @@ namespace PointCloudConverter
                 }
                 finally
                 {
-                    // Ensure the semaphore is released safely
-                    if (semaphore.CurrentCount == 0) // Make sure we don't release more times than we acquire
-                    {
-                        try
-                        {
-                            semaphore.Release();
-                        }
-                        catch (SemaphoreFullException ex)
-                        {
-                            //Log.Write($"Semaphore was already fully released. Exception: {ex.Message}");
-                        }
-                    }
+                    semaphore.Release();
                 }
                 //int? taskId = Task.CurrentId; // Get the current task ID
 
@@ -570,7 +559,9 @@ namespace PointCloudConverter
                 // call update one more time
                 ProgressTick(null, null);
                 // clear timer
+                progressTimerThread.Tick -= ProgressTick;
                 progressTimerThread.Stop();
+                progressTimerThread = null;
                 mainWindowStatic.progressBarFiles.Foreground = Brushes.Green;
                 //mainWindowStatic.progressBarPoints.Foreground = Brushes.Green;
             }));
@@ -874,7 +865,7 @@ namespace PointCloudConverter
 
                 Log.Write(jsonString, LogEvent.File);
 
-                long checkCancelEvery = fullPointCount / 128;
+                long checkCancelEvery = Math.Max(1, fullPointCount / 128);
 
                 // detect is 0-255 or 0-65535 range
                 bool isCustomIntensityRange = false;
