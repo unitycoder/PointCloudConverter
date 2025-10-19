@@ -33,16 +33,16 @@ namespace PointCloudConverter.Writers
                 maxX = maxY = maxZ = float.NegativeInfinity;
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Acc(float x, float y, float z)
-            {
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
-                if (y < minY) minY = y; 
-                if (y > maxY) maxY = y;
-                if (z < minZ) minZ = z; 
-                if (z > maxZ) maxZ = z;
-            }
+            //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+            //public void Acc(float x, float y, float z)
+            //{
+            //    if (x < minX) minX = x;
+            //    if (x > maxX) maxX = x;
+            //    if (y < minY) minY = y; 
+            //    if (y > maxY) maxY = y;
+            //    if (z < minZ) minZ = z; 
+            //    if (z > maxZ) maxZ = z;
+            //}
         }
 
         // global aggregator
@@ -56,11 +56,11 @@ namespace PointCloudConverter.Writers
             {
                 lock (_lock)
                 {
-                    if (b.minX < minX) minX = b.minX; 
+                    if (b.minX < minX) minX = b.minX;
                     if (b.maxX > maxX) maxX = b.maxX;
-                    if (b.minY < minY) minY = b.minY; 
+                    if (b.minY < minY) minY = b.minY;
                     if (b.maxY > maxY) maxY = b.maxY;
-                    if (b.minZ < minZ) minZ = b.minZ; 
+                    if (b.minZ < minZ) minZ = b.minZ;
                     if (b.maxZ > maxZ) maxZ = b.maxZ;
                 }
             }
@@ -422,7 +422,6 @@ namespace PointCloudConverter.Writers
             // cleanup after last file (cannot clear for each file, since its static for all files)
             nodeBounds.Clear();
 
-            //localBounds = new BoundsAcc();
             localBounds.Init();
 
             //cloudMinX = float.PositiveInfinity;
@@ -475,9 +474,6 @@ namespace PointCloudConverter.Writers
 
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, ushort intensity, double time, byte classification)
         {
-            // collect global all clouds bounds
-            localBounds.Acc(x, y, z);
-
             float gridSize = importSettings.gridSize;
 
             // add to correct cell, MOVE to writer
@@ -586,9 +582,6 @@ namespace PointCloudConverter.Writers
             List<double> nodeTempTime = null;
 
             List<string> outputFiles = new List<string>();
-
-            // merge local bounds to global
-            GlobalBounds.Merge(in localBounds);
 
             // process all tiles
             //foreach (KeyValuePair<int, List<float>> nodeData in nodeX)
@@ -1053,6 +1046,20 @@ namespace PointCloudConverter.Writers
                 cb.cellY = cellY;
                 cb.cellZ = cellZ;
 
+                // add minmax to local bounds
+                localBounds.minX = Math.Min(localBounds.minX, minX);
+                localBounds.minY = Math.Min(localBounds.minY, minY);
+                localBounds.minZ = Math.Min(localBounds.minZ, minZ);
+                localBounds.maxX = Math.Max(localBounds.maxX, maxX);
+                localBounds.maxY = Math.Max(localBounds.maxY, maxY);
+                localBounds.maxZ = Math.Max(localBounds.maxZ, maxZ);
+
+                // merge local bounds from this tile into global
+                GlobalBounds.Merge(in localBounds);
+
+                //Log.Write(localBounds.minX + "," + localBounds.maxX);
+
+
                 if (importSettings.averageTimestamp == true && totalPointsWritten > 0)
                 {
                     double averageTime = totalTime / totalPointsWritten;
@@ -1060,6 +1067,7 @@ namespace PointCloudConverter.Writers
                     cb.averageTimeStamp = averageTime;
                 }
 
+                // this tile data
                 nodeBoundsBag.Add(cb);
             } // loop all nodes/tiles foreach
 
