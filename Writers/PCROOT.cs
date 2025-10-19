@@ -64,10 +64,23 @@ namespace PointCloudConverter.Writers
                     if (b.maxZ > maxZ) maxZ = b.maxZ;
                 }
             }
+
+            public static void Reset()
+            {
+                lock (_lock)
+                {
+                    minX = float.PositiveInfinity;
+                    minY = float.PositiveInfinity;
+                    minZ = float.PositiveInfinity;
+                    maxX = float.NegativeInfinity;
+                    maxY = float.NegativeInfinity;
+                    maxZ = float.NegativeInfinity;
+                }
+            }
         }
 
         StringBuilder keyBuilder = new StringBuilder(32);
-        //Dictionary<string, (int, int, int)> keyCache = new Dictionary<string, (int, int, int)>();
+        // our nodes (=tiles, =grid cells), string is tileID and float are X,Y,Z,R,G,B values
         Dictionary<(int x, int y, int z), List<float>> nodeX = new();
         Dictionary<(int x, int y, int z), List<float>> nodeY = new();
         Dictionary<(int x, int y, int z), List<float>> nodeZ = new();
@@ -77,20 +90,6 @@ namespace PointCloudConverter.Writers
         Dictionary<(int x, int y, int z), List<ushort>> nodeIntensity = new();
         Dictionary<(int x, int y, int z), List<byte>> nodeClassification = new();
         Dictionary<(int x, int y, int z), List<double>> nodeTime = new();
-
-
-        // our nodes (=tiles, =grid cells), string is tileID and float are X,Y,Z,R,G,B values
-        //Dictionary<string, List<float>> nodeX = new Dictionary<string, List<float>>();
-        //        Dictionary<string, List<float>> nodeY = new Dictionary<string, List<float>>();
-        //        Dictionary<string, List<float>> nodeZ = new Dictionary<string, List<float>>();
-        //        Dictionary<string, List<float>> nodeR = new Dictionary<string, List<float>>();
-        //        Dictionary<string, List<float>> nodeG = new Dictionary<string, List<float>>();
-        //        Dictionary<string, List<float>> nodeB = new Dictionary<string, List<float>>();
-        //        Dictionary<string, List<ushort>> nodeIntensity = new Dictionary<string, List<ushort>>();
-        //        Dictionary<string, List<byte>> nodeClassification = new Dictionary<string, List<byte>>();
-        //        Dictionary<string, List<double>> nodeTime = new Dictionary<string, List<double>>();
-
-        //int? taskID;
 
         static int skippedNodesCounter = 0;
         static int skippedPointsCounter = 0; // FIXME, not used in regular mode, only for lossy filtering, TODO can calculate from importsetting values
@@ -376,6 +375,8 @@ namespace PointCloudConverter.Writers
             float cloudMaxY = GlobalBounds.maxY;
             float cloudMaxZ = GlobalBounds.maxZ;
 
+            GlobalBounds.Reset();
+
             // add global header settings to first row
             //                  version,          gridsize,                                  pointcount,             boundsMinX,       boundsMinY,       boundsMinZ,       boundsMaxX,       boundsMaxY,       boundsMaxZ
             string globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep + cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep + cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
@@ -446,7 +447,6 @@ namespace PointCloudConverter.Writers
             // dispose
             bsPoints?.Dispose();
             writerPoints?.Dispose();
-
         } // close
 
         void IWriter.Cleanup(int fileIndex)

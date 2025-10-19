@@ -397,92 +397,63 @@ namespace PointCloudConverter
 
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
-                if (cancellationToken.IsCancellationRequested)
+                await semaphore.WaitAsync(cancellationToken);     // acquire BEFORE starting task
+                int index = i;                                     // capture
+                tasks.Add(Task.Run(() =>
                 {
-                    return;
-                }
-
-                //await semaphore.WaitAsync(cancellationToken);
-                try
-                {
-                    await semaphore.WaitAsync(cancellationToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    // Handle the cancellation scenario here
-                    Log.Write("Wait was canceled.");
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
-                //int? taskId = Task.CurrentId; // Get the current task ID
-
-                //progressFile = i;
-                Interlocked.Increment(ref progressFile);
-
-                //bool isLastTask = (i == len - 1); // Check if this is the last task
-
-                int index = i; // Capture the current file index in the loop
-                int len2 = len;
-                tasks.Add(Task.Run(async () =>
-                {
-                    int? taskId = Task.CurrentId; // Get the current task ID
-                                                  //Log.Write("task started: " + taskId + " fileindex: " + index);
-                    Log.Write("task:" + taskId + ", reading file (" + (index + 1) + "/" + len2 + ") : " + importSettings.inputFiles[index] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[index]).Length) + ")\n");
+                    int? taskId = Task.CurrentId;                  // may be null; your pool should accept null
 
                     try
                     {
-                        // Do actual point cloud parsing for this file and pass taskId
-                        var res = ParseFile(importSettings, index, taskId, cancellationToken);
-                        if (!res)
+                        Log.Write($"task:{taskId}, reading file ({index + 1}/{len}) : " +
+                                  $"{importSettings.inputFiles[index]} ({Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[index]).Length)})\n");
+
+                        var ok = ParseFile(importSettings, index, taskId, cancellationToken);
+                        if (!ok)
                         {
-                            Interlocked.Increment(ref errorCounter); // thread-safe error counter increment
-                            if (importSettings.useJSONLog)
+                            Interlocked.Increment(ref errorCounter);
+                            if (cancellationToken.IsCancellationRequested)
                             {
-                                // if canceled, we dont want to log this (causes nullref)
-                                if (cancellationToken.IsCancellationRequested == false)
-                                {
-                                    Log.Write("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
-                                }
+                                Log.Write("Task was canceled.");
+                            }
+                            else if (importSettings.useJSONLog)
+                            {
+                                Log.Write(
+                                    "{\"event\":\"" + LogEvent.File + "\",\"path\":" +
+                                    System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[index]) +
+                                    ",\"status\":\"" + LogStatus.Processing + "\"}", LogEvent.Error);
                             }
                             else
                             {
-                                if (cancellationToken.IsCancellationRequested)
-                                {
-                                    Log.Write("Task was canceled.");
-                                }
-                                else
-                                {
-                                    Log.Write("files" + importSettings.inputFiles.Count + " i:" + i);
-                                    Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
-                                }
+                                Log.Write("files" + importSettings.inputFiles.Count + " i:" + index);
+                                Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[index], LogEvent.Error);
                             }
                         }
                     }
-                    catch (TaskCanceledException ex)
+                    catch (OperationCanceledException)
                     {
-                        Log.Write("Task was canceled: " + ex.Message, LogEvent.Error);
+                        Log.Write("Operation was canceled.");
                     }
                     catch (TimeoutException ex)
                     {
                         Log.Write("Timeout occurred: " + ex.Message, LogEvent.Error);
                     }
-                    catch (OperationCanceledException)
-                    {
-                        MessageBox.Show("Operation was canceled.");
-                    }
                     catch (Exception ex)
                     {
                         Log.Write("Exception> " + ex.Message, LogEvent.Error);
-                        //throw; // Rethrow to ensure Task.WhenAll sees the exception
                     }
                     finally
                     {
-                        semaphore.Release(); // Release the semaphore slot when the task is done
+                        Interlocked.Increment(ref progressFile);
+                        // make sure we don't keep heavy buffers in the pools.
+                        //try { importSettings.ReleaseReader(taskId); } catch { }
+                        //try { importSettings.ReleaseWriter(taskId); } catch { }
+
+                        // release exactly once per WaitAsync
+                        semaphore.Release();                       
                     }
-                }));
-            } // for all files
+                }, cancellationToken));
+            }
 
             await Task.WhenAll(tasks); // Wait for all tasks to complete
 
