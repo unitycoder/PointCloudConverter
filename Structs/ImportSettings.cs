@@ -20,12 +20,12 @@ namespace PointCloudConverter
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public Logger.LogEvent @event { get; set; }
-        
+
         [JsonIgnore] // FIXME doesnt ígnore it
         public IReader reader; // single threaded reader
         //public Dictionary<int?, IReader> Readers { get; set; } = new Dictionary<int?, IReader>();
         public ConcurrentDictionary<int?, IReader> Readers { get; set; } = new ConcurrentDictionary<int?, IReader>();
-        [JsonIgnore] 
+        [JsonIgnore]
         public IWriter writer = new UCPC();
 
         public string ReaderType => reader?.GetType().Name;
@@ -175,7 +175,7 @@ namespace PointCloudConverter
                 }
                 else
                 {
-                    Log.Write($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
+                    if (Log != null) Log.Write($"Reader for task ID {taskId} could not be removed because it was not found.", LogEvent.Warning);
                 }
             }
         }
