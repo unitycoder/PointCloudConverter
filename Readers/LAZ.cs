@@ -77,6 +77,7 @@ namespace PointCloudConverter.Readers
             var h = new LasHeader();
 
             h.FileName = importSettings.inputFiles[fileIndex];
+
             h.FileSourceID = lazReader.header.file_source_ID;
             h.GlobalEncoding = lazReader.header.global_encoding;
             h.ProjectID_GUID_data1 = lazReader.header.project_ID_GUID_data_1;
@@ -483,11 +484,11 @@ namespace PointCloudConverter.Readers
         {
             if (disposing)
             {
-                if (lazReader != null)
-                {
-                    lazReader.close_reader();
+                //if (lazReader != null)
+                //{
+                //    lazReader.close_reader();
                     lazReader = null;
-                }
+//                }
             }
         }
 

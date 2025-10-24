@@ -964,7 +964,7 @@ namespace PointCloudConverter
 
                         //if (classification<0 || classification>1) Log.Write("****: " + classification.ToString());
 
-                        //if (i < 10000) Log.Write("class: " + classification.ToString() + " minClass: " + minClass + " maxClass: " + maxClass);
+                        //if (i < 100000) Log.Write("class: " + classification.ToString());// + " minClass: " + minClass + " maxClass: " + maxClass);
                         //classification = 0;
                         //if (intensity.r < minInt)
                         //{
@@ -1015,6 +1015,12 @@ namespace PointCloudConverter
                 lastStatusMessage = "Finished saving..";
                 //taskReader.Close();
 
+                if (importSettings.importMetadata == true)
+                {
+                    var metaData = taskReader.GetMetaData(importSettings, fileIndex);
+                    jobMetadata.lasHeaders.Add(metaData);
+                }
+
                 //Log.Write("------------ release reader and writer ------------");
                 importSettings.ReleaseReader(taskId);
                 //taskReader.Dispose();
@@ -1032,11 +1038,6 @@ namespace PointCloudConverter
 
                 //Log.Write(jsonString, LogEvent.File);
 
-                if (importSettings.importMetadata == true)
-                {
-                    var metaData = taskReader.GetMetaData(importSettings, fileIndex);
-                    jobMetadata.lasHeaders.Add(metaData);
-                }
 
             } // if importMetadataOnly == false ^
             else // only metadata:
