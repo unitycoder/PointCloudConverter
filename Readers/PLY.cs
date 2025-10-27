@@ -26,8 +26,8 @@ namespace PointCloudConverter.Readers
 
         //private PlyParser.PropertyData pintensity, pclass, ptime;
 
-        private Float3 currentPoint;
-        private Color currentColor;
+        //private Float3 currentPoint;
+        private Color currentColor = new Color();
         //        private double currentTime;
         //        private byte currentIntensity;
         //        private byte currentClassification;
@@ -70,49 +70,64 @@ namespace PointCloudConverter.Readers
 
         public Bounds GetBounds() => bounds;
 
-        public Float3 GetXYZ()
+        public bool GetXYZ(out float x, out float y, out float z)
         {
             if (currentChunkIndex >= vertexChunks.Count)
-                return new Float3 { hasError = true };
+            {
+                x = y = z = 0;
+                return false;
+            }
+
+            //                return new Float3 { hasError = true };
 
             int chunkSize = ((Array)px.Data).Length;
             if (currentPointInChunk >= chunkSize)
             {
                 currentChunkIndex++;
                 if (currentChunkIndex >= vertexChunks.Count)
-                    return new Float3 { hasError = true };
+                {
+                    //return new Float3 { hasError = true };
+                    x = y = z = 0;
+                    return false;
+                }
 
                 currentPointInChunk = 0;
                 SetCurrentChunkProperties();
             }
 
-            currentPoint = new Float3
-            {
-                x = Convert.ToSingle(px.Data.GetValue(currentPointInChunk)),
-                y = Convert.ToSingle(py.Data.GetValue(currentPointInChunk)),
-                z = Convert.ToSingle(pz.Data.GetValue(currentPointInChunk)),
-                hasError = false
-            };
+            //currentPoint = new Float3
+            //{
+            //    x = Convert.ToSingle(px.Data.GetValue(currentPointInChunk)),
+            //    y = Convert.ToSingle(py.Data.GetValue(currentPointInChunk)),
+            //    z = Convert.ToSingle(pz.Data.GetValue(currentPointInChunk)),
+            //    hasError = false
+            //};
 
-            currentColor = new Color
-            {
-                r = Convert.ToSingle(Convert.ToByte(pr.Data.GetValue(currentPointInChunk))) / 255f,
-                g = Convert.ToSingle(Convert.ToByte(pg.Data.GetValue(currentPointInChunk))) / 255f,
-                b = Convert.ToSingle(Convert.ToByte(pb.Data.GetValue(currentPointInChunk))) / 255f
-            };
+            x = Convert.ToSingle(px.Data.GetValue(currentPointInChunk));
+            y = Convert.ToSingle(py.Data.GetValue(currentPointInChunk));
+            z = Convert.ToSingle(pz.Data.GetValue(currentPointInChunk));
+
+            //currentColor = new Color
+            //{
+            //    r = Convert.ToSingle(Convert.ToByte(pr.Data.GetValue(currentPointInChunk))) / 255f,
+            //    g = Convert.ToSingle(Convert.ToByte(pg.Data.GetValue(currentPointInChunk))) / 255f,
+            //    b = Convert.ToSingle(Convert.ToByte(pb.Data.GetValue(currentPointInChunk))) / 255f
+            //};
+            currentColor.r = Convert.ToSingle(Convert.ToByte(pr.Data.GetValue(currentPointInChunk))) / 255f;
+            currentColor.g = Convert.ToSingle(Convert.ToByte(pg.Data.GetValue(currentPointInChunk))) / 255f;
+            currentColor.b = Convert.ToSingle(Convert.ToByte(pb.Data.GetValue(currentPointInChunk))) / 255f;
 
             currentPointInChunk++;
-            return currentPoint;
+            //return currentPoint;
+            return true;
         }
 
 
-        public Color GetRGB()
+        public void GetRGB(out float r, out float g, out float b)
         {
-            //currentColor = new Color();
-            //currentColor.r = 255;
-            //currentColor.g = 0;
-            //currentColor.b = 0;
-            return currentColor;
+            r = currentColor.r;
+            g = currentColor.g;
+            b = currentColor.b;
         }
 
         public double GetTime()

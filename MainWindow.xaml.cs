@@ -30,7 +30,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "27.08.2025";
+        static readonly string version = "27.10.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -844,7 +844,7 @@ namespace PointCloudConverter
                 // Loop all points
                 // FIXME: would be nicer, if use different STEP value for skip, keep and limit..(to collect points all over the file, not just start)
                 long maxPointIterations = importSettings.useLimit ? pointCount : fullPointCount;
-                for (int i = 0; i < maxPointIterations; i++)
+                for (long i = 0; i < maxPointIterations; i++)
                 {
                     // check for cancel every 1% of points
                     if (i % checkCancelEvery == 0)
@@ -857,22 +857,24 @@ namespace PointCloudConverter
                     }
 
                     // get point XYZ
-                    Float3 point = taskReader.GetXYZ();
-                    if (point.hasError == true) break; // TODO display errors
+                    var success = taskReader.GetXYZ(out float px, out float py, out float pz);
+                    if (!success) break; // TODO display errors somewhere
 
                     // get point color
-                    Color rgb = (default);
+                    //Color rgb = (default);
+                    float pr = 1f, pg = 1f, pb = 1f;
 
                     if (importSettings.importRGB == true)
                     {
-                        rgb = taskReader.GetRGB();
+                        //rgb = taskReader.GetRGB();
+                        taskReader.GetRGB(out pr, out pg, out pb);
 
                         // convert from srg to linear (if your model seems too bright)
                         if (importSettings.sRGB)
                         {
-                            rgb.r = Tools.SRGBToLinear(rgb.r);
-                            rgb.g = Tools.SRGBToLinear(rgb.g);
-                            rgb.b = Tools.SRGBToLinear(rgb.b);
+                            pr = Tools.SRGBToLinear(pr);
+                            pg = Tools.SRGBToLinear(pg);
+                            pb = Tools.SRGBToLinear(pb);
                         }
                     }
 
@@ -883,42 +885,42 @@ namespace PointCloudConverter
                     if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
 
                     // add offsets (its 0 if not used)
-                    point.x -= importSettings.offsetX;
-                    point.y -= importSettings.offsetY;
-                    point.z -= importSettings.offsetZ;
+                    px -= importSettings.offsetX;
+                    py -= importSettings.offsetY;
+                    pz -= importSettings.offsetZ;
 
                     // scale if enabled
                     if (importSettings.useScale == true)
                     {
-                        point.x *= importSettings.scale;
-                        point.y *= importSettings.scale;
-                        point.z *= importSettings.scale;
+                        px *= importSettings.scale;
+                        py *= importSettings.scale;
+                        pz *= importSettings.scale;
                     }
 
                     // flip if enabled
                     if (importSettings.swapYZ == true)
                     {
-                        var temp = point.z;
-                        point.z = point.y;
-                        point.y = temp;
+                        var temp = pz;
+                        pz = py;
+                        py = temp;
                     }
 
                     // flip Z if enabled
                     if (importSettings.invertZ == true)
                     {
-                        point.z = -point.z;
+                        pz = -pz;
                     }
 
                     // flip X if enabled
                     if (importSettings.invertX == true)
                     {
-                        point.x = -point.x;
+                        px = -px;
                     }
 
                     // filtering is done after scaling and offsets
                     if (importSettings.useFilter)
                     {
-                        var cell = ((int)Math.Floor(point.x / importSettings.filterDistance), (int)Math.Floor(point.y / importSettings.filterDistance), (int)Math.Floor(point.z / importSettings.filterDistance));
+                        var cell = ((int)Math.Floor(px / importSettings.filterDistance), (int)Math.Floor(py / importSettings.filterDistance), (int)Math.Floor(pz / importSettings.filterDistance));
 
                         if (!occupiedCells.TryAdd(cell, 0))
                         {
@@ -948,9 +950,9 @@ namespace PointCloudConverter
                         // if no rgb, then replace RGB with intensity, NOTE this doesnt work correctly if using detect intensity range! (since raw value is now ushort, can be 0-65k)
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = intensity / 255f; // convert byte to float
-                            rgb.g = rgb.r;
-                            rgb.b = rgb.r;
+                            pr = intensity / 255f; // convert byte to float
+                            pg = pr;
+                            pb = pr;
                         }
                     }
 
@@ -980,9 +982,9 @@ namespace PointCloudConverter
                         // if no rgb, then replace RGB with intensity
                         if (importSettings.importRGB == false)
                         {
-                            rgb.r = classification / 255f;
-                            rgb.g = rgb.r;
-                            rgb.b = rgb.r;
+                            pr = classification / 255f;
+                            pg = pr;
+                            pb = pr;
                         }
                     }
 
@@ -996,7 +998,7 @@ namespace PointCloudConverter
                     // collect this point XYZ and RGB into node, optionally intensity also
                     //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     // TODO can remove importsettings, its already passed on init
-                    taskWriter.AddPoint(index: i, x: (float)point.x, y: (float)point.y, z: (float)point.z, r: rgb.r, g: rgb.g, b: rgb.b, intensity: intensity, time: time, classification: classification);
+                    taskWriter.AddPoint(index: (int)i, x: (float)px, y: (float)py, z: (float)pz, r: pr, g: pg, b: pb, intensity: intensity, time: time, classification: classification);
                     //progressPoint = i;
                     progressInfo.CurrentValue = i;
                 } // for all points

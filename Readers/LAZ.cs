@@ -17,6 +17,7 @@ using System.Text;
 using Color = PointCloudConverter.Structs.Color;
 using System.Xml.Linq;
 using Windows.Data.Xml.Dom;
+using System.Diagnostics;
 
 namespace PointCloudConverter.Readers
 {
@@ -360,27 +361,23 @@ namespace PointCloudConverter.Readers
             return count;
         }
 
-        Color IReader.GetRGB()
+        void IReader.GetRGB(out float r, out float g, out float b)
         {
-            var c = new Color();
-
             // get point reference
             var p = lazReader.point;
 
             if (p.rgb[0] > 255 || p.rgb[1] > 255 || p.rgb[2] > 255)
             {
-                c.r = Tools.LUT255[(byte)(p.rgb[0] / 256f)];
-                c.g = Tools.LUT255[(byte)(p.rgb[1] / 256f)];
-                c.b = Tools.LUT255[(byte)(p.rgb[2] / 256f)];
+                r = Tools.LUT255[(byte)(p.rgb[0] / 256f)];
+                g = Tools.LUT255[(byte)(p.rgb[1] / 256f)];
+                b = Tools.LUT255[(byte)(p.rgb[2] / 256f)];
             }
             else // Values are within the 0-255 range
             {
-                c.r = Tools.LUT255[(byte)(p.rgb[0])];
-                c.g = Tools.LUT255[(byte)(p.rgb[1])];
-                c.b = Tools.LUT255[(byte)(p.rgb[2])];
+                r = Tools.LUT255[(byte)(p.rgb[0])];
+                g = Tools.LUT255[(byte)(p.rgb[1])];
+                b = Tools.LUT255[(byte)(p.rgb[2])];
             }
-
-            return c;
         }
 
         ushort IReader.GetIntensity()
@@ -419,34 +416,24 @@ namespace PointCloudConverter.Readers
             return finalClassification;
         }
 
-        Float3 IReader.GetXYZ()
+        public bool GetXYZ(out float x, out float y, out float z)
         {
-            var f = new Float3();
-            f.hasError = false;
-
-            // Read point
             int err = lazReader.read_point();
-
-            // check for received errors
-            //var err = lazReader.get_error();
-            //if (err == null)
             if (err != 0)
             {
+                x = y = z = 0;
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Failed to read until end of file?");
                 Console.WriteLine("ErrorCode: " + err);
                 Console.ForegroundColor = ConsoleColor.White;
-                f.hasError = true;
+                return false;
             }
 
-            // Get precision coordinates
-            var coordArray = new double[3];
-            lazReader.get_coordinates(coordArray);
-            f.x = coordArray[0];
-            f.y = coordArray[1];
-            f.z = coordArray[2];
+            x = (float)(lazReader.header.x_scale_factor * lazReader.point.X + lazReader.header.x_offset);
+            y = (float)(lazReader.header.y_scale_factor * lazReader.point.Y + lazReader.header.y_offset);
+            z = (float)(lazReader.header.z_scale_factor * lazReader.point.Z + lazReader.header.z_offset);
 
-            return f;
+            return true;
         }
 
         double IReader.GetTime()
@@ -487,8 +474,8 @@ namespace PointCloudConverter.Readers
                 //if (lazReader != null)
                 //{
                 //    lazReader.close_reader();
-                    lazReader = null;
-//                }
+                lazReader = null;
+                //                }
             }
         }
 

@@ -122,12 +122,16 @@ namespace PointCloudConverter.Readers
             return header?.E57Root?.Data3D?[0]?.Points?.RecordCount ?? 0;
         }
 
-        public Float3 GetXYZ()
+        public bool GetXYZ(out float x, out float y, out float z)
         {
             if (currentChunk == null || currentPointIndex >= currentChunk.Count)
             {
                 if (!chunkEnumerator.MoveNext())
-                    return new Float3 { hasError = true };
+                {
+                    //return new Float3 { hasError = true };
+                    x = y = z = 0;
+                    return false;
+                }
 
                 currentChunk = chunkEnumerator.Current;
                 currentPointIndex = 0;
@@ -137,18 +141,22 @@ namespace PointCloudConverter.Readers
             }
 
             var p = currentChunk.Positions[currentPointIndex];
-            lastXYZ.x = p.X;
-            lastXYZ.y = p.Y;
-            lastXYZ.z = p.Z;
-            lastXYZ.hasError = false;
+            //lastXYZ.x = p.X;
+            //lastXYZ.y = p.Y;
+            //lastXYZ.z = p.Z;
+            //lastXYZ.hasError = false;
+            x = (float)p.X;
+            y = (float)p.Y;
+            z = (float)p.Z;
 
             currentPointIndex++;
-            return lastXYZ;
+            //return lastXYZ;
+            return true;
         }
 
         private C3b[] cachedColors = null;
 
-        public Color GetRGB()
+        public void GetRGB(out float r, out float g, out float b)
         {
             if (cachedColors == null && currentChunk?.Colors != null)
             {
@@ -160,15 +168,14 @@ namespace PointCloudConverter.Readers
             if (cachedColors != null && i >= 0 && i < cachedColors.Length)
             {
                 var c = cachedColors[i];
-                return new Color
-                {
-                    r = c.R / 255f,
-                    g = c.G / 255f,
-                    b = c.B / 255f
-                };
+                r = c.R / 255f;
+                g = c.G / 255f;
+                b = c.B / 255f;
             }
-
-            return default;
+            else
+            {
+                r = g = b = 0f;
+            }
         }
 
         public ushort GetIntensity()

@@ -12,9 +12,9 @@ namespace PointCloudConverter.Readers
         // bounds are used for AutoOffset
         Bounds GetBounds();
         // retrieve single point X,Y,Z coordinates (float)
-        Float3 GetXYZ();
+        bool GetXYZ(out float x, out float y, out float z);
         // retrieve single point R,G,B colors (byte 0-255)
-        Color GetRGB();
+        void GetRGB(out float r, out float g, out float b);
         // retrieve single point scan time
         double GetTime();
 
