@@ -69,6 +69,7 @@ namespace PointCloudConverter
 
         // filter by distance
         private readonly float cellSize = 0.5f;
+        // TODO Replace ConcurrentDictionary<(int,int,int),byte> with a compact, contention-free structure
         private static ConcurrentDictionary<(int, int, int), byte> occupiedCells = new();
 
         // plugins
@@ -570,6 +571,7 @@ namespace PointCloudConverter
             public long MaxValue { get; internal set; }     // Maximum value for the progress
             public string FilePath { get; internal set; }
             public bool UseJsonLog { get; internal set; }
+            public int LastPercent = -1;
         }
 
         static void InitProgressBars(ImportSettings importSettings)
@@ -634,57 +636,34 @@ namespace PointCloudConverter
                 // Update all progress bars based on the current values in the List
                 lock (lockObject) // Lock to safely read progressInfos
                 {
-                    foreach (var progressInfo in progressInfos)
+                    foreach (var info in progressInfos)
                     {
-                        int index = progressInfo.Index;
-                        long currentValue = progressInfo.CurrentValue;
-                        long maxValue = progressInfo.MaxValue;
+                        int idx = info.Index;
+                        long cur = info.CurrentValue;
+                        long max = info.MaxValue <= 0 ? 1 : info.MaxValue; // avoid /0
+                        int percent = (int)(100L * cur / max);
 
-                        // Access ProgressBar directly from the StackPanel.Children using its index
-                        if (index >= 0 && index < mainWindowStatic.ProgressBarsContainer.Children.Count)
+                        // Update UI bar
+                        if (idx >= 0 && idx < mainWindowStatic.ProgressBarsContainer.Children.Count &&
+                            mainWindowStatic.ProgressBarsContainer.Children[idx] is ProgressBar bar)
                         {
-                            if (mainWindowStatic.ProgressBarsContainer.Children[index] is ProgressBar progressBar)
-                            {
-                                progressBar.Maximum = maxValue;
-                                progressBar.Value = currentValue;
-                                progressBar.Foreground = ((currentValue + 1 >= maxValue) ? Brushes.Lime : Brushes.Red); //+1 hack fix
-                                                                                                                        //progressBar.ToolTip = $"Thread {index} - {currentValue} / {maxValue}"; // not visible, because modal dialog
-                                                                                                                        //Log.Write("ProgressTick: " + index + " " + currentValue + " / " + maxValue);
-
-                                // print json progress
-                                if (progressInfo.UseJsonLog) // TODO now same bool value is for each progressinfo..
-                                {
-                                    string jsonString = "{" +
-                                        "\"event\": \"" + LogEvent.Progress + "\"," +
-                                        "\"thread\": " + index + "," +
-                                        "\"currentPoint\": " + currentValue + "," +
-                                        "\"totalPoints\": " + maxValue + "," +
-                                        "\"percentage\": " + (int)((currentValue / (float)maxValue) * 100.0) + "," +
-                                        "\"file\": " + System.Text.Json.JsonSerializer.Serialize(progressInfo.FilePath) +
-                                        "}";
-                                    Log.Write(jsonString, LogEvent.Progress);
-                                }
-                            }
+                            bar.Maximum = max;
+                            bar.Value = cur;
+                            bar.Foreground = ((cur + 1 >= max) ? Brushes.Lime : Brushes.Red);
                         }
-                    } // foreach progressinfo
-                } // lock
-                  //}
-                  //else //  finished ?
-                  //{
-                  //    Log.Write("*************** ProgressTick: progressTotalPoints is 0, finishing..");
-                  //    mainWindowStatic.progressBarFiles.Value = 0;
-                  //    mainWindowStatic.lblStatus.Content = "";
 
-                //    foreach (UIElement element in mainWindowStatic.ProgressBarsContainer.Children)
-                //    {
-                //        if (element is ProgressBar progressBar)
-                //        {
-                //            progressBar.Value = 0;
-                //            progressBar.Foreground = Brushes.Lime;
-                //        }
-                //    }
-                //}
+                        // Emit JSON ONLY when percentage changes
+                        if (info.UseJsonLog && percent != info.LastPercent)
+                        {
+                            info.LastPercent = percent;
+
+                            // Efficient JSON (no string concat)
+                            LogExtensions.WriteProgressUtf8(Log, threadIndex: idx, current: cur, total: max, percent: percent, filePath: info.FilePath);
+                        } // foreach progressinfo
+                    } // lock
+                }
             });
+
         } // ProgressTick()
 
 

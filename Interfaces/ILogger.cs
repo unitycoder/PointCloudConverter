@@ -25,6 +25,7 @@ namespace PointCloudConverter.Logger
     {
         void Write(string msg);
         void Write(string msg, LogEvent eventType);
+        void Write(ReadOnlySpan<byte> writtenSpan, LogEvent progress);
     }
 
     // Handles non-JSON (text-based) logging
@@ -41,6 +42,11 @@ namespace PointCloudConverter.Logger
             // Could be expanded to handle different events in the future
             //Console.WriteLine($"{eventType}: {msg}");
         }
+
+        void ILogger.Write(ReadOnlySpan<byte> writtenSpan, LogEvent progress)
+        {
+            // not used
+        }
     }
 
     // Handles JSON-based logging
@@ -54,6 +60,11 @@ namespace PointCloudConverter.Logger
         public void Write(string msg, LogEvent eventType)
         {
             Console.WriteLine(msg);
+        }
+
+        void ILogger.Write(ReadOnlySpan<byte> writtenSpan, LogEvent progress)
+        {
+            Console.WriteLine(System.Text.Encoding.UTF8.GetString(writtenSpan));
         }
     }
 
