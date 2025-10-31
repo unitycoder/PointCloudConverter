@@ -30,7 +30,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "27.10.2025";
+        static readonly string version = "31.10.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -899,7 +899,7 @@ namespace PointCloudConverter
                     // filtering is done after scaling and offsets
                     if (importSettings.useFilter)
                     {
-                        var cell = ((int)Math.Floor(px / importSettings.filterDistance), (int)Math.Floor(py / importSettings.filterDistance), (int)Math.Floor(pz / importSettings.filterDistance));
+                        var cell = ((int)MathF.Floor(px / importSettings.filterDistance), (int)MathF.Floor(py / importSettings.filterDistance), (int)MathF.Floor(pz / importSettings.filterDistance));
 
                         if (!occupiedCells.TryAdd(cell, 0))
                         {
