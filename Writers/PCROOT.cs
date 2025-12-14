@@ -20,8 +20,8 @@ namespace PointCloudConverter.Writers
         const string tileExtension = ".pct";
         const string sep = "|";
 
-        BufferedStream bsPoints = null;
-        BinaryWriter writerPoints = null;
+        //BufferedStream bsPoints = null;
+        //BinaryWriter writerPoints = null;
         ImportSettings importSettings;
 
         static ConcurrentBag<PointCloudTile> nodeBoundsBag = new ConcurrentBag<PointCloudTile>();
@@ -127,8 +127,8 @@ namespace PointCloudConverter.Writers
         {
             if (disposing)
             {
-                bsPoints?.Dispose();
-                writerPoints?.Dispose();
+                //bsPoints?.Dispose();
+                //writerPoints?.Dispose();
 
                 if (nodeData != null)
                 {
@@ -158,8 +158,8 @@ namespace PointCloudConverter.Writers
                 nodeData = new Dictionary<(int x, int y, int z), PointData>();
             }
 
-            bsPoints = null;
-            writerPoints = null;
+            //bsPoints = null;
+            //writerPoints = null;
             importSettings = (ImportSettings)(object)_importSettings;
 
             localBounds = new BoundsAcc();
@@ -262,15 +262,15 @@ namespace PointCloudConverter.Writers
 
             Console.ForegroundColor = ConsoleColor.White;
 
-            List<float> nodeTempX;
-            List<float> nodeTempY;
-            List<float> nodeTempZ;
-            List<float> nodeTempR;
-            List<float> nodeTempG;
-            List<float> nodeTempB;
-            List<ushort> nodeTempIntensity = null;
-            List<byte> nodeTempClassification = null;
-            List<double> nodeTempTime = null;
+            //List<float> nodeTempX;
+            //List<float> nodeTempY;
+            //List<float> nodeTempZ;
+            //List<float> nodeTempR;
+            //List<float> nodeTempG;
+            //List<float> nodeTempB;
+            //List<ushort> nodeTempIntensity = null;
+            //List<byte> nodeTempClassification = null;
+            //List<double> nodeTempTime = null;
 
             List<string> outputFiles = new List<string>();
 
@@ -286,40 +286,54 @@ namespace PointCloudConverter.Writers
                     continue;
                 }
 
-                nodeTempX = data.X;
-                nodeTempY = data.Y;
-                nodeTempZ = data.Z;
-                nodeTempR = data.R;
-                nodeTempG = data.G;
-                nodeTempB = data.B;
+                //nodeTempX = data.X;
+                //nodeTempY = data.Y;
+                //nodeTempZ = data.Z;
+                //nodeTempR = data.R;
+                //nodeTempG = data.G;
+                //nodeTempB = data.B;
 
-                if (importSettings.importRGB && importSettings.importIntensity)
-                {
-                    nodeTempIntensity = data.Intensity;
-                }
+                //if (importSettings.importRGB && importSettings.importIntensity)
+                //{
+                //    nodeTempIntensity = data.Intensity;
+                //}
 
-                if (importSettings.importRGB && importSettings.importClassification)
-                {
-                    nodeTempClassification = data.Classification;
-                }
+                //if (importSettings.importRGB && importSettings.importClassification)
+                //{
+                //    nodeTempClassification = data.Classification;
+                //}
 
-                if (importSettings.averageTimestamp)
-                {
-                    nodeTempTime = data.Time;
-                }
+                //if (importSettings.averageTimestamp)
+                //{
+                //    nodeTempTime = data.Time;
+                //}
 
                 // Randomize points if enabled
+                //if (importSettings.randomize)
+                //{
+                //    Tools.ShufflePointAttributes(
+                //        nodeTempX.Count,
+                //        nodeTempX, nodeTempY, nodeTempZ,
+                //        importSettings.importRGB ? nodeTempR : null,
+                //        importSettings.importRGB ? nodeTempG : null,
+                //        importSettings.importRGB ? nodeTempB : null,
+                //        importSettings.importIntensity ? nodeTempIntensity : null,
+                //        importSettings.importClassification ? nodeTempClassification : null,
+                //        importSettings.averageTimestamp ? nodeTempTime : null
+                //    );
+                //}
+
                 if (importSettings.randomize)
                 {
                     Tools.ShufflePointAttributes(
-                        nodeTempX.Count,
-                        nodeTempX, nodeTempY, nodeTempZ,
-                        importSettings.importRGB ? nodeTempR : null,
-                        importSettings.importRGB ? nodeTempG : null,
-                        importSettings.importRGB ? nodeTempB : null,
-                        importSettings.importIntensity ? nodeTempIntensity : null,
-                        importSettings.importClassification ? nodeTempClassification : null,
-                        importSettings.averageTimestamp ? nodeTempTime : null
+                        data.X.Count,
+                        data.X, data.Y, data.Z,
+                        importSettings.importRGB ? data.R : null,
+                        importSettings.importRGB ? data.G : null,
+                        importSettings.importRGB ? data.B : null,
+                        importSettings.importIntensity ? data.Intensity : null,
+                        importSettings.importClassification ? data.Classification : null,
+                        importSettings.averageTimestamp ? data.Time : null
                     );
                 }
 
@@ -338,8 +352,8 @@ namespace PointCloudConverter.Writers
                 string fullpath = Path.Combine(baseFolder, fileOnly) + "_" + fileIndex + "_" + cellX + "_" + cellY + "_" + cellZ + tileExtension;
                 string fullpathFileOnly = fileOnly + "_" + fileIndex + "_" + cellX + "_" + cellY + "_" + cellZ + tileExtension;
 
-                bsPoints = new BufferedStream(new FileStream(fullpath, FileMode.Create));
-                writerPoints = new BinaryWriter(bsPoints);
+                //bsPoints = new BufferedStream(new FileStream(fullpath, FileMode.Create));
+                //writerPoints = new BinaryWriter(bsPoints);
 
                 outputFiles.Add(fullpath);
 
@@ -354,11 +368,11 @@ namespace PointCloudConverter.Writers
                 double totalTime = 0;
 
                 // Write all points in this tile
-                for (int i = 0, len = nodeTempX.Count; i < len; i++)
+                for (int i = 0, len = data.X.Count; i < len; i++)
                 {
-                    float px = nodeTempX[i];
-                    float py = nodeTempY[i];
-                    float pz = nodeTempZ[i];
+                    float px = data.X[i];
+                    float py = data.Y[i];
+                    float pz = data.Z[i];
                     int packedX = 0;
                     int packedY = 0;
 
@@ -381,8 +395,8 @@ namespace PointCloudConverter.Writers
                             float c = py;
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
-                            byte bg = (byte)(nodeTempG[i] * 255);
-                            byte bi = importSettings.useCustomIntensityRange ? (byte)(nodeTempIntensity[i] / 257) : (byte)nodeTempIntensity[i];
+                            byte bg = (byte)(data.G[i] * 255);
+                            byte bi = importSettings.useCustomIntensityRange ? (byte)(data.Intensity[i] / 257) : (byte)data.Intensity[i];
                             packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         }
                         else if (importSettings.importRGB && !importSettings.importIntensity && importSettings.importClassification)
@@ -390,8 +404,8 @@ namespace PointCloudConverter.Writers
                             float c = py;
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
-                            byte bg = (byte)(nodeTempG[i] * 255);
-                            byte bc = nodeTempClassification[i];
+                            byte bg = (byte)(data.G[i] * 255);
+                            byte bc = data.Classification[i];
                             packedY = (bg << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
                         }
                         else if (importSettings.importRGB && importSettings.importIntensity && importSettings.importClassification)
@@ -399,13 +413,13 @@ namespace PointCloudConverter.Writers
                             float c = py;
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
-                            byte bg = (byte)(nodeTempG[i] * 255);
-                            byte bi = importSettings.useCustomIntensityRange ? (byte)(nodeTempIntensity[i] / 257) : (byte)nodeTempIntensity[i];
+                            byte bg = (byte)(data.G[i] * 255);
+                            byte bi = importSettings.useCustomIntensityRange ? (byte)(data.Intensity[i] / 257) : (byte)data.Intensity[i];
                             packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
                         }
                         else
                         {
-                            py = Tools.SuperPacker(nodeTempG[i] * 0.98f, py, importSettings.gridSize * importSettings.packMagicValue);
+                            py = Tools.SuperPacker(data.G[i] * 0.98f, py, importSettings.gridSize * importSettings.packMagicValue);
                         }
 
                         if (importSettings.importRGB && importSettings.importIntensity && importSettings.importClassification)
@@ -413,16 +427,16 @@ namespace PointCloudConverter.Writers
                             float c = px;
                             int cIntegral = (int)c;
                             int cFractional = (int)((c - cIntegral) * 255);
-                            byte br = (byte)(nodeTempR[i] * 255);
-                            byte bc = nodeTempClassification[i];
+                            byte br = (byte)(data.R[i] * 255);
+                            byte bc = data.Classification[i];
                             packedX = (br << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
                         }
                         else
                         {
-                            px = Tools.SuperPacker(nodeTempR[i] * 0.98f, px, importSettings.gridSize * importSettings.packMagicValue);
+                            px = Tools.SuperPacker(data.R[i] * 0.98f, px, importSettings.gridSize * importSettings.packMagicValue);
                         }
 
-                        pz = Tools.SuperPacker(nodeTempB[i] * 0.98f, pz, importSettings.gridSize * importSettings.packMagicValue);
+                        pz = Tools.SuperPacker(data.B[i] * 0.98f, pz, importSettings.gridSize * importSettings.packMagicValue);
                     }
                     else if (useLossyFiltering == true)
                     {
@@ -454,7 +468,7 @@ namespace PointCloudConverter.Writers
                         byte bz = (byte)(pz * cellsInTile);
 
                         float h = 0f, s = 0f, v = 0f;
-                        RGBtoHSV(nodeTempR[i], nodeTempG[i], nodeTempB[i], out h, out s, out v);
+                        RGBtoHSV(data.R[i], data.G[i], data.B[i], out h, out s, out v);
 
                         h = h / 360f;
                         byte bh = (byte)(h * 255f);
@@ -466,7 +480,7 @@ namespace PointCloudConverter.Writers
                         uint hsv554 = (uint)((huepacked << 9) + (satpacked << 5) + valpacked);
 
                         uint combinedXYZHSV = (uint)(((bz + by << 6 + bx << 12)) << 14) + hsv554;
-                        writerPoints.Write((uint)combinedXYZHSV);
+                        //writerPoints.Write((uint)combinedXYZHSV);
                     }
                     else
                     {
@@ -489,31 +503,32 @@ namespace PointCloudConverter.Writers
                         }
 
                         FloatToBytes(pz, pointBuffer, 8);
-                        writerPoints.Write(pointBuffer);
+                        // for testing, dont output to file
+                        //writerPoints.Write(pointBuffer);
                     }
 
                     if (importSettings.averageTimestamp)
                     {
-                        totalTime += nodeTempTime[i];
+                        totalTime += data.Time[i];
                     }
 
                     totalPointsWritten++;
-                }
+                } // for all points
 
-                writerPoints.Close();
-                bsPoints.Dispose();
+                //writerPoints.Close();
+                //bsPoints.Dispose();
 
                 // Write separate RGB file if not packed
                 if (importSettings.packColors == false && useLossyFiltering == false)
                 {
                     using (var writerColors = new BinaryWriter(new BufferedStream(new FileStream(fullpath + ".rgb", FileMode.Create))))
                     {
-                        int len = nodeTempX.Count;
+                        int len = data.X.Count;
                         for (int i = 0; i < len; i++)
                         {
-                            FloatToBytes(nodeTempR[i], colorBuffer, 0);
-                            FloatToBytes(nodeTempG[i], colorBuffer, 4);
-                            FloatToBytes(nodeTempB[i], colorBuffer, 8);
+                            FloatToBytes(data.R[i], colorBuffer, 0);
+                            FloatToBytes(data.G[i], colorBuffer, 4);
+                            FloatToBytes(data.B[i], colorBuffer, 8);
                             writerColors.Write(colorBuffer);
                         }
                     }
@@ -524,9 +539,9 @@ namespace PointCloudConverter.Writers
                         BufferedStream bsIntensity = new BufferedStream(new FileStream(fullpath + ".int", FileMode.Create));
                         var writerIntensity = new BinaryWriter(bsIntensity);
 
-                        for (int i = 0, len = nodeTempX.Count; i < len; i++)
+                        for (int i = 0, len = data.X.Count; i < len; i++)
                         {
-                            float c = nodeTempIntensity[i] / 255f;
+                            float c = data.Intensity[i] / 255f;
                             writerIntensity.Write(c);
                             writerIntensity.Write(c);
                             writerIntensity.Write(c);
@@ -542,9 +557,9 @@ namespace PointCloudConverter.Writers
                         BufferedStream bsClassification = new BufferedStream(new FileStream(fullpath + ".cla", FileMode.Create));
                         var writerClassification = new BinaryWriter(bsClassification);
 
-                        for (int i = 0, len = nodeTempX.Count; i < len; i++)
+                        for (int i = 0, len = data.X.Count; i < len; i++)
                         {
-                            float c = nodeTempClassification[i] / 255f;
+                            float c = data.Classification[i] / 255f;
                             writerClassification.Write(c);
                             writerClassification.Write(c);
                             writerClassification.Write(c);
@@ -739,14 +754,14 @@ namespace PointCloudConverter.Writers
             nodeBounds.Clear();
             localBounds.Init();
 
-            bsPoints?.Dispose();
-            writerPoints?.Dispose();
+            //bsPoints?.Dispose();
+            //writerPoints?.Dispose();
         }
 
         void IWriter.Cleanup(int fileIndex)
         {
-            bsPoints?.Dispose();
-            writerPoints?.Dispose();
+            //bsPoints?.Dispose();
+            //writerPoints?.Dispose();
 
             if (nodeData != null)
             {
