@@ -26,11 +26,13 @@ using System.Globalization;
 using System.Windows.Media;
 using PointCloudConverter.Structs.Metadata;
 
+// TODO test /3gb commandline arg for .NET 8 to allow large objects >2gb
+
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "31.10.2025";
+        static readonly string version = "14.12.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -391,6 +393,13 @@ namespace PointCloudConverter
             // init pool
             importSettings.InitWriterPool(maxThreads, importSettings.exportFormat);
 
+            if (!EnsureMainWriterInitialized(importSettings))
+            {
+                Log.Write("Error> Failed to initialize main writer", LogEvent.Error);
+                Environment.ExitCode = (int)ExitCode.Error;
+                return;
+            }
+
             var semaphore = new SemaphoreSlim(maxThreads);
 
             var tasks = new List<Task>();
@@ -449,9 +458,8 @@ namespace PointCloudConverter
                         // make sure we don't keep heavy buffers in the pools.
                         //try { importSettings.ReleaseReader(taskId); } catch { }
                         //try { importSettings.ReleaseWriter(taskId); } catch { }
-
                         // release exactly once per WaitAsync
-                        semaphore.Release();                       
+                        semaphore.Release();
                     }
                 }, cancellationToken));
             }
@@ -780,15 +788,15 @@ namespace PointCloudConverter
                 var taskWriter = importSettings.GetOrCreateWriter(taskId);
 
                 // for saving pcroot header, we need this writer
-                if (importSettings.exportFormat != ExportFormat.UCPC)
-                {
-                    var mainWriterRes = importSettings.writer.InitWriter(importSettings, pointCount, Log);
-                    if (mainWriterRes == false)
-                    {
-                        Log.Write("Error> Failed to initialize main Writer, fileindex: " + fileIndex + " taskid:" + taskId);
-                        return false;
-                    }
-                }
+                //if (importSettings.exportFormat != ExportFormat.UCPC)
+                //{
+                //    var mainWriterRes = importSettings.writer.InitWriter(importSettings, pointCount, Log);
+                //    if (mainWriterRes == false)
+                //    {
+                //        Log.Write("Error> Failed to initialize main Writer, fileindex: " + fileIndex + " taskid:" + taskId);
+                //        return false;
+                //    }
+                //}
 
                 // init writer for this file
                 var writerRes = taskWriter.InitWriter(importSettings, pointCount, Log);
@@ -977,7 +985,7 @@ namespace PointCloudConverter
                     // collect this point XYZ and RGB into node, optionally intensity also
                     //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
                     // TODO can remove importsettings, its already passed on init
-                    taskWriter.AddPoint(index: (int)i, x: (float)px, y: (float)py, z: (float)pz, r: pr, g: pg, b: pb, intensity: intensity, time: time, classification: classification);
+                    taskWriter.AddPoint(index: unchecked((int)i), x: (float)px, y: (float)py, z: (float)pz, r: pr, g: pg, b: pb, intensity: intensity, time: time, classification: classification);
                     //progressPoint = i;
                     progressInfo.CurrentValue = i;
                 } // for all points
@@ -1167,6 +1175,7 @@ namespace PointCloudConverter
 
             if (((bool)chkImportIntensity.IsChecked) && ((bool)chkCustomIntensityRange.IsChecked)) args.Add("-customintensityrange=True");
             if (((bool)chkDetectIntensityRange.IsChecked) && ((bool)chkDetectIntensityRange.IsChecked)) args.Add("-detectintensityrange=True");
+            if (((bool)chkUseMemoryLimit.IsChecked) && !string.IsNullOrEmpty(txtMemoryLimit.Text)) args.Add("-threadmemgb=" + txtMemoryLimit.Text);
 
             // check input files
             //Trace.WriteLine("loggeris:" + Log.GetType().ToString());
@@ -1582,6 +1591,8 @@ namespace PointCloudConverter
             chkUseFilter.IsChecked = Properties.Settings.Default.useFilter;
             txtFilterDistance.Text = Properties.Settings.Default.filterDistance.ToString();
             chkConvertSRGB.IsChecked = Properties.Settings.Default.useSRGB;
+            chkUseMemoryLimit.IsChecked = Properties.Settings.Default.useMemoryLimit;
+            txtMemoryLimit.Text = Properties.Settings.Default.memoryLimit.ToString();
             isInitialiazing = false;
         }
 
@@ -1635,8 +1646,14 @@ namespace PointCloudConverter
             Properties.Settings.Default.useGrid = (bool)chkUseGrid.IsChecked;
             Properties.Settings.Default.offsetMode = txtOffsetMode.Text;
             Properties.Settings.Default.useFilter = (bool)chkUseFilter.IsChecked;
-            Properties.Settings.Default.filterDistance = Tools.ParseFloat(txtFilterDistance.Text);
+            float tempFilterDistance = 0.5f;
+            float.TryParse(txtFilterDistance.Text.Replace(",", "."), NumberStyles.Float, CultureInfo.InvariantCulture, out tempFilterDistance);
+            Properties.Settings.Default.filterDistance = tempFilterDistance;
             Properties.Settings.Default.useSRGB = (bool)chkConvertSRGB.IsChecked;
+            Properties.Settings.Default.useMemoryLimit = (bool)chkUseMemoryLimit.IsChecked;
+            int tempMemLimit = 8;
+            int.TryParse(txtMemoryLimit.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempMemLimit);
+            Properties.Settings.Default.memoryLimit = tempMemLimit;
             Properties.Settings.Default.Save();
         }
 
@@ -1887,6 +1904,40 @@ namespace PointCloudConverter
             }
             Process.Start(new ProcessStartInfo("explorer.exe", pluginsFolder));
         }
+
+        static bool EnsureMainWriterInitialized(ImportSettings importSettings)
+        {
+            // UCPC doesn't use importSettings.writer.Close() at the end
+            if (importSettings.exportFormat == ExportFormat.UCPC)
+                return true;
+
+            // If InitWriterPool already created it, fine.
+            // If not, you must create it here (switch/factory).
+            if (importSettings.writer == null)
+            {
+                // Example only: create the correct writer for your format.
+                // Replace with your real writer types / factory.
+                switch (importSettings.exportFormat)
+                {
+                    case ExportFormat.PCROOT:
+                        importSettings.writer = new PCROOT(null);
+                        break;
+
+                    // case ExportFormat.SOMETHING:
+                    //     importSettings.writer = new SomethingWriter(null);
+                    //     break;
+
+                    default:
+                        // If it's plugin/external, you probably don't have a "main writer" concept.
+                        // Return true or handle it specifically.
+                        return true;
+                }
+            }
+
+            // Init ONCE. If your main writer doesn't need pointCount here, pass 0.
+            return importSettings.writer.InitWriter(importSettings, pointCount: 0, Log);
+        }
+
 
     } // class
 } // namespace

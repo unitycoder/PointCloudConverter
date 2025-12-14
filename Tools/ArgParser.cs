@@ -840,6 +840,22 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-threadmemgb":
+                                Log.Write("threadmemgb = " + param);
+
+                                bool threadmemgb = int.TryParse(param, out tempInt);
+                                if (threadmemgb == false || tempInt <= 0f)
+
+                                {
+                                    importSettings.errors.Add("Invalid threadmemgb value (must be greater than 0) : " + param);
+                                }
+                                else
+                                {
+                                    importSettings.usethreadMemLimit = true;
+                                    importSettings.threadMemGB = tempInt;
+                                }
+                                break;
+
                             // TODO load whole commandline args list from text file
                             case "-config":
                                 Log.Write("config = " + param);

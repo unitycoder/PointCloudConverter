@@ -1,16 +1,21 @@
 ﻿// PCROOT (v3) Exporter https://github.com/unitycoder/UnityPointCloudViewer/wiki/Binary-File-Format-Structure#custom-v3-tiles-pcroot-and-pct-rgb
-// Memory-optimized version - Combined 9 dictionaries into 1 for 30-50% memory reduction
+// Low-RAM bucketed implementation:
+// - AddPoint() spills each point into one of N bucket files (sequential writes).
+// - Save() reads buckets back one by one, accumulates tiles up to a memory budget, flushes to final pct/rgb/int/cla.
+// - Preserves: packColors, importIntensity, importClassification, averageTimestamp, minimumPointCount, randomize (chunk shuffle).
+// Notes:
+// - useLossyFiltering is not supported in this bucketed path (kept false).
+// - randomize is done per flushed chunk (not a perfect whole-tile Fisher-Yates unless a tile fits in memory).
 
 using PointCloudConverter.Logger;
 using System;
-using System.Collections;
+using System.Buffers;
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 
 namespace PointCloudConverter.Writers
@@ -20,8 +25,6 @@ namespace PointCloudConverter.Writers
         const string tileExtension = ".pct";
         const string sep = "|";
 
-        //BufferedStream bsPoints = null;
-        //BinaryWriter writerPoints = null;
         ImportSettings importSettings;
 
         static ConcurrentBag<PointCloudTile> nodeBoundsBag = new ConcurrentBag<PointCloudTile>();
@@ -70,35 +73,9 @@ namespace PointCloudConverter.Writers
             }
         }
 
-        // MEMORY OPTIMIZATION: Combined structure for all point attributes
-        // Using class instead of struct to avoid value-type copy issues
-        class PointData
-        {
-            public List<float> X, Y, Z, R, G, B;
-            public List<ushort> Intensity;
-            public List<byte> Classification;
-            public List<double> Time;
-
-            public void Clear()
-            {
-                X?.Clear();
-                Y?.Clear();
-                Z?.Clear();
-                R?.Clear();
-                G?.Clear();
-                B?.Clear();
-                Intensity?.Clear();
-                Classification?.Clear();
-                Time?.Clear();
-            }
-        }
-
-        // MEMORY OPTIMIZATION: Single dictionary instead of 9 separate dictionaries
-        Dictionary<(int x, int y, int z), PointData> nodeData = new();
-
-        StringBuilder keyBuilder = new StringBuilder(32);
         static int skippedNodesCounter = 0;
         static int skippedPointsCounter = 0;
+
         static bool useLossyFiltering = false;
 
         private byte[] pointBuffer = new byte[12];
@@ -106,7 +83,76 @@ namespace PointCloudConverter.Writers
 
         static ILogger Log;
 
-        static int initialCapacity = 65536;
+        // Bucket spill settings
+        public int BucketCount { get; set; } = 128; // must be power of two for mask bucket selection
+        public int BucketBufferBytes { get; set; } = 1 << 20; // 1 MB per bucket stream buffer
+
+        // Memory budget for in-bucket tile accumulation during Save().
+        // Set per thread/instance. Example: 4 GiB.
+        public double ThreadMemoryBudgetGB { get; set; } = 4;
+        public long ThreadMemoryBudgetBytes => (long)(ThreadMemoryBudgetGB * 1024 * 1024 * 1024);
+
+        // Temp bucket infra
+        private bool bucketsOpen;
+        private string tempBucketFolder;
+        private string[] bucketPaths;
+        private FileStream[] bucketFileStreams;
+        private BufferedStream[] bucketBufferedStreams;
+
+        // Stats per tile (for pcroot + minimumPointCount skip + average timestamp)
+        private readonly Dictionary<(int x, int y, int z), TileStats> tileStats = new();
+
+        // Output folder info cached (one instance handles one file)
+        private string baseFolderCached;
+        private string fileOnlyCached;
+
+        // Fixed on-disk bucket record: 48 bytes, little-endian
+        // int cellX, cellY, cellZ (12)
+        // float x,y,z (12) => 24
+        // float r,g,b (12) => 36
+        // ushort intensity (2) => 38
+        // byte classification (1) => 39
+        // byte flags (1) => 40
+        // double time (8) => 48
+        private const int BucketRecordBytes = 48;
+
+        // flags
+        private const byte FlagRGB = 1;
+        private const byte FlagIntensity = 2;
+        private const byte FlagClassification = 4;
+        private const byte FlagTime = 8;
+
+        struct TileStats
+        {
+            public long TotalPoints;
+            public float MinX, MinY, MinZ, MaxX, MaxY, MaxZ;
+            public double TimeSum;
+            public bool HasAny;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void AddPoint(float x, float y, float z, double time, bool addTime)
+            {
+                if (!HasAny)
+                {
+                    MinX = MaxX = x;
+                    MinY = MaxY = y;
+                    MinZ = MaxZ = z;
+                    HasAny = true;
+                }
+                else
+                {
+                    if (x < MinX) MinX = x;
+                    if (x > MaxX) MaxX = x;
+                    if (y < MinY) MinY = y;
+                    if (y > MaxY) MaxY = y;
+                    if (z < MinZ) MinZ = z;
+                    if (z > MaxZ) MaxZ = z;
+                }
+
+                TotalPoints++;
+                if (addTime) TimeSum += time;
+            }
+        }
 
         public PCROOT(int? _taskID)
         {
@@ -129,17 +175,8 @@ namespace PointCloudConverter.Writers
         {
             if (disposing)
             {
-                //bsPoints?.Dispose();
-                //writerPoints?.Dispose();
-
-                if (nodeData != null)
-                {
-                    foreach (var data in nodeData.Values)
-                    {
-                        data.Clear();
-                    }
-                    nodeData.Clear();
-                }
+                CloseBucketWriters();
+                DeleteBucketFolderSafe();
             }
         }
 
@@ -147,531 +184,240 @@ namespace PointCloudConverter.Writers
         {
             Log = logger;
 
-            if (nodeData != null)
-            {
-                foreach (var data in nodeData.Values)
-                {
-                    data.Clear();
-                }
-                nodeData.Clear();
-            }
-            else
-            {
-                nodeData = new Dictionary<(int x, int y, int z), PointData>();
-            }
-
-            //bsPoints = null;
-            //writerPoints = null;
             importSettings = (ImportSettings)(object)_importSettings;
 
             localBounds = new BoundsAcc();
             localBounds.Init();
 
+            tileStats.Clear();
+
+            bucketsOpen = false;
+            tempBucketFolder = null;
+            bucketPaths = null;
+            bucketFileStreams = null;
+            bucketBufferedStreams = null;
+
+            baseFolderCached = null;
+            fileOnlyCached = null;
+
+            if ((BucketCount & (BucketCount - 1)) != 0)
+                throw new InvalidOperationException("BucketCount must be a power of two");
+
             return true;
         }
 
-        void IWriter.CreateHeader(int pointCount)
-        {
-        }
-
-        void IWriter.WriteXYZ(float x, float y, float z)
-        {
-        }
-
-        void IWriter.WriteRGB(float r, float g, float b)
-        {
-        }
-
-        void IWriter.Randomize()
-        {
-        }
+        void IWriter.CreateHeader(int pointCount) { }
+        void IWriter.WriteXYZ(float x, float y, float z) { }
+        void IWriter.WriteRGB(float r, float g, float b) { }
+        void IWriter.Randomize() { }
 
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, ushort intensity, double time, byte classification)
         {
+            if (useLossyFiltering)
+            {
+                // Not supported in bucketed mode. Keep it false.
+            }
+
+            EnsureBucketWritersOpen();
+
             float gridSize = importSettings.gridSize;
 
             int cellX = (int)(x / gridSize);
             int cellY = (int)(y / gridSize);
             int cellZ = (int)(z / gridSize);
 
-            var key = (cellX, cellY, cellZ);
+            int bucketId = BucketIdForKey(cellX, cellY, cellZ);
 
-            // Get or create point data for this cell
-            if (!nodeData.TryGetValue(key, out var data))
-            {
-                //data = new PointData
-                //{
-                //    X = new List<float> { x },
-                //    Y = new List<float> { y },
-                //    Z = new List<float> { z },
-                //    R = new List<float> { r },
-                //    G = new List<float> { g },
-                //    B = new List<float> { b }
-                //};
+            byte flags = 0;
+            if (importSettings.importRGB) flags |= FlagRGB;
+            if (importSettings.importRGB && importSettings.importIntensity) flags |= FlagIntensity;
+            if (importSettings.importRGB && importSettings.importClassification) flags |= FlagClassification;
+            if (importSettings.averageTimestamp) flags |= FlagTime;
 
-                //if (importSettings.importRGB && importSettings.importIntensity) data.Intensity = new List<ushort> { intensity };
-                //if (importSettings.importRGB && importSettings.importClassification) data.Classification = new List<byte> { classification };
-                //if (importSettings.averageTimestamp) data.Time = new List<double> { time };
+            Span<byte> rec = stackalloc byte[BucketRecordBytes];
 
-                data = new PointData
-                {
-                    X = new List<float>(initialCapacity),
-                    Y = new List<float>(initialCapacity),
-                    Z = new List<float>(initialCapacity),
-                    R = new List<float>(initialCapacity),
-                    G = new List<float>(initialCapacity),
-                    B = new List<float>(initialCapacity),
+            BinaryPrimitives.WriteInt32LittleEndian(rec.Slice(0, 4), cellX);
+            BinaryPrimitives.WriteInt32LittleEndian(rec.Slice(4, 4), cellY);
+            BinaryPrimitives.WriteInt32LittleEndian(rec.Slice(8, 4), cellZ);
 
-                    Intensity = importSettings.importRGB && importSettings.importIntensity ? new List<ushort>(initialCapacity) : null,
-                    Classification = importSettings.importRGB && importSettings.importClassification ? new List<byte>(initialCapacity) : null,
-                    Time = importSettings.averageTimestamp ? new List<double>(initialCapacity) : null,
-                };
+            BinaryPrimitives.WriteSingleLittleEndian(rec.Slice(12, 4), x);
+            BinaryPrimitives.WriteSingleLittleEndian(rec.Slice(16, 4), y);
+            BinaryPrimitives.WriteSingleLittleEndian(rec.Slice(20, 4), z);
 
-                data.X.Add(x);
-                data.Y.Add(y);
-                data.Z.Add(z);
-                data.R.Add(r);
-                data.G.Add(g);
-                data.B.Add(b);
-                if (importSettings.importRGB && importSettings.importIntensity) data.Intensity.Add(intensity);
-                if (importSettings.importRGB && importSettings.importClassification) data.Classification.Add(classification);
-                if (importSettings.averageTimestamp) data.Time.Add(time);
+            BinaryPrimitives.WriteSingleLittleEndian(rec.Slice(24, 4), r);
+            BinaryPrimitives.WriteSingleLittleEndian(rec.Slice(28, 4), g);
+            BinaryPrimitives.WriteSingleLittleEndian(rec.Slice(32, 4), b);
 
-                nodeData[key] = data;
-            }
-            else // got existing cell, add point to it
-            {
-                // Since PointData is now a class (reference type), modifications persist
-                data.X.Add(x);
-                data.Y.Add(y);
-                data.Z.Add(z);
-                data.R.Add(r);
-                data.G.Add(g);
-                data.B.Add(b);
+            BinaryPrimitives.WriteUInt16LittleEndian(rec.Slice(36, 2), intensity);
+            rec[38] = classification;
+            rec[39] = flags;
 
-                if (importSettings.importRGB && importSettings.importIntensity) data.Intensity.Add(intensity);
-                if (importSettings.importRGB && importSettings.importClassification) data.Classification.Add(classification);
-                if (importSettings.averageTimestamp) data.Time.Add(time);
-            }
-        } // AddPoint()
+            BinaryPrimitives.WriteDoubleLittleEndian(rec.Slice(40, 8), time);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void FloatToBytes(float value, byte[] buffer, int offset)
-        {
-            fixed (byte* b = &buffer[offset])
-            {
-                *(float*)b = value;
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void IntToBytes(int value, byte[] buffer, int offset)
-        {
-            fixed (byte* b = &buffer[offset])
-            {
-                *(int*)b = value;
-            }
+            bucketBufferedStreams[bucketId].Write(rec);
         }
 
         void IWriter.Save(int fileIndex)
         {
-            if (useLossyFiltering == true)
+            EnsureBucketWritersOpen();
+            CloseBucketWriters(); // finalize bucket files for reading
+
+            string fileOnly = fileOnlyCached;
+            string baseFolder = baseFolderCached;
+
+            Log.Write("Bucketed Save(): buckets=" + BucketCount + ", budget=" + ThreadMemoryBudgetBytes + " bytes");
+
+            // Read each bucket, build tiles in memory up to budget, flush to disk
+            byte[] ioBuf = ArrayPool<byte>.Shared.Rent(Math.Max(BucketBufferBytes, 1 << 20));
+
+            try
             {
-                Console.WriteLine("************* useLossyFiltering ****************");
-            }
+                var tileBuffers = new Dictionary<(int x, int y, int z), TileBuffer>(capacity: 16384);
 
-            string fileOnly = Path.GetFileNameWithoutExtension(importSettings.outputFile);
-            string baseFolder = Path.GetDirectoryName(importSettings.outputFile);
-            Console.ForegroundColor = ConsoleColor.Blue;
-
-            Log.Write("Saving " + nodeData.Count + " tiles into: " + baseFolder);
-
-            Console.ForegroundColor = ConsoleColor.White;
-
-            //List<float> nodeTempX;
-            //List<float> nodeTempY;
-            //List<float> nodeTempZ;
-            //List<float> nodeTempR;
-            //List<float> nodeTempG;
-            //List<float> nodeTempB;
-            //List<ushort> nodeTempIntensity = null;
-            //List<byte> nodeTempClassification = null;
-            //List<double> nodeTempTime = null;
-
-            List<string> outputFiles = new List<string>();
-
-            // Process all tiles
-            foreach (KeyValuePair<(int x, int y, int z), PointData> nodeEntry in nodeData)
-            {
-                var key = nodeEntry.Key;
-                var data = nodeEntry.Value;
-
-                if (data.X.Count < importSettings.minimumPointCount)
+                for (int b = 0; b < BucketCount; b++)
                 {
-                    skippedNodesCounter++;
-                    continue;
-                }
+                    string bucketPath = bucketPaths[b];
+                    if (!File.Exists(bucketPath))
+                        continue;
 
-                //nodeTempX = data.X;
-                //nodeTempY = data.Y;
-                //nodeTempZ = data.Z;
-                //nodeTempR = data.R;
-                //nodeTempG = data.G;
-                //nodeTempB = data.B;
+                    using var fs = new FileStream(bucketPath, FileMode.Open, FileAccess.Read, FileShare.Read, BucketBufferBytes, FileOptions.SequentialScan);
+                    using var bs = new BufferedStream(fs, BucketBufferBytes);
 
-                //if (importSettings.importRGB && importSettings.importIntensity)
-                //{
-                //    nodeTempIntensity = data.Intensity;
-                //}
+                    tileBuffers.Clear();
+                    long approxBytes = 0;
 
-                //if (importSettings.importRGB && importSettings.importClassification)
-                //{
-                //    nodeTempClassification = data.Classification;
-                //}
+                    int carry = 0;
+                    int read;
 
-                //if (importSettings.averageTimestamp)
-                //{
-                //    nodeTempTime = data.Time;
-                //}
-
-                // Randomize points if enabled
-                //if (importSettings.randomize)
-                //{
-                //    Tools.ShufflePointAttributes(
-                //        nodeTempX.Count,
-                //        nodeTempX, nodeTempY, nodeTempZ,
-                //        importSettings.importRGB ? nodeTempR : null,
-                //        importSettings.importRGB ? nodeTempG : null,
-                //        importSettings.importRGB ? nodeTempB : null,
-                //        importSettings.importIntensity ? nodeTempIntensity : null,
-                //        importSettings.importClassification ? nodeTempClassification : null,
-                //        importSettings.averageTimestamp ? nodeTempTime : null
-                //    );
-                //}
-
-                if (importSettings.randomize)
-                {
-                    Tools.ShufflePointAttributes(
-                        data.X.Count,
-                        data.X, data.Y, data.Z,
-                        importSettings.importRGB ? data.R : null,
-                        importSettings.importRGB ? data.G : null,
-                        importSettings.importRGB ? data.B : null,
-                        importSettings.importIntensity ? data.Intensity : null,
-                        importSettings.importClassification ? data.Classification : null,
-                        importSettings.averageTimestamp ? data.Time : null
-                    );
-                }
-
-                // Get tile bounds
-                float minX = float.PositiveInfinity;
-                float minY = float.PositiveInfinity;
-                float minZ = float.PositiveInfinity;
-                float maxX = float.NegativeInfinity;
-                float maxY = float.NegativeInfinity;
-                float maxZ = float.NegativeInfinity;
-
-                int cellX = key.x;
-                int cellY = key.y;
-                int cellZ = key.z;
-
-                string fullpath = Path.Combine(baseFolder, fileOnly) + "_" + fileIndex + "_" + cellX + "_" + cellY + "_" + cellZ + tileExtension;
-                string fullpathFileOnly = fileOnly + "_" + fileIndex + "_" + cellX + "_" + cellY + "_" + cellZ + tileExtension;
-
-                //bsPoints = new BufferedStream(new FileStream(fullpath, FileMode.Create));
-                //writerPoints = new BinaryWriter(bsPoints);
-
-                outputFiles.Add(fullpath);
-
-
-                int totalPointsWritten = 0;
-                int fixedGridSize = 10;
-                int cellsInTile = 64;
-                bool[] reservedGridCells = null;
-
-                if (useLossyFiltering == true) reservedGridCells = new bool[cellsInTile * cellsInTile * cellsInTile];
-
-                double totalTime = 0;
-
-                // Write all points in this tile
-                for (int i = 0, len = data.X.Count; i < len; i++)
-                {
-                    float px = data.X[i];
-                    float py = data.Y[i];
-                    float pz = data.Z[i];
-                    int packedX = 0;
-                    int packedY = 0;
-
-                    if (px < minX) minX = px;
-                    if (px > maxX) maxX = px;
-                    if (py < minY) minY = py;
-                    if (py > maxY) maxY = py;
-                    if (pz < minZ) minZ = pz;
-                    if (pz > maxZ) maxZ = pz;
-
-                    if (importSettings.packColors == true)
+                    while ((read = bs.Read(ioBuf, carry, ioBuf.Length - carry)) > 0)
                     {
-                        px -= (cellX * importSettings.gridSize);
-                        py -= (cellY * importSettings.gridSize);
-                        pz -= (cellZ * importSettings.gridSize);
+                        int total = carry + read;
+                        int offset = 0;
 
-                        // Pack G, Py and INTensity
-                        if (importSettings.importRGB && importSettings.importIntensity && !importSettings.importClassification)
+                        while (offset + BucketRecordBytes <= total)
                         {
-                            float c = py;
-                            int cIntegral = (int)c;
-                            int cFractional = (int)((c - cIntegral) * 255);
-                            byte bg = (byte)(data.G[i] * 255);
-                            byte bi = importSettings.useCustomIntensityRange ? (byte)(data.Intensity[i] / 257) : (byte)data.Intensity[i];
-                            packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
-                        }
-                        else if (importSettings.importRGB && !importSettings.importIntensity && importSettings.importClassification)
-                        {
-                            float c = py;
-                            int cIntegral = (int)c;
-                            int cFractional = (int)((c - cIntegral) * 255);
-                            byte bg = (byte)(data.G[i] * 255);
-                            byte bc = data.Classification[i];
-                            packedY = (bg << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
-                        }
-                        else if (importSettings.importRGB && importSettings.importIntensity && importSettings.importClassification)
-                        {
-                            float c = py;
-                            int cIntegral = (int)c;
-                            int cFractional = (int)((c - cIntegral) * 255);
-                            byte bg = (byte)(data.G[i] * 255);
-                            byte bi = importSettings.useCustomIntensityRange ? (byte)(data.Intensity[i] / 257) : (byte)data.Intensity[i];
-                            packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
-                        }
-                        else
-                        {
-                            py = Tools.SuperPacker(data.G[i] * 0.98f, py, importSettings.gridSize * importSettings.packMagicValue);
-                        }
+                            var rec = new ReadOnlySpan<byte>(ioBuf, offset, BucketRecordBytes);
 
-                        if (importSettings.importRGB && importSettings.importIntensity && importSettings.importClassification)
-                        {
-                            float c = px;
-                            int cIntegral = (int)c;
-                            int cFractional = (int)((c - cIntegral) * 255);
-                            byte br = (byte)(data.R[i] * 255);
-                            byte bc = data.Classification[i];
-                            packedX = (br << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
-                        }
-                        else
-                        {
-                            px = Tools.SuperPacker(data.R[i] * 0.98f, px, importSettings.gridSize * importSettings.packMagicValue);
-                        }
+                            int cellX = BinaryPrimitives.ReadInt32LittleEndian(rec.Slice(0, 4));
+                            int cellY = BinaryPrimitives.ReadInt32LittleEndian(rec.Slice(4, 4));
+                            int cellZ = BinaryPrimitives.ReadInt32LittleEndian(rec.Slice(8, 4));
 
-                        pz = Tools.SuperPacker(data.B[i] * 0.98f, pz, importSettings.gridSize * importSettings.packMagicValue);
-                    }
-                    else if (useLossyFiltering == true)
-                    {
-                        px -= (cellX * fixedGridSize);
-                        py -= (cellY * fixedGridSize);
-                        pz -= (cellZ * fixedGridSize);
-                        px /= (float)cellsInTile;
-                        py /= (float)cellsInTile;
-                        pz /= (float)cellsInTile;
-                        byte packx = (byte)(px * cellsInTile);
-                        byte packy = (byte)(py * cellsInTile);
-                        byte packz = (byte)(pz * cellsInTile);
+                            float x = BinaryPrimitives.ReadSingleLittleEndian(rec.Slice(12, 4));
+                            float y = BinaryPrimitives.ReadSingleLittleEndian(rec.Slice(16, 4));
+                            float z = BinaryPrimitives.ReadSingleLittleEndian(rec.Slice(20, 4));
 
-                        var reservedTileLocalCellIndex = packx + cellsInTile * (packy + cellsInTile * packz);
+                            float r = BinaryPrimitives.ReadSingleLittleEndian(rec.Slice(24, 4));
+                            float g = BinaryPrimitives.ReadSingleLittleEndian(rec.Slice(28, 4));
+                            float bb = BinaryPrimitives.ReadSingleLittleEndian(rec.Slice(32, 4));
 
-                        if (reservedGridCells[reservedTileLocalCellIndex] == true)
-                        {
-                            skippedPointsCounter++;
-                            continue;
+                            ushort intensity = BinaryPrimitives.ReadUInt16LittleEndian(rec.Slice(36, 2));
+                            byte classification = rec[38];
+                            byte flags = rec[39];
+                            double time = BinaryPrimitives.ReadDoubleLittleEndian(rec.Slice(40, 8));
+
+                            var key = (cellX, cellY, cellZ);
+
+                            if (!tileBuffers.TryGetValue(key, out var buf))
+                            {
+                                buf = new TileBuffer(importSettings);
+                                tileBuffers.Add(key, buf);
+                            }
+
+                            buf.Add(x, y, z, r, g, bb, intensity, time, classification, flags);
+
+                            approxBytes += buf.LastAddBytes;
+
+                            // stats (full tile across all flushes)
+                            if (!tileStats.TryGetValue(key, out var st))
+                                st = default;
+
+                            st.AddPoint(x, y, z, time, (flags & FlagTime) != 0);
+                            tileStats[key] = st;
+
+                            // Flush on budget
+                            if (approxBytes >= ThreadMemoryBudgetBytes)
+                            {
+                                FlushTileBuffers(tileBuffers, baseFolder, fileOnly, fileIndex);
+                                tileBuffers.Clear();
+                                approxBytes = 0;
+                            }
+
+                            offset += BucketRecordBytes;
                         }
 
-                        reservedGridCells[reservedTileLocalCellIndex] = true;
+                        carry = total - offset;
+                        if (carry > 0)
+                            Buffer.BlockCopy(ioBuf, offset, ioBuf, 0, carry);
                     }
 
-                    if (useLossyFiltering == true)
+                    if (tileBuffers.Count > 0)
                     {
-                        byte bx = (byte)(px * cellsInTile);
-                        byte by = (byte)(py * cellsInTile);
-                        byte bz = (byte)(pz * cellsInTile);
-
-                        float h = 0f, s = 0f, v = 0f;
-                        RGBtoHSV(data.R[i], data.G[i], data.B[i], out h, out s, out v);
-
-                        h = h / 360f;
-                        byte bh = (byte)(h * 255f);
-                        byte bs = (byte)(s * 255f);
-                        byte bv = (byte)(v * 255f);
-                        byte huepacked = (byte)(bh >> 3);
-                        byte satpacked = (byte)(bs >> 3);
-                        byte valpacked = (byte)(bv >> 4);
-                        uint hsv554 = (uint)((huepacked << 9) + (satpacked << 5) + valpacked);
-
-                        uint combinedXYZHSV = (uint)(((bz + by << 6 + bx << 12)) << 14) + hsv554;
-                        //writerPoints.Write((uint)combinedXYZHSV);
-                    }
-                    else
-                    {
-                        if (importSettings.packColors && importSettings.importRGB && importSettings.importIntensity && importSettings.importClassification)
-                        {
-                            IntToBytes(packedX, pointBuffer, 0);
-                        }
-                        else
-                        {
-                            FloatToBytes(px, pointBuffer, 0);
-                        }
-
-                        if (importSettings.packColors && importSettings.importRGB && (importSettings.importIntensity || importSettings.importClassification))
-                        {
-                            IntToBytes(packedY, pointBuffer, 4);
-                        }
-                        else
-                        {
-                            FloatToBytes(py, pointBuffer, 4);
-                        }
-
-                        FloatToBytes(pz, pointBuffer, 8);
-                        // for testing, dont output to file
-                        //writerPoints.Write(pointBuffer);
-                    }
-
-                    if (importSettings.averageTimestamp)
-                    {
-                        totalTime += data.Time[i];
-                    }
-
-                    totalPointsWritten++;
-                } // for all points
-
-                //writerPoints.Close();
-                //bsPoints.Dispose();
-
-                // Write separate RGB file if not packed
-                if (importSettings.packColors == false && useLossyFiltering == false)
-                {
-                    using (var writerColors = new BinaryWriter(new BufferedStream(new FileStream(fullpath + ".rgb", FileMode.Create))))
-                    {
-                        int len = data.X.Count;
-                        for (int i = 0; i < len; i++)
-                        {
-                            FloatToBytes(data.R[i], colorBuffer, 0);
-                            FloatToBytes(data.G[i], colorBuffer, 4);
-                            FloatToBytes(data.B[i], colorBuffer, 8);
-                            writerColors.Write(colorBuffer);
-                        }
-                    }
-
-                    // Write intensity file
-                    if (importSettings.importRGB && importSettings.importIntensity)
-                    {
-                        BufferedStream bsIntensity = new BufferedStream(new FileStream(fullpath + ".int", FileMode.Create));
-                        var writerIntensity = new BinaryWriter(bsIntensity);
-
-                        for (int i = 0, len = data.X.Count; i < len; i++)
-                        {
-                            float c = data.Intensity[i] / 255f;
-                            writerIntensity.Write(c);
-                            writerIntensity.Write(c);
-                            writerIntensity.Write(c);
-                        }
-
-                        writerIntensity.Close();
-                        bsIntensity.Dispose();
-                    }
-
-                    // Write classification file
-                    if (importSettings.importRGB && importSettings.importClassification)
-                    {
-                        BufferedStream bsClassification = new BufferedStream(new FileStream(fullpath + ".cla", FileMode.Create));
-                        var writerClassification = new BinaryWriter(bsClassification);
-
-                        for (int i = 0, len = data.X.Count; i < len; i++)
-                        {
-                            float c = data.Classification[i] / 255f;
-                            writerClassification.Write(c);
-                            writerClassification.Write(c);
-                            writerClassification.Write(c);
-                        }
-
-                        writerClassification.Close();
-                        bsClassification.Dispose();
+                        FlushTileBuffers(tileBuffers, baseFolder, fileOnly, fileIndex);
+                        tileBuffers.Clear();
                     }
                 }
 
-                // Collect node bounds
-                var cb = new PointCloudTile();
-                cb.fileName = fullpathFileOnly;
-                cb.totalPoints = totalPointsWritten;
-                cb.minX = minX;
-                cb.minY = minY;
-                cb.minZ = minZ;
-                cb.maxX = maxX;
-                cb.maxY = maxY;
-                cb.maxZ = maxZ;
-                cb.centerX = (minX + maxX) * 0.5f;
-                cb.centerY = (minY + maxY) * 0.5f;
-                cb.centerZ = (minZ + maxZ) * 0.5f;
-                cb.cellX = cellX;
-                cb.cellY = cellY;
-                cb.cellZ = cellZ;
+                // Emit node bounds from tileStats (applies minimumPointCount)
+                int tilesEmitted = 0;
 
-                localBounds.minX = Math.Min(localBounds.minX, minX);
-                localBounds.minY = Math.Min(localBounds.minY, minY);
-                localBounds.minZ = Math.Min(localBounds.minZ, minZ);
-                localBounds.maxX = Math.Max(localBounds.maxX, maxX);
-                localBounds.maxY = Math.Max(localBounds.maxY, maxY);
-                localBounds.maxZ = Math.Max(localBounds.maxZ, maxZ);
+                foreach (var kv in tileStats)
+                {
+                    var key = kv.Key;
+                    var st = kv.Value;
+
+                    if (st.TotalPoints < importSettings.minimumPointCount)
+                    {
+                        skippedNodesCounter++;
+                        continue;
+                    }
+
+                    int cellX = key.x;
+                    int cellY = key.y;
+                    int cellZ = key.z;
+
+                    string fullpathFileOnly = fileOnly + "_" + fileIndex + "_" + cellX + "_" + cellY + "_" + cellZ + tileExtension;
+
+                    var cb = new PointCloudTile();
+                    cb.fileName = fullpathFileOnly;
+                    cb.totalPoints = (int)Math.Min(int.MaxValue, st.TotalPoints);
+                    cb.minX = st.MinX; cb.minY = st.MinY; cb.minZ = st.MinZ;
+                    cb.maxX = st.MaxX; cb.maxY = st.MaxY; cb.maxZ = st.MaxZ;
+                    cb.centerX = (st.MinX + st.MaxX) * 0.5f;
+                    cb.centerY = (st.MinY + st.MaxY) * 0.5f;
+                    cb.centerZ = (st.MinZ + st.MaxZ) * 0.5f;
+                    cb.cellX = cellX; cb.cellY = cellY; cb.cellZ = cellZ;
+
+                    if (importSettings.averageTimestamp && st.TotalPoints > 0)
+                        cb.averageTimeStamp = st.TimeSum / st.TotalPoints;
+
+                    nodeBoundsBag.Add(cb);
+                    tilesEmitted++;
+
+                    localBounds.minX = Math.Min(localBounds.minX, st.MinX);
+                    localBounds.minY = Math.Min(localBounds.minY, st.MinY);
+                    localBounds.minZ = Math.Min(localBounds.minZ, st.MinZ);
+                    localBounds.maxX = Math.Max(localBounds.maxX, st.MaxX);
+                    localBounds.maxY = Math.Max(localBounds.maxY, st.MaxY);
+                    localBounds.maxZ = Math.Max(localBounds.maxZ, st.MaxZ);
+                }
 
                 GlobalBounds.Merge(in localBounds);
 
-                if (importSettings.averageTimestamp && totalPointsWritten > 0)
-                {
-                    double averageTime = totalTime / totalPointsWritten;
-                    cb.averageTimeStamp = averageTime;
-                }
-
-                nodeBoundsBag.Add(cb);
-            } // for all tiles
-
-            // release actual memory with trim or replace array
-            //1.Dispose / clear the PointData values and set their lists to null(or reallocate new ones via pooling).
-            foreach (var data in nodeData.Values)
-            {
-                data.X.Clear();
-                data.Y.Clear();
-                data.Z.Clear();
-                data.R.Clear();
-                data.G.Clear();
-                data.B.Clear();
-                data.Intensity?.Clear();
-                data.Classification?.Clear();
-                data.Time?.Clear();
-
-                data.X = null;
-                data.Y = null;
-                data.Z = null;
-                data.R = null;
-                data.G = null;
-                data.B = null;
-                data.Intensity = null;
-                data.Classification = null;
-                data.Time = null;
+                string jsonString = "{" +
+                                    "\"event\": \"" + LogEvent.File + "\"," +
+                                    "\"status\": \"" + LogStatus.Complete + "\"," +
+                                    "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+                                    "\"tiles\": " + tilesEmitted + "," +
+                                    "\"folder\": " + JsonSerializer.Serialize(baseFolder) +
+                                    "}";
+                Log.Write(jsonString, LogEvent.End);
             }
-            nodeData.Clear();
-
-            // gc clear
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-
-
-
-            string jsonString = "{" +
-                                "\"event\": \"" + LogEvent.File + "\"," +
-                                "\"status\": \"" + LogStatus.Complete + "\"," +
-                                "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
-                                "\"tiles\": " + nodeData.Count + "," +
-                                "\"folder\": " + JsonSerializer.Serialize(baseFolder) + "," +
-                                "\"filenames\": " + JsonSerializer.Serialize(outputFiles) + "}";
-            Log.Write(jsonString, LogEvent.End);
-        } // Save()
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(ioBuf);
+                DeleteBucketFolderSafe();
+            }
+        }
 
         void IWriter.Close()
         {
@@ -728,7 +474,11 @@ namespace PointCloudConverter.Writers
 
             for (int i = 0, len = nodeBounds.Count; i < len; i++)
             {
-                var tilerow = nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep + nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep + nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep + nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
+                var tilerow = nodeBounds[i].totalPoints + sep + nodeBounds[i].minX + sep + nodeBounds[i].minY + sep + nodeBounds[i].minZ + sep +
+                             nodeBounds[i].maxX + sep + nodeBounds[i].maxY + sep + nodeBounds[i].maxZ + sep +
+                             nodeBounds[i].cellX + sep + nodeBounds[i].cellY + sep + nodeBounds[i].cellZ + sep +
+                             nodeBounds[i].averageTimeStamp + sep + nodeBounds[i].overlapRatio;
+
                 tilerow = tilerow.Replace(",", ".");
                 tilerow = nodeBounds[i].fileName + sep + tilerow;
                 tilerootdata.Add(tilerow);
@@ -757,7 +507,9 @@ namespace PointCloudConverter.Writers
             string identifer = "# PCROOT - https://github.com/unitycoder/PointCloudConverter";
             if (addComments) tilerootdata.Insert(0, identifer);
 
-            string commentRow = "# version" + sep + "gridsize" + sep + "pointcount" + sep + "boundsMinX" + sep + "boundsMinY" + sep + "boundsMinZ" + sep + "boundsMaxX" + sep + "boundsMaxY" + sep + "boundsMaxZ" + sep + "autoOffsetX" + sep + "autoOffsetY" + sep + "autoOffsetZ" + sep + "packMagicValue";
+            string commentRow = "# version" + sep + "gridsize" + sep + "pointcount" + sep + "boundsMinX" + sep + "boundsMinY" + sep +
+                                "boundsMinZ" + sep + "boundsMaxX" + sep + "boundsMaxY" + sep + "boundsMaxZ" + sep +
+                                "autoOffsetX" + sep + "autoOffsetY" + sep + "autoOffsetZ" + sep + "packMagicValue";
             if (importSettings.importRGB && importSettings.importIntensity) commentRow += sep + "intensity";
             if (importSettings.importRGB && importSettings.importClassification) commentRow += sep + "classification";
             if (addComments) tilerootdata.Insert(1, commentRow);
@@ -772,99 +524,507 @@ namespace PointCloudConverter.Writers
 
             GlobalBounds.Reset();
 
-            string globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep + cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep + cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
+            string globalData = versionID + sep + importSettings.gridSize.ToString() + sep + totalPointCount + sep +
+                                cloudMinX + sep + cloudMinY + sep + cloudMinZ + sep +
+                                cloudMaxX + sep + cloudMaxY + sep + cloudMaxZ;
+
             globalData += sep + importSettings.offsetX + sep + importSettings.offsetY + sep + importSettings.offsetZ + sep + importSettings.packMagicValue;
             globalData = globalData.Replace(",", ".");
 
-            if (addComments)
-            {
-                tilerootdata.Insert(2, globalData);
-            }
-            else
-            {
-                tilerootdata.Insert(0, globalData);
-            }
+            if (addComments) tilerootdata.Insert(2, globalData);
+            else tilerootdata.Insert(0, globalData);
 
-            if (addComments) tilerootdata.Insert(3, "# filename" + sep + "pointcount" + sep + "minX" + sep + "minY" + sep + "minZ" + sep + "maxX" + sep + "maxY" + sep + "maxZ" + sep + "cellX" + sep + "cellY" + sep + "cellZ" + sep + "averageTimeStamp" + sep + "overlapRatio");
+            if (addComments)
+                tilerootdata.Insert(3, "# filename" + sep + "pointcount" + sep + "minX" + sep + "minY" + sep + "minZ" + sep +
+                                        "maxX" + sep + "maxY" + sep + "maxZ" + sep + "cellX" + sep + "cellY" + sep + "cellZ" + sep +
+                                        "averageTimeStamp" + sep + "overlapRatio");
 
             File.WriteAllLines(outputFileRoot, tilerootdata.ToArray());
 
-            Console.ForegroundColor = ConsoleColor.Green;
             Log.Write("Done saving v3 : " + outputFileRoot);
-            Console.ForegroundColor = ConsoleColor.White;
+
             if (skippedNodesCounter > 0)
-            {
                 Log.Write("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
-            }
 
             if (useLossyFiltering && skippedPointsCounter > 0)
-            {
                 Log.Write("*Skipped " + skippedPointsCounter + " points due to bytepacked grid filtering");
-            }
 
             if ((tilerootdata.Count - 1) <= 0)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Log.Write("Error> No tiles found! Try enable -scale (to make your cloud to smaller) Or make -gridsize bigger, or set -limit point count to smaller value");
-                Console.ForegroundColor = ConsoleColor.White;
-            }
+                Log.Write("Error> No tiles found! Try enable -scale or make -gridsize bigger, or set -limit point count smaller");
 
             nodeBounds.Clear();
             localBounds.Init();
-
-            //bsPoints?.Dispose();
-            //writerPoints?.Dispose();
         }
 
         void IWriter.Cleanup(int fileIndex)
         {
-            //bsPoints?.Dispose();
-            //writerPoints?.Dispose();
-
-            if (nodeData != null)
-            {
-                foreach (var data in nodeData.Values)
-                {
-                    data.Clear();
-                }
-                nodeData.Clear();
-            }
-        }
-
-        void RGBtoHSV(float r, float g, float b, out float h, out float s, out float v)
-        {
-            float min, max, delta;
-
-            min = Math.Min(Math.Min(r, g), b);
-            max = Math.Max(Math.Max(r, g), b);
-            v = max;
-
-            delta = max - min;
-
-            if (max != 0)
-                s = delta / max;
-            else
-            {
-                s = 0;
-                h = -1;
-                return;
-            }
-
-            if (r == max)
-                h = (g - b) / delta;
-            else if (g == max)
-                h = 2 + (b - r) / delta;
-            else
-                h = 4 + (r - g) / delta;
-
-            h *= 60;
-
-            if (h < 0) h += 360;
+            CloseBucketWriters();
+            DeleteBucketFolderSafe();
+            tileStats.Clear();
         }
 
         public void SetIntensityRange(bool isCustomRange)
         {
             importSettings.useCustomIntensityRange = isCustomRange;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void FloatToBytes(float value, byte[] buffer, int offset)
+        {
+            fixed (byte* b = &buffer[offset])
+            {
+                *(float*)b = value;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void IntToBytes(int value, byte[] buffer, int offset)
+        {
+            fixed (byte* b = &buffer[offset])
+            {
+                *(int*)b = value;
+            }
+        }
+
+        private void EnsureBucketWritersOpen()
+        {
+            if (bucketsOpen) return;
+
+            baseFolderCached = Path.GetDirectoryName(importSettings.outputFile);
+            fileOnlyCached = Path.GetFileNameWithoutExtension(importSettings.outputFile);
+
+            string sessionId = Guid.NewGuid().ToString("N");
+            tempBucketFolder = Path.Combine(baseFolderCached, fileOnlyCached + "_tmp_" + sessionId + "_buckets");
+            Directory.CreateDirectory(tempBucketFolder);
+
+            bucketPaths = new string[BucketCount];
+            bucketFileStreams = new FileStream[BucketCount];
+            bucketBufferedStreams = new BufferedStream[BucketCount];
+
+            for (int i = 0; i < BucketCount; i++)
+            {
+                string p = Path.Combine(tempBucketFolder, "bucket_" + i + ".bin");
+                bucketPaths[i] = p;
+
+                var fs = new FileStream(p, FileMode.Create, FileAccess.Write, FileShare.Read, BucketBufferBytes, FileOptions.SequentialScan);
+                bucketFileStreams[i] = fs;
+                bucketBufferedStreams[i] = new BufferedStream(fs, BucketBufferBytes);
+            }
+
+            bucketsOpen = true;
+        }
+
+        private void CloseBucketWriters()
+        {
+            if (!bucketsOpen) return;
+
+            if (bucketBufferedStreams != null)
+            {
+                for (int i = 0; i < bucketBufferedStreams.Length; i++)
+                {
+                    if (bucketBufferedStreams[i] != null)
+                    {
+                        bucketBufferedStreams[i].Flush();
+                        bucketBufferedStreams[i].Dispose();
+                        bucketBufferedStreams[i] = null;
+                    }
+                }
+            }
+
+            if (bucketFileStreams != null)
+            {
+                for (int i = 0; i < bucketFileStreams.Length; i++)
+                {
+                    if (bucketFileStreams[i] != null)
+                    {
+                        bucketFileStreams[i].Dispose();
+                        bucketFileStreams[i] = null;
+                    }
+                }
+            }
+        }
+
+        private void DeleteBucketFolderSafe()
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(tempBucketFolder) && Directory.Exists(tempBucketFolder))
+                    Directory.Delete(tempBucketFolder, true);
+            }
+            catch
+            {
+            }
+
+            bucketsOpen = false;
+            tempBucketFolder = null;
+            bucketPaths = null;
+            bucketFileStreams = null;
+            bucketBufferedStreams = null;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int HashKey(int x, int y, int z)
+        {
+            unchecked
+            {
+                int h = x * 73856093;
+                h ^= y * 19349663;
+                h ^= z * 83492791;
+                return h;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int BucketIdForKey(int x, int y, int z)
+        {
+            int h = HashKey(x, y, z);
+            return h & (BucketCount - 1);
+        }
+
+        private void FlushTileBuffers(Dictionary<(int x, int y, int z), TileBuffer> buffers, string baseFolder, string fileOnly, int fileIndex)
+        {
+            foreach (var kv in buffers)
+            {
+                var key = kv.Key;
+                var buf = kv.Value;
+
+                if (buf.Count == 0)
+                {
+                    buf.Dispose();
+                    continue;
+                }
+
+                int cellX = key.x;
+                int cellY = key.y;
+                int cellZ = key.z;
+
+                string fullpath = Path.Combine(baseFolder, fileOnly) + "_" + fileIndex + "_" + cellX + "_" + cellY + "_" + cellZ + tileExtension;
+
+                buf.WriteToFiles(fullpath, cellX, cellY, cellZ, key, this);
+
+                // done with chunk
+                buf.Dispose();
+            }
+        }
+
+        private sealed class TileBuffer
+        {
+            private readonly ImportSettings s;
+
+            private float[] x, y, z, r, g, b;
+            private ushort[] intensity;
+            private byte[] classification;
+            private double[] time;
+
+            private int count;
+
+            public long LastAddBytes { get; private set; }
+            public int Count => count;
+
+            public TileBuffer(ImportSettings settings)
+            {
+                s = settings;
+                EnsureCapacity(256);
+            }
+
+            public void Add(float px, float py, float pz, float pr, float pg, float pb, ushort i, double t, byte c, byte flags)
+            {
+                EnsureCapacity(count + 1);
+
+                x[count] = px;
+                y[count] = py;
+                z[count] = pz;
+
+                r[count] = pr;
+                g[count] = pg;
+                b[count] = pb;
+
+                if ((flags & FlagIntensity) != 0) intensity[count] = i;
+                if ((flags & FlagClassification) != 0) classification[count] = c;
+                if ((flags & FlagTime) != 0) time[count] = t;
+
+                count++;
+
+                long add = 24;
+                if ((flags & FlagIntensity) != 0) add += 2;
+                if ((flags & FlagClassification) != 0) add += 1;
+                if ((flags & FlagTime) != 0) add += 8;
+                LastAddBytes = add;
+            }
+
+            private void EnsureCapacity(int want)
+            {
+                int cap = x != null ? x.Length : 0;
+                if (cap >= want) return;
+
+                int newCap = cap == 0 ? 256 : cap;
+                while (newCap < want)
+                    newCap = newCap < 1024 ? newCap * 2 : newCap + (newCap / 2);
+
+                x = Grow(x, newCap);
+                y = Grow(y, newCap);
+                z = Grow(z, newCap);
+
+                r = Grow(r, newCap);
+                g = Grow(g, newCap);
+                b = Grow(b, newCap);
+
+                if (s.importRGB && s.importIntensity)
+                    intensity = Grow(intensity, newCap);
+                if (s.importRGB && s.importClassification)
+                    classification = Grow(classification, newCap);
+                if (s.averageTimestamp)
+                    time = Grow(time, newCap);
+            }
+
+            private static T[] Grow<T>(T[] arr, int newCap)
+            {
+                var pool = ArrayPool<T>.Shared;
+                T[] next = pool.Rent(newCap);
+
+                if (arr != null)
+                {
+                    Array.Copy(arr, 0, next, 0, arr.Length);
+                    pool.Return(arr, clearArray: true);
+                }
+
+                return next;
+            }
+
+            public void Dispose()
+            {
+                Return(ref x);
+                Return(ref y);
+                Return(ref z);
+                Return(ref r);
+                Return(ref g);
+                Return(ref b);
+                Return(ref intensity);
+                Return(ref classification);
+                Return(ref time);
+                count = 0;
+            }
+
+            private static void Return<T>(ref T[] arr)
+            {
+                if (arr == null) return;
+                ArrayPool<T>.Shared.Return(arr, clearArray: true);
+                arr = null;
+            }
+
+            public void WriteToFiles(string fullpath, int cellX, int cellY, int cellZ, (int x, int y, int z) key, PCROOT self)
+            {
+                int[] order = null;
+
+                try
+                {
+                    // Optional chunk randomization: one order used for pct + rgb + int + cla
+                    if (self.importSettings.randomize && count > 1)
+                    {
+                        order = ArrayPool<int>.Shared.Rent(count);
+                        for (int i = 0; i < count; i++) order[i] = i;
+
+                        int seed = HashKey(key.x, key.y, key.z) ^ count;
+                        var rnd = new Random(seed);
+
+                        for (int i = count - 1; i > 0; i--)
+                        {
+                            int j = rnd.Next(i + 1);
+                            int tmp = order[i];
+                            order[i] = order[j];
+                            order[j] = tmp;
+                        }
+                    }
+
+                    // Append points (.pct)
+                    using (var writerPoints = new BinaryWriter(new BufferedStream(
+                        new FileStream(fullpath, FileMode.Append, FileAccess.Write, FileShare.Read))))
+                    {
+                        if (order == null)
+                        {
+                            for (int i = 0; i < count; i++)
+                                WriteOnePoint(i, writerPoints, cellX, cellY, cellZ, self);
+                        }
+                        else
+                        {
+                            for (int k = 0; k < count; k++)
+                                WriteOnePoint(order[k], writerPoints, cellX, cellY, cellZ, self);
+                        }
+                    }
+
+                    // Separate outputs when not packed
+                    if (!self.importSettings.packColors && !useLossyFiltering)
+                    {
+                        // .rgb
+                        using (var writerColors = new BinaryWriter(new BufferedStream(
+                            new FileStream(fullpath + ".rgb", FileMode.Append, FileAccess.Write, FileShare.Read))))
+                        {
+                            if (order == null)
+                            {
+                                for (int i = 0; i < count; i++)
+                                {
+                                    self.FloatToBytes(r[i], self.colorBuffer, 0);
+                                    self.FloatToBytes(g[i], self.colorBuffer, 4);
+                                    self.FloatToBytes(b[i], self.colorBuffer, 8);
+                                    writerColors.Write(self.colorBuffer);
+                                }
+                            }
+                            else
+                            {
+                                for (int k = 0; k < count; k++)
+                                {
+                                    int i = order[k];
+                                    self.FloatToBytes(r[i], self.colorBuffer, 0);
+                                    self.FloatToBytes(g[i], self.colorBuffer, 4);
+                                    self.FloatToBytes(b[i], self.colorBuffer, 8);
+                                    writerColors.Write(self.colorBuffer);
+                                }
+                            }
+                        }
+
+                        // .int
+                        if (self.importSettings.importRGB && self.importSettings.importIntensity)
+                        {
+                            using var writerIntensity = new BinaryWriter(new BufferedStream(
+                                new FileStream(fullpath + ".int", FileMode.Append, FileAccess.Write, FileShare.Read)));
+
+                            if (order == null)
+                            {
+                                for (int i = 0; i < count; i++)
+                                {
+                                    float c = intensity[i] / 255f;
+                                    writerIntensity.Write(c);
+                                    writerIntensity.Write(c);
+                                    writerIntensity.Write(c);
+                                }
+                            }
+                            else
+                            {
+                                for (int k = 0; k < count; k++)
+                                {
+                                    int i = order[k];
+                                    float c = intensity[i] / 255f;
+                                    writerIntensity.Write(c);
+                                    writerIntensity.Write(c);
+                                    writerIntensity.Write(c);
+                                }
+                            }
+                        }
+
+                        // .cla
+                        if (self.importSettings.importRGB && self.importSettings.importClassification)
+                        {
+                            using var writerClassification = new BinaryWriter(new BufferedStream(
+                                new FileStream(fullpath + ".cla", FileMode.Append, FileAccess.Write, FileShare.Read)));
+
+                            if (order == null)
+                            {
+                                for (int i = 0; i < count; i++)
+                                {
+                                    float c = classification[i] / 255f;
+                                    writerClassification.Write(c);
+                                    writerClassification.Write(c);
+                                    writerClassification.Write(c);
+                                }
+                            }
+                            else
+                            {
+                                for (int k = 0; k < count; k++)
+                                {
+                                    int i = order[k];
+                                    float c = classification[i] / 255f;
+                                    writerClassification.Write(c);
+                                    writerClassification.Write(c);
+                                    writerClassification.Write(c);
+                                }
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    if (order != null)
+                        ArrayPool<int>.Shared.Return(order, clearArray: true);
+                }
+            }
+
+            private void WriteOnePoint(int i, BinaryWriter writerPoints, int cellX, int cellY, int cellZ, PCROOT self)
+            {
+                float px = x[i];
+                float py = y[i];
+                float pz = z[i];
+
+                int packedX = 0;
+                int packedY = 0;
+
+                if (self.importSettings.packColors)
+                {
+                    px -= (cellX * self.importSettings.gridSize);
+                    py -= (cellY * self.importSettings.gridSize);
+                    pz -= (cellZ * self.importSettings.gridSize);
+
+                    if (self.importSettings.importRGB && self.importSettings.importIntensity && !self.importSettings.importClassification)
+                    {
+                        float c = py;
+                        int cIntegral = (int)c;
+                        int cFractional = (int)((c - cIntegral) * 255);
+                        byte bg = (byte)(g[i] * 255);
+                        byte bi = self.importSettings.useCustomIntensityRange ? (byte)(intensity[i] / 257) : (byte)intensity[i];
+                        packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
+                    }
+                    else if (self.importSettings.importRGB && !self.importSettings.importIntensity && self.importSettings.importClassification)
+                    {
+                        float c = py;
+                        int cIntegral = (int)c;
+                        int cFractional = (int)((c - cIntegral) * 255);
+                        byte bg = (byte)(g[i] * 255);
+                        byte bc = classification[i];
+                        packedY = (bg << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
+                    }
+                    else if (self.importSettings.importRGB && self.importSettings.importIntensity && self.importSettings.importClassification)
+                    {
+                        float c = py;
+                        int cIntegral = (int)c;
+                        int cFractional = (int)((c - cIntegral) * 255);
+                        byte bg = (byte)(g[i] * 255);
+                        byte bi = self.importSettings.useCustomIntensityRange ? (byte)(intensity[i] / 257) : (byte)intensity[i];
+                        packedY = (bg << 24) | (bi << 16) | (cIntegral << 8) | cFractional;
+                    }
+                    else
+                    {
+                        py = Tools.SuperPacker(g[i] * 0.98f, py, self.importSettings.gridSize * self.importSettings.packMagicValue);
+                    }
+
+                    if (self.importSettings.importRGB && self.importSettings.importIntensity && self.importSettings.importClassification)
+                    {
+                        float c = px;
+                        int cIntegral = (int)c;
+                        int cFractional = (int)((c - cIntegral) * 255);
+                        byte br = (byte)(r[i] * 255);
+                        byte bc = classification[i];
+                        packedX = (br << 24) | (bc << 16) | (cIntegral << 8) | cFractional;
+                    }
+                    else
+                    {
+                        px = Tools.SuperPacker(r[i] * 0.98f, px, self.importSettings.gridSize * self.importSettings.packMagicValue);
+                    }
+
+                    pz = Tools.SuperPacker(b[i] * 0.98f, pz, self.importSettings.gridSize * self.importSettings.packMagicValue);
+                }
+
+                if (self.importSettings.packColors && self.importSettings.importRGB && self.importSettings.importIntensity && self.importSettings.importClassification)
+                    self.IntToBytes(packedX, self.pointBuffer, 0);
+                else
+                    self.FloatToBytes(px, self.pointBuffer, 0);
+
+                if (self.importSettings.packColors && self.importSettings.importRGB && (self.importSettings.importIntensity || self.importSettings.importClassification))
+                    self.IntToBytes(packedY, self.pointBuffer, 4);
+                else
+                    self.FloatToBytes(py, self.pointBuffer, 4);
+
+                self.FloatToBytes(pz, self.pointBuffer, 8);
+                writerPoints.Write(self.pointBuffer);
+            }
         }
     }
 }

@@ -39,7 +39,6 @@ namespace PointCloudConverter
 
         static ILogger Log;
 
-
         public void InitWriterPool(int maxThreads, ExportFormat export)
         {
             //exportFormat = export;
@@ -97,7 +96,25 @@ namespace PointCloudConverter
                     return new UCPC();
                     break;
                 case ExportFormat.PCROOT:
-                    return new PCROOT(null); // No taskId when creating the pool, it's assigned later
+                    var pcrootWriter = new PCROOT(null);
+
+                    if (usethreadMemLimit == true)
+                    {
+                        pcrootWriter.ThreadMemoryBudgetGB = threadMemGB;
+                    }
+                    else // use max available memory split by max threads
+                    {
+                        // get available memory
+                        ulong availableMemory = (ulong)System.GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+                        // convert to GB
+                        ulong availableMemoryGB = availableMemory / (1024 * 1024 * 1024);
+                        // divide by max threads
+                        threadMemGB = (int)(availableMemoryGB / (ulong)_maxWriters);
+                        // set a minimum of 2GB per thread
+                        if (threadMemGB < 2) threadMemGB = 2;
+                        pcrootWriter.ThreadMemoryBudgetGB = threadMemGB;
+                    }
+                    return pcrootWriter; // No taskId when creating the pool, it's assigned later
                     break;
                 case ExportFormat.External:
                     // get name from current writer type
@@ -241,6 +258,8 @@ namespace PointCloudConverter
         public bool useFilter { get; set; } = false; // filter by distance
         public float filterDistance { get; set; } = 0.5f;
         public bool sRGB { get; set; } = false; // use sRGB color space for RGB values
+        public bool usethreadMemLimit { get; set; } = false;
+        public int threadMemGB { get; set; } = 8; // only for PCROOT writer, memory per thread in GB
 
         public override string ToString()
         {

@@ -448,7 +448,7 @@ namespace PointCloudConverter
             Console.WriteLine("-usegrid" + argSeparator + "true\t\tSplits point cloud to grid (multiple files). Required for V3 format (automatically enabled if its off). \tDefault is true for v3");
             Console.WriteLine("-offsetmode" + argSeparator + "min\t\tGet auto-offset bounds, min=min from all bounds, legacy=first cloud min bound\tDefault is min");
             Console.WriteLine("-srgb" + argSeparator + "false\t\tConvert raw sRGB values to Linear RGB\tDefault is false, enable this is your model seems too bright");
-
+            Console.WriteLine("-threadmemgb" + argSeparator + "8\t\tLimit maximum memory usage per thread (PCROOT only)\tDefault is 8gb per thread");
 
             Console.WriteLine("");
             Console.WriteLine("? /? -? help -help /help");
