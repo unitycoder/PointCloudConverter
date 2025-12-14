@@ -106,6 +106,8 @@ namespace PointCloudConverter.Writers
 
         static ILogger Log;
 
+        static int initialCapacity = 65536;
+
         public PCROOT(int? _taskID)
         {
         }
@@ -197,19 +199,43 @@ namespace PointCloudConverter.Writers
             // Get or create point data for this cell
             if (!nodeData.TryGetValue(key, out var data))
             {
+                //data = new PointData
+                //{
+                //    X = new List<float> { x },
+                //    Y = new List<float> { y },
+                //    Z = new List<float> { z },
+                //    R = new List<float> { r },
+                //    G = new List<float> { g },
+                //    B = new List<float> { b }
+                //};
+
+                //if (importSettings.importRGB && importSettings.importIntensity) data.Intensity = new List<ushort> { intensity };
+                //if (importSettings.importRGB && importSettings.importClassification) data.Classification = new List<byte> { classification };
+                //if (importSettings.averageTimestamp) data.Time = new List<double> { time };
+
                 data = new PointData
                 {
-                    X = new List<float> { x },
-                    Y = new List<float> { y },
-                    Z = new List<float> { z },
-                    R = new List<float> { r },
-                    G = new List<float> { g },
-                    B = new List<float> { b }
+                    X = new List<float>(initialCapacity),
+                    Y = new List<float>(initialCapacity),
+                    Z = new List<float>(initialCapacity),
+                    R = new List<float>(initialCapacity),
+                    G = new List<float>(initialCapacity),
+                    B = new List<float>(initialCapacity),
+
+                    Intensity = importSettings.importRGB && importSettings.importIntensity ? new List<ushort>(initialCapacity) : null,
+                    Classification = importSettings.importRGB && importSettings.importClassification ? new List<byte>(initialCapacity) : null,
+                    Time = importSettings.averageTimestamp ? new List<double>(initialCapacity) : null,
                 };
 
-                if (importSettings.importRGB && importSettings.importIntensity) data.Intensity = new List<ushort> { intensity };
-                if (importSettings.importRGB && importSettings.importClassification) data.Classification = new List<byte> { classification };
-                if (importSettings.averageTimestamp) data.Time = new List<double> { time };
+                data.X.Add(x);
+                data.Y.Add(y);
+                data.Z.Add(z);
+                data.R.Add(r);
+                data.G.Add(g);
+                data.B.Add(b);
+                if (importSettings.importRGB && importSettings.importIntensity) data.Intensity.Add(intensity);
+                if (importSettings.importRGB && importSettings.importClassification) data.Classification.Add(classification);
+                if (importSettings.averageTimestamp) data.Time.Add(time);
 
                 nodeData[key] = data;
             }
@@ -227,7 +253,7 @@ namespace PointCloudConverter.Writers
                 if (importSettings.importRGB && importSettings.importClassification) data.Classification.Add(classification);
                 if (importSettings.averageTimestamp) data.Time.Add(time);
             }
-        }
+        } // AddPoint()
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void FloatToBytes(float value, byte[] buffer, int offset)
@@ -603,7 +629,39 @@ namespace PointCloudConverter.Writers
                 }
 
                 nodeBoundsBag.Add(cb);
+            } // for all tiles
+
+            // release actual memory with trim or replace array
+            //1.Dispose / clear the PointData values and set their lists to null(or reallocate new ones via pooling).
+            foreach (var data in nodeData.Values)
+            {
+                data.X.Clear();
+                data.Y.Clear();
+                data.Z.Clear();
+                data.R.Clear();
+                data.G.Clear();
+                data.B.Clear();
+                data.Intensity?.Clear();
+                data.Classification?.Clear();
+                data.Time?.Clear();
+
+                data.X = null;
+                data.Y = null;
+                data.Z = null;
+                data.R = null;
+                data.G = null;
+                data.B = null;
+                data.Intensity = null;
+                data.Classification = null;
+                data.Time = null;
             }
+            nodeData.Clear();
+
+            // gc clear
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+
 
             string jsonString = "{" +
                                 "\"event\": \"" + LogEvent.File + "\"," +
@@ -613,7 +671,7 @@ namespace PointCloudConverter.Writers
                                 "\"folder\": " + JsonSerializer.Serialize(baseFolder) + "," +
                                 "\"filenames\": " + JsonSerializer.Serialize(outputFiles) + "}";
             Log.Write(jsonString, LogEvent.End);
-        }
+        } // Save()
 
         void IWriter.Close()
         {
