@@ -70,7 +70,7 @@ namespace PointCloudConverter.Readers
 
         public Bounds GetBounds() => bounds;
 
-        public bool GetXYZ(out float x, out float y, out float z)
+        public bool GetXYZ(out double x, out double y, out double z)
         {
             if (currentChunkIndex >= vertexChunks.Count)
             {

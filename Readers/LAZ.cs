@@ -416,7 +416,7 @@ namespace PointCloudConverter.Readers
             return finalClassification;
         }
 
-        public bool GetXYZ(out float x, out float y, out float z)
+        public bool GetXYZ(out double x, out double y, out double z)
         {
             int err = lazReader.read_point();
             if (err != 0)
@@ -429,9 +429,9 @@ namespace PointCloudConverter.Readers
                 return false;
             }
 
-            x = (float)(lazReader.header.x_scale_factor * lazReader.point.X + lazReader.header.x_offset);
-            y = (float)(lazReader.header.y_scale_factor * lazReader.point.Y + lazReader.header.y_offset);
-            z = (float)(lazReader.header.z_scale_factor * lazReader.point.Z + lazReader.header.z_offset);
+            x = lazReader.header.x_scale_factor * lazReader.point.X + lazReader.header.x_offset;
+            y = lazReader.header.y_scale_factor * lazReader.point.Y + lazReader.header.y_offset;
+            z = lazReader.header.z_scale_factor * lazReader.point.Z + lazReader.header.z_offset;
 
             return true;
         }

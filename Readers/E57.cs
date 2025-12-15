@@ -20,7 +20,7 @@ namespace PointCloudConverter.Readers
         private ASTM_E57.E57FileHeader header;
         private E57MetaData metaData;
 
-        private Float3 lastXYZ;
+        private Double3 lastXYZ;
 
         public struct E57MetaData
         {
@@ -122,7 +122,7 @@ namespace PointCloudConverter.Readers
             return header?.E57Root?.Data3D?[0]?.Points?.RecordCount ?? 0;
         }
 
-        public bool GetXYZ(out float x, out float y, out float z)
+        public bool GetXYZ(out double x, out double y, out double z)
         {
             if (currentChunk == null || currentPointIndex >= currentChunk.Count)
             {

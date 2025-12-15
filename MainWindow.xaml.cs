@@ -280,7 +280,7 @@ namespace PointCloudConverter
             progressTotalFiles = importSettings.maxFiles - 1;
             if (progressTotalFiles < 0) progressTotalFiles = 0;
 
-            List<Float3> boundsListTemp = new List<Float3>();
+            List<Double3> boundsListTemp = new List<Double3>();
 
             // clear filter by distance
             occupiedCells.Clear();
@@ -311,7 +311,7 @@ namespace PointCloudConverter
 
                     if (res.Item1 == true)
                     {
-                        boundsListTemp.Add(new Float3(res.Item2, res.Item3, res.Item4));
+                        boundsListTemp.Add(new Double3(res.Item2, res.Item3, res.Item4));
                     }
                     else
                     {
@@ -848,7 +848,7 @@ namespace PointCloudConverter
                     }
 
                     // get point XYZ
-                    var success = taskReader.GetXYZ(out float px, out float py, out float pz);
+                    var success = taskReader.GetXYZ(out double px, out double py, out double pz);
                     if (!success) break; // TODO display errors somewhere
 
                     // get point color
@@ -911,7 +911,7 @@ namespace PointCloudConverter
                     // filtering is done after scaling and offsets
                     if (importSettings.useFilter)
                     {
-                        var cell = ((int)MathF.Floor(px / importSettings.filterDistance), (int)MathF.Floor(py / importSettings.filterDistance), (int)MathF.Floor(pz / importSettings.filterDistance));
+                        var cell = ((int)Math.Floor(px / importSettings.filterDistance), (int)Math.Floor(py / importSettings.filterDistance), (int)Math.Floor(pz / importSettings.filterDistance));
 
                         if (!occupiedCells.TryAdd(cell, 0))
                         {
