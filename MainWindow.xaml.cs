@@ -941,7 +941,15 @@ namespace PointCloudConverter
                         // if no rgb, then replace RGB with intensity, NOTE this doesnt work correctly if using detect intensity range! (since raw value is now ushort, can be 0-65k)
                         if (importSettings.importRGB == false)
                         {
-                            pr = intensity / 255f; // convert byte to float
+                            // if custom range, we need to map 0-65535 to 0-255
+                            if (isCustomIntensityRange == true)
+                            {
+                                pr = intensity / 65535f; // convert ushort to float
+                            }
+                            else
+                            {
+                                pr = intensity / 255f; // convert byte to float
+                            }
                             pg = pr;
                             pb = pr;
                         }
