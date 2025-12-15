@@ -213,6 +213,13 @@ namespace PointCloudConverter.Writers
 
         void IWriter.AddPoint(int index, float x, float y, float z, float r, float g, float b, ushort intensity, double time, byte classification)
         {
+            localBounds.minX = Math.Min(localBounds.minX, x);
+            localBounds.minY = Math.Min(localBounds.minY, y);
+            localBounds.minZ = Math.Min(localBounds.minZ, z);
+            localBounds.maxX = Math.Max(localBounds.maxX, x);
+            localBounds.maxY = Math.Max(localBounds.maxY, y);
+            localBounds.maxZ = Math.Max(localBounds.maxZ, z);
+
             if (useLossyFiltering)
             {
                 // Not supported in bucketed mode. Keep it false.
@@ -222,17 +229,22 @@ namespace PointCloudConverter.Writers
 
             float gridSize = importSettings.gridSize;
 
-            int cellX = (int)(x / gridSize);
-            int cellY = (int)(y / gridSize);
-            int cellZ = (int)(z / gridSize);
+            //int cellX = (int)(x / gridSize);
+            //int cellY = (int)(y / gridSize);
+            //int cellZ = (int)(z / gridSize);
+            int cellX = (int)MathF.Floor(x / gridSize);
+            int cellY = (int)MathF.Floor(y / gridSize);
+            int cellZ = (int)MathF.Floor(z / gridSize);
+
 
             int bucketId = BucketIdForKey(cellX, cellY, cellZ);
 
             byte flags = 0;
             if (importSettings.importRGB) flags |= FlagRGB;
-            if (importSettings.importRGB && importSettings.importIntensity) flags |= FlagIntensity;
-            if (importSettings.importRGB && importSettings.importClassification) flags |= FlagClassification;
+            if (importSettings.importIntensity) flags |= FlagIntensity;
+            if (importSettings.importClassification) flags |= FlagClassification;
             if (importSettings.averageTimestamp) flags |= FlagTime;
+
 
             Span<byte> rec = stackalloc byte[BucketRecordBytes];
 
@@ -387,20 +399,24 @@ namespace PointCloudConverter.Writers
                     cb.centerX = (st.MinX + st.MaxX) * 0.5f;
                     cb.centerY = (st.MinY + st.MaxY) * 0.5f;
                     cb.centerZ = (st.MinZ + st.MaxZ) * 0.5f;
-                    cb.cellX = cellX; cb.cellY = cellY; cb.cellZ = cellZ;
 
-                    if (importSettings.averageTimestamp && st.TotalPoints > 0)
-                        cb.averageTimeStamp = st.TimeSum / st.TotalPoints;
+                    if (importSettings.packColors)
+                    {
+                        cb.cellX = cellX;
+                        cb.cellY = cellY;
+                        cb.cellZ = cellZ;
+                    }
+                    else
+                    {
+                        cb.cellX = 0;
+                        cb.cellY = 0;
+                        cb.cellZ = 0;
+                    }
+
+                    if (importSettings.averageTimestamp && st.TotalPoints > 0) cb.averageTimeStamp = st.TimeSum / st.TotalPoints;
 
                     nodeBoundsBag.Add(cb);
                     tilesEmitted++;
-
-                    localBounds.minX = Math.Min(localBounds.minX, st.MinX);
-                    localBounds.minY = Math.Min(localBounds.minY, st.MinY);
-                    localBounds.minZ = Math.Min(localBounds.minZ, st.MinZ);
-                    localBounds.maxX = Math.Max(localBounds.maxX, st.MaxX);
-                    localBounds.maxY = Math.Max(localBounds.maxY, st.MaxY);
-                    localBounds.maxZ = Math.Max(localBounds.maxZ, st.MaxZ);
                 }
 
                 GlobalBounds.Merge(in localBounds);
@@ -780,12 +796,11 @@ namespace PointCloudConverter.Writers
                 g = Grow(g, newCap);
                 b = Grow(b, newCap);
 
-                if (s.importRGB && s.importIntensity)
-                    intensity = Grow(intensity, newCap);
-                if (s.importRGB && s.importClassification)
-                    classification = Grow(classification, newCap);
-                if (s.averageTimestamp)
-                    time = Grow(time, newCap);
+                if (s.importRGB) { r = Grow(r, newCap); g = Grow(g, newCap); b = Grow(b, newCap); }
+                if (s.importIntensity) intensity = Grow(intensity, newCap);
+                if (s.importClassification) classification = Grow(classification, newCap);
+                if (s.averageTimestamp) time = Grow(time, newCap);
+
             }
 
             private static T[] Grow<T>(T[] arr, int newCap)
@@ -1023,7 +1038,7 @@ namespace PointCloudConverter.Writers
                     }
 
                     pz = Tools.SuperPacker(b[i] * 0.98f, pz, self.importSettings.gridSize * self.importSettings.packMagicValue);
-                }
+                } // packColors
 
                 if (self.importSettings.packColors && self.importSettings.importRGB && self.importSettings.importIntensity && self.importSettings.importClassification)
                     self.IntToBytes(packedX, self.pointBuffer, 0);
