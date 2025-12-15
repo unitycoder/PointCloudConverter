@@ -194,6 +194,9 @@
             <StatusBarItem>
                 <Label x:Name="lblStatus" Foreground="{DynamicResource MainText}">Status</Label>
             </StatusBarItem>
+            <StatusBarItem>
+                <Label x:Name="lblTimer" Foreground="{DynamicResource MainText}">Timer</Label>
+            </StatusBarItem>
         </StatusBar>
 
         <!--progress panel-->

@@ -267,6 +267,8 @@ namespace PointCloudConverter.Writers
 
             Log.Write("Bucketed Save(): buckets=" + BucketCount + ", budget=" + ThreadMemoryBudgetBytes + " bytes");
 
+            var startedTiles = new HashSet<(int x, int y, int z)>();
+
             // Read each bucket, build tiles in memory up to budget, flush to disk
             byte[] ioBuf = ArrayPool<byte>.Shared.Rent(Math.Max(BucketBufferBytes, 1 << 20));
 
@@ -337,7 +339,7 @@ namespace PointCloudConverter.Writers
                             // Flush on budget
                             if (approxBytes >= ThreadMemoryBudgetBytes)
                             {
-                                FlushTileBuffers(tileBuffers, baseFolder, fileOnly, fileIndex);
+                                FlushTileBuffers(tileBuffers, baseFolder, fileOnly, fileIndex, startedTiles);
                                 tileBuffers.Clear();
                                 approxBytes = 0;
                             }
@@ -352,7 +354,7 @@ namespace PointCloudConverter.Writers
 
                     if (tileBuffers.Count > 0)
                     {
-                        FlushTileBuffers(tileBuffers, baseFolder, fileOnly, fileIndex);
+                        FlushTileBuffers(tileBuffers, baseFolder, fileOnly, fileIndex, startedTiles);
                         tileBuffers.Clear();
                     }
                 }
@@ -681,31 +683,31 @@ namespace PointCloudConverter.Writers
             return h & (BucketCount - 1);
         }
 
-        private void FlushTileBuffers(Dictionary<(int x, int y, int z), TileBuffer> buffers, string baseFolder, string fileOnly, int fileIndex)
+
+
+        private void FlushTileBuffers(
+            Dictionary<(int x, int y, int z), TileBuffer> buffers,
+            string baseFolder, string fileOnly, int fileIndex,
+            HashSet<(int x, int y, int z)> startedTiles)
         {
             foreach (var kv in buffers)
             {
                 var key = kv.Key;
                 var buf = kv.Value;
 
-                if (buf.Count == 0)
-                {
-                    buf.Dispose();
-                    continue;
-                }
+                if (buf.Count == 0) { buf.Dispose(); continue; }
 
-                int cellX = key.x;
-                int cellY = key.y;
-                int cellZ = key.z;
+                int cellX = key.x, cellY = key.y, cellZ = key.z;
 
                 string fullpath = Path.Combine(baseFolder, fileOnly) + "_" + fileIndex + "_" + cellX + "_" + cellY + "_" + cellZ + tileExtension;
 
-                buf.WriteToFiles(fullpath, cellX, cellY, cellZ, key, this);
+                bool firstWrite = startedTiles.Add(key);
+                buf.WriteToFiles(fullpath, cellX, cellY, cellZ, key, this, firstWrite);
 
-                // done with chunk
                 buf.Dispose();
             }
         }
+
 
         private sealed class TileBuffer
         {
@@ -812,7 +814,7 @@ namespace PointCloudConverter.Writers
                 arr = null;
             }
 
-            public void WriteToFiles(string fullpath, int cellX, int cellY, int cellZ, (int x, int y, int z) key, PCROOT self)
+            public void WriteToFiles(string fullpath, int cellX, int cellY, int cellZ, (int x, int y, int z) key, PCROOT self, bool firstWrite)
             {
                 int[] order = null;
 
@@ -836,9 +838,11 @@ namespace PointCloudConverter.Writers
                         }
                     }
 
+                    var mode = firstWrite ? FileMode.Create : FileMode.Append;
+
                     // Append points (.pct)
                     using (var writerPoints = new BinaryWriter(new BufferedStream(
-                        new FileStream(fullpath, FileMode.Append, FileAccess.Write, FileShare.Read))))
+                        new FileStream(fullpath, mode, FileAccess.Write, FileShare.Read))))
                     {
                         if (order == null)
                         {

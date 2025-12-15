@@ -26,13 +26,13 @@ using System.Globalization;
 using System.Windows.Media;
 using PointCloudConverter.Structs.Metadata;
 
-// TODO test /3gb commandline arg for .NET 8 to allow large objects >2gb
+// NOTE can test /3gb commandline arg for .NET 8 to allow large objects >2gb
 
 namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "14.12.2025";
+        static readonly string version = "15.12.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -249,6 +249,8 @@ namespace PointCloudConverter
             LoadSettings();
         }
 
+        static Stopwatch stopwatch = new Stopwatch();
+
         // main processing loop
         private static async Task ProcessAllFiles(object workerParamsObject)
         {
@@ -262,7 +264,7 @@ namespace PointCloudConverter
                 return;
             }
 
-            Stopwatch stopwatch = new Stopwatch();
+            stopwatch .Reset();
             stopwatch.Start();
 
             // if user has set maxFiles param, loop only that many files
@@ -404,7 +406,7 @@ namespace PointCloudConverter
 
             var tasks = new List<Task>();
 
-
+            // launch tasks for all files
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
                 await semaphore.WaitAsync(cancellationToken);     // acquire BEFORE starting task
@@ -531,7 +533,6 @@ namespace PointCloudConverter
 
             stopwatch.Stop();
             Log.Write("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
-            stopwatch.Reset();
 
             Application.Current.Dispatcher.Invoke(new Action(() =>
             {
@@ -640,6 +641,9 @@ namespace PointCloudConverter
                 mainWindowStatic.progressBarFiles.Value = progressFile;
                 mainWindowStatic.progressBarFiles.Maximum = progressTotalFiles + 1;
                 mainWindowStatic.lblStatus.Content = lastStatusMessage;
+
+                mainWindowStatic.lblTimer.Content = (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s");
+
 
                 // Update all progress bars based on the current values in the List
                 lock (lockObject) // Lock to safely read progressInfos
