@@ -556,6 +556,8 @@ namespace PointCloudConverter.Writers
 
             nodeBounds.Clear();
             localBounds.Init();
+
+            nodeBoundsBag.Clear();
         }
 
         void IWriter.Cleanup(int fileIndex)
@@ -754,6 +756,13 @@ namespace PointCloudConverter.Writers
                 LastAddBytes = add;
             }
 
+            private static float NormalizeIntensity(ushort value, ImportSettings settings)
+            {
+                float max = settings.useCustomIntensityRange ? 65535f : 255f;
+                float clamped = Math.Clamp(value, 0f, max);
+                return clamped / max;
+            }
+
             private void EnsureCapacity(int want)
             {
                 int cap = x != null ? x.Length : 0;
@@ -861,7 +870,7 @@ namespace PointCloudConverter.Writers
                     {
                         // .rgb
                         using (var writerColors = new BinaryWriter(new BufferedStream(
-                            new FileStream(fullpath + ".rgb", FileMode.Append, FileAccess.Write, FileShare.Read))))
+                            new FileStream(fullpath + ".rgb", mode, FileAccess.Write, FileShare.Read))))
                         {
                             if (order == null)
                             {
@@ -890,13 +899,13 @@ namespace PointCloudConverter.Writers
                         if (self.importSettings.importRGB && self.importSettings.importIntensity)
                         {
                             using var writerIntensity = new BinaryWriter(new BufferedStream(
-                                new FileStream(fullpath + ".int", FileMode.Append, FileAccess.Write, FileShare.Read)));
+                                new FileStream(fullpath + ".int", mode, FileAccess.Write, FileShare.Read)));
 
                             if (order == null)
                             {
                                 for (int i = 0; i < count; i++)
                                 {
-                                    float c = intensity[i] / 255f;
+                                    float c = NormalizeIntensity(intensity[i], self.importSettings);
                                     writerIntensity.Write(c);
                                     writerIntensity.Write(c);
                                     writerIntensity.Write(c);
@@ -907,7 +916,7 @@ namespace PointCloudConverter.Writers
                                 for (int k = 0; k < count; k++)
                                 {
                                     int i = order[k];
-                                    float c = intensity[i] / 255f;
+                                    float c = NormalizeIntensity(intensity[i], self.importSettings);
                                     writerIntensity.Write(c);
                                     writerIntensity.Write(c);
                                     writerIntensity.Write(c);
@@ -919,7 +928,7 @@ namespace PointCloudConverter.Writers
                         if (self.importSettings.importRGB && self.importSettings.importClassification)
                         {
                             using var writerClassification = new BinaryWriter(new BufferedStream(
-                                new FileStream(fullpath + ".cla", FileMode.Append, FileAccess.Write, FileShare.Read)));
+                                new FileStream(fullpath + ".cla", mode, FileAccess.Write, FileShare.Read)));
 
                             if (order == null)
                             {
@@ -1028,7 +1037,8 @@ namespace PointCloudConverter.Writers
 
                 self.FloatToBytes(pz, self.pointBuffer, 8);
                 writerPoints.Write(self.pointBuffer);
-            }
-        }
-    }
-}
+            } // WriteOnePoint
+        } // class TileBuffer
+
+    } // class
+} // namespace
