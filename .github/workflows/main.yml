@@ -24,7 +24,7 @@ jobs:
         shell: powershell
         run: |
           # cancel early, if not build commit
-          $strVal ='${{ github.event.commits[0].message }}'
+          $strVal ='${{ github.event. head_commit.message }}'
           if($strVal -clike '*#BUILD*') 
           {
                 Write-Host 'True'
