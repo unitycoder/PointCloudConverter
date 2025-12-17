@@ -148,7 +148,7 @@
                 <CheckBox x:Name="chkGetAvgTileTimestamp" Content="Get Average timestamp per Tile" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Experimental: Calculate average raw gps_time from tile points and save into pcroot"/>
                 <CheckBox x:Name="chkCalculateOverlappingTiles" Content="Calculate overlapping tiles" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Experimental: Save additional overlapped tile data into pcroot (if tile overlaps another tile)"/>
                 <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-                    <CheckBox x:Name="chkUseMemoryLimit" Content="Memory limit:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Limit memory usage, Default is 8gb per thread!"/>
+                    <CheckBox x:Name="chkUseMemoryLimit" Content="Memory limit:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" ToolTip="Limit memory usage, Default is max available PER Thread!"/>
                     <TextBox x:Name="txtMemoryLimit" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="8"/>
                     <Label Content="GB *Per Thread" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
                 </StackPanel>

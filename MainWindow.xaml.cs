@@ -264,7 +264,7 @@ namespace PointCloudConverter
                 return;
             }
 
-            stopwatch .Reset();
+            stopwatch.Reset();
             stopwatch.Start();
 
             // if user has set maxFiles param, loop only that many files
@@ -1292,6 +1292,9 @@ namespace PointCloudConverter
                         case "offset":
                             chkAutoOffset.IsChecked = value.ToLower() == "true";
                             break;
+                        case "offsetmode":
+                            txtOffsetMode.Text = value;
+                            break;
                         case "rgb":
                             chkImportRGB.IsChecked = value.ToLower() == "true";
                             break;
@@ -1367,6 +1370,23 @@ namespace PointCloudConverter
                             break;
                         case "customintensityrange":
                             chkCustomIntensityRange.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "detectintensityrange":
+                            chkDetectIntensityRange.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "filter":
+                            chkUseFilter.IsChecked = true;
+                            txtFilterDistance.Text = value;
+                            break;
+                        case "srgb":
+                            chkConvertSRGB.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "usegrid":
+                            chkUseGrid.IsChecked = value.ToLower() == "true";
+                            break;
+                        case "threadmemgb":
+                            chkUseMemoryLimit.IsChecked = true;
+                            txtMemoryLimit.Text = value;
                             break;
                         default:
                             Console.WriteLine($"Unknown argument: {key}");

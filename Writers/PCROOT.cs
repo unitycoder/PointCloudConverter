@@ -1,11 +1,4 @@
 ﻿// PCROOT (v3) Exporter https://github.com/unitycoder/UnityPointCloudViewer/wiki/Binary-File-Format-Structure#custom-v3-tiles-pcroot-and-pct-rgb
-// Low-RAM bucketed implementation:
-// - AddPoint() spills each point into one of N bucket files (sequential writes).
-// - Save() reads buckets back one by one, accumulates tiles up to a memory budget, flushes to final pct/rgb/int/cla.
-// - Preserves: packColors, importIntensity, importClassification, averageTimestamp, minimumPointCount, randomize (chunk shuffle).
-// Notes:
-// - useLossyFiltering is not supported in this bucketed path (kept false).
-// - randomize is done per flushed chunk (not a perfect whole-tile Fisher-Yates unless a tile fits in memory).
 
 using PointCloudConverter.Logger;
 using System;
@@ -583,6 +576,7 @@ namespace PointCloudConverter.Writers
             tileStats.Clear();
         }
 
+
         public void SetIntensityRange(bool isCustomRange)
         {
             importSettings.useCustomIntensityRange = isCustomRange;
@@ -701,8 +695,6 @@ namespace PointCloudConverter.Writers
             return h & (BucketCount - 1);
         }
 
-
-
         private void FlushTileBuffers(
             Dictionary<(int x, int y, int z), TileBuffer> buffers,
             string baseFolder, string fileOnly, int fileIndex,
@@ -725,7 +717,6 @@ namespace PointCloudConverter.Writers
                 buf.Dispose();
             }
         }
-
 
         private sealed class TileBuffer
         {
