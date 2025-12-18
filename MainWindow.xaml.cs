@@ -302,7 +302,8 @@ namespace PointCloudConverter
                 {
                     if (cancellationToken.IsCancellationRequested)
                     {
-                        return; // Exit the loop if cancellation is requested
+                        Environment.ExitCode = (int)ExitCode.Cancelled;
+                        return; // Exit if cancellation is requested
                     }
 
                     progressFile = i;
@@ -357,35 +358,6 @@ namespace PointCloudConverter
             jobMetadata.lasHeaders.Clear();
             progressFile = 0;
 
-            //for (int i = 0, len = importSettings.maxFiles; i < len; i++)
-            //{
-            //    if (cancellationToken.IsCancellationRequested)
-            //    {
-            //        return; // Exit the loop if cancellation is requested
-            //    }
-
-            //    progressFile = i;
-            //    Log.Write("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
-            //    //Debug.WriteLine("\nReading file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
-            //    //if (abort==true) 
-            //    // do actual point cloud parsing for this file
-            //    var res = ParseFile(importSettings, i);
-            //    if (res == false)
-            //    {
-            //        errorCounter++;
-            //        if (importSettings.useJSONLog)
-            //        {
-            //            Log.Write("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
-            //        }
-            //        else
-            //        {
-            //            Log.Write("Error> Failed to parse file: " + importSettings.inputFiles[i], LogEvent.Error);
-            //        }
-            //    }
-            //}
-            //// hack to fix progress bar not updating on last file
-            //progressFile++;
-
             // clamp to maxfiles
             int maxThreads = Math.Min(importSettings.maxThreads, importSettings.maxFiles);
             // clamp to min 1
@@ -409,11 +381,17 @@ namespace PointCloudConverter
             // launch tasks for all files
             for (int i = 0, len = importSettings.maxFiles; i < len; i++)
             {
-                await semaphore.WaitAsync(cancellationToken);     // acquire BEFORE starting task
-                int index = i;                                     // capture
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    Environment.ExitCode = (int)ExitCode.Cancelled;
+                    break;
+                }
+
+                await semaphore.WaitAsync();
+                int index = i;
                 tasks.Add(Task.Run(() =>
                 {
-                    int? taskId = Task.CurrentId;                  // may be null; your pool should accept null
+                    int? taskId = Task.CurrentId;
 
                     try
                     {
@@ -457,18 +435,21 @@ namespace PointCloudConverter
                     finally
                     {
                         Interlocked.Increment(ref progressFile);
-                        // make sure we don't keep heavy buffers in the pools.
-                        //try { importSettings.ReleaseReader(taskId); } catch { }
-                        //try { importSettings.ReleaseWriter(taskId); } catch { }
                         // release exactly once per WaitAsync
                         semaphore.Release();
                     }
                 }, cancellationToken));
+            } // for all files
+
+            try
+            {
+                await Task.WhenAll(tasks); // Wait for all tasks to complete or be canceled
             }
-
-            await Task.WhenAll(tasks); // Wait for all tasks to complete
-
-            //Trace.WriteLine(" ---------------------- all finished -------------------- ");
+            catch (OperationCanceledException)
+            {
+                // Treat cancellation as a normal outcome
+                Environment.ExitCode = (int)ExitCode.Cancelled;
+            }
 
             // now write header for for pcroot (using main writer)
             if (importSettings.exportFormat != ExportFormat.UCPC)
@@ -477,9 +458,6 @@ namespace PointCloudConverter
                 // UCPC calls close in Save() itself
             }
 
-            // if this was last file
-            //if (fileIndex == (importSettings.maxFiles - 1))
-            //            {
             JsonSerializerSettings settings = new JsonSerializerSettings
             {
                 StringEscapeHandling = StringEscapeHandling.Default // This prevents escaping of characters and write the WKT string properly
@@ -491,8 +469,6 @@ namespace PointCloudConverter
 
             string jsonMeta = JsonConvert.SerializeObject(jobMetadata, settings);
 
-            // var jsonMeta = JsonSerializer.Serialize(lasHeaders, new JsonSerializerOptions() { WriteIndented = true });
-            //Log.Write("MetaData: " + jsonMeta);
             // write metadata to file
             if (importSettings.importMetadata == true)
             {
@@ -529,7 +505,6 @@ namespace PointCloudConverter
                     }
                 }
             });
-            //    } // if last file
 
             stopwatch.Stop();
             Log.Write("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
@@ -544,7 +519,6 @@ namespace PointCloudConverter
                 progressTimerThread.Stop();
                 progressTimerThread = null;
                 mainWindowStatic.progressBarFiles.Foreground = Brushes.Green;
-                //mainWindowStatic.progressBarPoints.Foreground = Brushes.Green;
             }));
         } // ProcessAllFiles
 
@@ -700,359 +674,358 @@ namespace PointCloudConverter
         static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId, CancellationToken cancellationToken)
         {
             progressTotalPoints = 0;
-
             Log.Write("Started processing file: " + importSettings.inputFiles[fileIndex]);
 
-            // each thread needs its own reader
-            bool res;
-
-            //importSettings.reader = new LAZ(taskId);
             IReader taskReader = importSettings.GetOrCreateReader(taskId);
+            ProgressInfo progressInfo = progressInfos[fileIndex % progressInfos.Count];
 
-            ProgressInfo progressInfo = null;
-            //lock (lockObject)
-            {
-                //Log.Write(progressInfos.Count + " : " + fileIndex, LogEvent.Info);
-                progressInfo = progressInfos[fileIndex % progressInfos.Count];
-            }
+            bool success = false;
 
             try
             {
-                res = taskReader.InitReader(importSettings, fileIndex);
-            }
-            catch (Exception)
-            {
-                throw new Exception("Error> Failed to initialize reader: " + importSettings.inputFiles[fileIndex]);
-            }
-
-            //Log.Write("taskid: " + taskId + " reader initialized");
-
-            if (res == false)
-            {
-                Log.Write("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
-                Environment.ExitCode = (int)ExitCode.Error;
-                return false;
-            }
-
-            if (importSettings.importMetadataOnly == false)
-            {
-                long fullPointCount = taskReader.GetPointCount();
-                long pointCount = fullPointCount;
-
-                // show stats for decimations
-                if (importSettings.skipPoints == true)
+                bool res;
+                try
                 {
-                    var afterSkip = (int)Math.Floor(pointCount - (pointCount / (float)importSettings.skipEveryN));
-                    Log.Write("Skip every X points is enabled, original points: " + fullPointCount + ", After skipping:" + afterSkip);
-                    pointCount = afterSkip;
+                    res = taskReader.InitReader(importSettings, fileIndex);
+                }
+                catch (Exception)
+                {
+                    throw new Exception("Error> Failed to initialize reader: " + importSettings.inputFiles[fileIndex]);
                 }
 
-                if (importSettings.keepPoints == true)
+                if (!res)
                 {
-                    Log.Write("Keep every x points is enabled, original points: " + fullPointCount + ", After keeping:" + (pointCount / importSettings.keepEveryN));
-                    pointCount = pointCount / importSettings.keepEveryN;
-                }
-
-                if (importSettings.useLimit == true)
-                {
-                    Log.Write("Original points: " + pointCount + " Limited points: " + importSettings.limit);
-                    pointCount = importSettings.limit > pointCount ? pointCount : importSettings.limit;
-                }
-                else
-                {
-                    Log.Write("Points: " + pointCount + " (" + importSettings.inputFiles[fileIndex] + ")");
-                }
-
-                // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds?
-
-                // dont use these bounds, in this case
-                if (importSettings.useAutoOffset == true || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true))
-                {
-                    // TODO add manual offset here still?
-                    // we use global bounds or Y offset to fix negative Y
-                }
-                else if (importSettings.useManualOffset == true)
-                {
-                    importSettings.offsetX = importSettings.manualOffsetX;
-                    importSettings.offsetY = importSettings.manualOffsetY;
-                    importSettings.offsetZ = importSettings.manualOffsetZ;
-                }
-                else // no autooffset either
-                {
-                    if (importSettings.useAutoOffset == false)
-                    {
-                        importSettings.offsetX = 0;
-                        importSettings.offsetY = 0;
-                        importSettings.offsetZ = 0;
-                    }
-                }
-
-                //Log.Write("************** Offsets: " + importSettings.offsetX + " " + importSettings.offsetY + " " + importSettings.offsetZ);
-
-                var taskWriter = importSettings.GetOrCreateWriter(taskId);
-
-                // for saving pcroot header, we need this writer
-                //if (importSettings.exportFormat != ExportFormat.UCPC)
-                //{
-                //    var mainWriterRes = importSettings.writer.InitWriter(importSettings, pointCount, Log);
-                //    if (mainWriterRes == false)
-                //    {
-                //        Log.Write("Error> Failed to initialize main Writer, fileindex: " + fileIndex + " taskid:" + taskId);
-                //        return false;
-                //    }
-                //}
-
-                // init writer for this file
-                var writerRes = taskWriter.InitWriter(importSettings, pointCount, Log);
-                if (writerRes == false)
-                {
-                    Log.Write("Error> Failed to initialize Writer, fileindex: " + fileIndex + " taskid:" + taskId);
+                    Log.Write("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
+                    Environment.ExitCode = (int)ExitCode.Error;
                     return false;
                 }
 
-                //progressPoint = 0;
-                progressInfo.CurrentValue = 0;
-                progressInfo.MaxValue = importSettings.useLimit ? pointCount : fullPointCount;
-                progressInfo.FilePath = importSettings.inputFiles[fileIndex];
-
-                lastStatusMessage = "Processing points..";
-
-                string jsonString = "{" +
-                "\"event\": \"" + LogEvent.File + "\"," +
-                "\"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
-                "\"size\": " + new FileInfo(importSettings.inputFiles[fileIndex]).Length + "," +
-                "\"points\": " + pointCount + "," +
-                "\"status\": \"" + LogStatus.Processing + "\"" +
-                "}";
-
-                Log.Write(jsonString, LogEvent.File);
-
-                long checkCancelEvery = Math.Max(1, fullPointCount / 128);
-
-                // detect is 0-255 or 0-65535 range
-                bool isCustomIntensityRange = false;
-
-                // Loop all points
-                // FIXME: would be nicer, if use different STEP value for skip, keep and limit..(to collect points all over the file, not just start)
-                long maxPointIterations = importSettings.useLimit ? pointCount : fullPointCount;
-                for (long i = 0; i < maxPointIterations; i++)
+                if (importSettings.importMetadataOnly == false)
                 {
-                    // check for cancel every 1% of points
-                    if (i % checkCancelEvery == 0)
+                    long fullPointCount = taskReader.GetPointCount();
+                    long pointCount = fullPointCount;
+
+                    // show stats for decimations
+                    if (importSettings.skipPoints == true)
                     {
-                        if (cancellationToken.IsCancellationRequested)
+                        var afterSkip = (int)Math.Floor(pointCount - (pointCount / (float)importSettings.skipEveryN));
+                        Log.Write("Skip every X points is enabled, original points: " + fullPointCount + ", After skipping:" + afterSkip);
+                        pointCount = afterSkip;
+                    }
+
+                    if (importSettings.keepPoints == true)
+                    {
+                        Log.Write("Keep every x points is enabled, original points: " + fullPointCount + ", After keeping:" + (pointCount / importSettings.keepEveryN));
+                        pointCount = pointCount / importSettings.keepEveryN;
+                    }
+
+                    if (importSettings.useLimit == true)
+                    {
+                        Log.Write("Original points: " + pointCount + " Limited points: " + importSettings.limit);
+                        pointCount = importSettings.limit > pointCount ? pointCount : importSettings.limit;
+                    }
+                    else
+                    {
+                        Log.Write("Points: " + pointCount + " (" + importSettings.inputFiles[fileIndex] + ")");
+                    }
+
+                    // NOTE only works with formats that have bounds defined in header, otherwise need to loop whole file to get bounds?
+
+                    // dont use these bounds, in this case
+                    if (importSettings.useAutoOffset == true || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true))
+                    {
+                        // TODO add manual offset here still?
+                        // we use global bounds or Y offset to fix negative Y
+                    }
+                    else if (importSettings.useManualOffset == true)
+                    {
+                        importSettings.offsetX = importSettings.manualOffsetX;
+                        importSettings.offsetY = importSettings.manualOffsetY;
+                        importSettings.offsetZ = importSettings.manualOffsetZ;
+                    }
+                    else // no autooffset either
+                    {
+                        if (importSettings.useAutoOffset == false)
                         {
-                            //Log.Write("Parse task (" + taskId + ") was canceled for: " + importSettings.inputFiles[fileIndex]);
-                            return false;
+                            importSettings.offsetX = 0;
+                            importSettings.offsetY = 0;
+                            importSettings.offsetZ = 0;
                         }
                     }
 
-                    // get point XYZ
-                    var success = taskReader.GetXYZ(out double px, out double py, out double pz);
-                    if (!success) break; // TODO display errors somewhere
+                    //Log.Write("************** Offsets: " + importSettings.offsetX + " " + importSettings.offsetY + " " + importSettings.offsetZ);
 
-                    // get point color
-                    //Color rgb = (default);
-                    float pr = 1f, pg = 1f, pb = 1f;
+                    var taskWriter = importSettings.GetOrCreateWriter(taskId);
 
-                    if (importSettings.importRGB == true)
+                    // for saving pcroot header, we need this writer
+                    //if (importSettings.exportFormat != ExportFormat.UCPC)
+                    //{
+                    //    var mainWriterRes = importSettings.writer.InitWriter(importSettings, pointCount, Log);
+                    //    if (mainWriterRes == false)
+                    //    {
+                    //        Log.Write("Error> Failed to initialize main Writer, fileindex: " + fileIndex + " taskid:" + taskId);
+                    //        return false;
+                    //    }
+                    //}
+
+                    // init writer for this file
+                    var writerRes = taskWriter.InitWriter(importSettings, pointCount, Log);
+                    if (writerRes == false)
                     {
-                        //rgb = taskReader.GetRGB();
-                        taskReader.GetRGB(out pr, out pg, out pb);
+                        Log.Write("Error> Failed to initialize Writer, fileindex: " + fileIndex + " taskid:" + taskId);
+                        return false;
+                    }
 
-                        // convert from srg to linear (if your model seems too bright)
-                        if (importSettings.sRGB)
+                    //progressPoint = 0;
+                    progressInfo.CurrentValue = 0;
+                    progressInfo.MaxValue = importSettings.useLimit ? pointCount : fullPointCount;
+                    progressInfo.FilePath = importSettings.inputFiles[fileIndex];
+
+                    lastStatusMessage = "Processing points..";
+
+                    string jsonString = "{" +
+                    "\"event\": \"" + LogEvent.File + "\"," +
+                    "\"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+                    "\"size\": " + new FileInfo(importSettings.inputFiles[fileIndex]).Length + "," +
+                    "\"points\": " + pointCount + "," +
+                    "\"status\": \"" + LogStatus.Processing + "\"" +
+                    "}";
+
+                    Log.Write(jsonString, LogEvent.File);
+
+                    long checkCancelEvery = Math.Max(1, fullPointCount / 128);
+
+                    // detect is 0-255 or 0-65535 range
+                    bool isCustomIntensityRange = false;
+
+                    // Loop all points
+                    // FIXME: would be nicer, if use different STEP value for skip, keep and limit..(to collect points all over the file, not just start)
+                    long maxPointIterations = importSettings.useLimit ? pointCount : fullPointCount;
+                    for (long i = 0; i < maxPointIterations; i++)
+                    {
+                        // check for cancel every 1% of points
+                        if (i % checkCancelEvery == 0)
                         {
-                            pr = Tools.SRGBToLinear(pr);
-                            pg = Tools.SRGBToLinear(pg);
-                            pb = Tools.SRGBToLinear(pb);
-                        }
-                    }
-
-                    // skip points
-                    if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
-
-                    // keep points
-                    if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
-
-                    // add offsets (its 0 if not used)
-                    px -= importSettings.offsetX;
-                    py -= importSettings.offsetY;
-                    pz -= importSettings.offsetZ;
-
-                    // scale if enabled
-                    if (importSettings.useScale == true)
-                    {
-                        px *= importSettings.scale;
-                        py *= importSettings.scale;
-                        pz *= importSettings.scale;
-                    }
-
-                    // flip if enabled
-                    if (importSettings.swapYZ == true)
-                    {
-                        var temp = pz;
-                        pz = py;
-                        py = temp;
-                    }
-
-                    // flip Z if enabled
-                    if (importSettings.invertZ == true)
-                    {
-                        pz = -pz;
-                    }
-
-                    // flip X if enabled
-                    if (importSettings.invertX == true)
-                    {
-                        px = -px;
-                    }
-
-                    // filtering is done after scaling and offsets
-                    if (importSettings.useFilter)
-                    {
-                        var cell = ((int)Math.Floor(px / importSettings.filterDistance), (int)Math.Floor(py / importSettings.filterDistance), (int)Math.Floor(pz / importSettings.filterDistance));
-
-                        if (!occupiedCells.TryAdd(cell, 0))
-                        {
-                            continue; // cell already taken, skip this point
-                        }
-                    }
-
-                    ushort intensity = 0;
-                    byte classification = 0;
-                    double time = 0;
-
-                    // TODO get intensity as separate value
-                    if (importSettings.importIntensity == true)
-                    {
-                        //intensity = 0;
-                        intensity = taskReader.GetIntensity();
-
-                        //if (i < 20000) Log.Write("int: " + intensity);
-
-                        if (importSettings.detectIntensityRange && isCustomIntensityRange == false)
-                        {
-                            // check if intensity is 0-255 or 0-65535
-                            isCustomIntensityRange = intensity > 255;
-                            //Log.Write("Detecting intensity range " + intensity + " " + (isCustomIntensityRange ? "************" : "")+" "+ importSettings.inputFiles[fileIndex]);
-                        }
-
-                        // if no rgb, then replace RGB with intensity, NOTE this doesnt work correctly if using detect intensity range! (since raw value is now ushort, can be 0-65k)
-                        if (importSettings.importRGB == false)
-                        {
-                            // if custom range, we need to map 0-65535 to 0-255
-                            if (isCustomIntensityRange == true)
+                            if (cancellationToken.IsCancellationRequested)
                             {
-                                pr = intensity / 65535f; // convert ushort to float
+                                //Log.Write("Parse task (" + taskId + ") was canceled for: " + importSettings.inputFiles[fileIndex]);
+                                return false;
                             }
-                            else
-                            {
-                                pr = intensity / 255f; // convert byte to float
-                            }
-                            pg = pr;
-                            pb = pr;
                         }
-                    }
 
-                    // FIXME cannot have both classification and intensity, because both save into RGB here
+                        // get point XYZ
+                        var gotPointData = taskReader.GetXYZ(out double px, out double py, out double pz);
+                        if (!gotPointData) break; // TODO display errors somewhere
 
-                    if (importSettings.importClassification == true)
-                    {
-                        classification = taskReader.GetClassification();
+                        // get point color
+                        //Color rgb = (default);
+                        float pr = 1f, pg = 1f, pb = 1f;
 
-                        //classification = (byte)255;
-
-                        //if (classification<0 || classification>1) Log.Write("****: " + classification.ToString());
-
-                        //if (i < 100000) Log.Write("class: " + classification.ToString());// + " minClass: " + minClass + " maxClass: " + maxClass);
-                        //classification = 0;
-                        //if (intensity.r < minInt)
-                        //{
-                        //    minInt = intensity.r;
-                        //    Log.Write("Min: " + minInt + " Max: " + maxInt);
-                        //}
-                        //if (intensity.r > maxInt)
-                        //{
-                        //    maxInt = intensity.r;
-                        //    Log.Write("Min: " + minInt + " Max: " + maxInt);
-                        //}
-
-                        // if no rgb, then replace RGB with intensity
-                        if (importSettings.importRGB == false)
+                        if (importSettings.importRGB == true)
                         {
-                            pr = classification / 255f;
-                            pg = pr;
-                            pb = pr;
+                            //rgb = taskReader.GetRGB();
+                            taskReader.GetRGB(out pr, out pg, out pb);
+
+                            // convert from srg to linear (if your model seems too bright)
+                            if (importSettings.sRGB)
+                            {
+                                pr = Tools.SRGBToLinear(pr);
+                                pg = Tools.SRGBToLinear(pg);
+                                pb = Tools.SRGBToLinear(pb);
+                            }
                         }
-                    }
 
-                    if (importSettings.averageTimestamp == true)
+                        // skip points
+                        if (importSettings.skipPoints == true && (i % importSettings.skipEveryN == 0)) continue;
+
+                        // keep points
+                        if (importSettings.keepPoints == true && (i % importSettings.keepEveryN != 0)) continue;
+
+                        // add offsets (its 0 if not used)
+                        px -= importSettings.offsetX;
+                        py -= importSettings.offsetY;
+                        pz -= importSettings.offsetZ;
+
+                        // scale if enabled
+                        if (importSettings.useScale == true)
+                        {
+                            px *= importSettings.scale;
+                            py *= importSettings.scale;
+                            pz *= importSettings.scale;
+                        }
+
+                        // flip if enabled
+                        if (importSettings.swapYZ == true)
+                        {
+                            var temp = pz;
+                            pz = py;
+                            py = temp;
+                        }
+
+                        // flip Z if enabled
+                        if (importSettings.invertZ == true)
+                        {
+                            pz = -pz;
+                        }
+
+                        // flip X if enabled
+                        if (importSettings.invertX == true)
+                        {
+                            px = -px;
+                        }
+
+                        // filtering is done after scaling and offsets
+                        if (importSettings.useFilter)
+                        {
+                            var cell = ((int)Math.Floor(px / importSettings.filterDistance), (int)Math.Floor(py / importSettings.filterDistance), (int)Math.Floor(pz / importSettings.filterDistance));
+
+                            if (!occupiedCells.TryAdd(cell, 0))
+                            {
+                                continue; // cell already taken, skip this point
+                            }
+                        }
+
+                        ushort intensity = 0;
+                        byte classification = 0;
+                        double time = 0;
+
+                        // TODO get intensity as separate value
+                        if (importSettings.importIntensity == true)
+                        {
+                            //intensity = 0;
+                            intensity = taskReader.GetIntensity();
+
+                            //if (i < 20000) Log.Write("int: " + intensity);
+
+                            if (importSettings.detectIntensityRange && isCustomIntensityRange == false)
+                            {
+                                // check if intensity is 0-255 or 0-65535
+                                isCustomIntensityRange = intensity > 255;
+                                //Log.Write("Detecting intensity range " + intensity + " " + (isCustomIntensityRange ? "************" : "")+" "+ importSettings.inputFiles[fileIndex]);
+                            }
+
+                            // if no rgb, then replace RGB with intensity, NOTE this doesnt work correctly if using detect intensity range! (since raw value is now ushort, can be 0-65k)
+                            if (importSettings.importRGB == false)
+                            {
+                                // if custom range, we need to map 0-65535 to 0-255
+                                if (isCustomIntensityRange == true)
+                                {
+                                    pr = intensity / 65535f; // convert ushort to float
+                                }
+                                else
+                                {
+                                    pr = intensity / 255f; // convert byte to float
+                                }
+                                pg = pr;
+                                pb = pr;
+                            }
+                        }
+
+                        // FIXME cannot have both classification and intensity, because both save into RGB here
+
+                        if (importSettings.importClassification == true)
+                        {
+                            classification = taskReader.GetClassification();
+
+                            //classification = (byte)255;
+
+                            //if (classification<0 || classification>1) Log.Write("****: " + classification.ToString());
+
+                            //if (i < 100000) Log.Write("class: " + classification.ToString());// + " minClass: " + minClass + " maxClass: " + maxClass);
+                            //classification = 0;
+                            //if (intensity.r < minInt)
+                            //{
+                            //    minInt = intensity.r;
+                            //    Log.Write("Min: " + minInt + " Max: " + maxInt);
+                            //}
+                            //if (intensity.r > maxInt)
+                            //{
+                            //    maxInt = intensity.r;
+                            //    Log.Write("Min: " + minInt + " Max: " + maxInt);
+                            //}
+
+                            // if no rgb, then replace RGB with intensity
+                            if (importSettings.importRGB == false)
+                            {
+                                pr = classification / 255f;
+                                pg = pr;
+                                pb = pr;
+                            }
+                        }
+
+                        if (importSettings.averageTimestamp == true)
+                        {
+                            // get time
+                            time = taskReader.GetTime();
+                            //Console.WriteLine("Time: " + time);
+                        }
+
+                        // collect this point XYZ and RGB into node, optionally intensity also
+                        //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
+                        // TODO can remove importsettings, its already passed on init
+                        taskWriter.AddPoint(index: unchecked((int)i), x: (float)px, y: (float)py, z: (float)pz, r: pr, g: pg, b: pb, intensity: intensity, time: time, classification: classification);
+                        //progressPoint = i;
+                        progressInfo.CurrentValue = i;
+                    } // for all points
+
+                    // hack for missing 100% progress
+                    progressInfo.CurrentValue = maxPointIterations;
+
+                    if (importSettings.detectIntensityRange == true)
                     {
-                        // get time
-                        time = taskReader.GetTime();
-                        //Console.WriteLine("Time: " + time);
+                        taskWriter.SetIntensityRange(isCustomIntensityRange);
                     }
 
-                    // collect this point XYZ and RGB into node, optionally intensity also
-                    //importSettings.writer.AddPoint(i, (float)point.x, (float)point.y, (float)point.z, rgb.r, rgb.g, rgb.b, importSettings.importIntensity, intensity.r, importSettings.averageTimestamp, time);
-                    // TODO can remove importsettings, its already passed on init
-                    taskWriter.AddPoint(index: unchecked((int)i), x: (float)px, y: (float)py, z: (float)pz, r: pr, g: pg, b: pb, intensity: intensity, time: time, classification: classification);
-                    //progressPoint = i;
-                    progressInfo.CurrentValue = i;
-                } // for all points
+                    lastStatusMessage = "Saving files..";
+                    //importSettings.writer.Save(fileIndex);
+                    taskWriter.Save(fileIndex);
+                    lastStatusMessage = "Finished saving..";
+                    //taskReader.Close();
 
-                // hack for missing 100% progress
-                progressInfo.CurrentValue = maxPointIterations;
+                    if (importSettings.importMetadata == true)
+                    {
+                        var metaData = taskReader.GetMetaData(importSettings, fileIndex);
+                        jobMetadata.lasHeaders.Add(metaData);
+                    }
 
-                if (importSettings.detectIntensityRange == true)
+                    //Log.Write("------------ release reader and writer ------------");
+                    importSettings.ReleaseReader(taskId);
+                    //taskReader.Dispose();
+                    importSettings.ReleaseWriter(taskId);
+                    //Log.Write("------------ reader and writer released ------------");
+
+                    // TODO add event for finished writing this file, and return list of output files
+                    //jsonString = "{" +
+                    //    "\"event\": \"" + LogEvent.File + "\"," +
+                    //    "\"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+                    //    //"\"size\": " + new FileInfo(importSettings.inputFiles[fileIndex]).Length + "," +
+                    //    //"\"points\": " + pointCount + "," +
+                    //    "\"status\": \"" + LogStatus.Complete + "\"" +
+                    //    "}";
+
+                    //Log.Write(jsonString, LogEvent.File);
+
+
+                } // if importMetadataOnly == false ^
+                else // only metadata:
                 {
-                    taskWriter.SetIntensityRange(isCustomIntensityRange);
+                    if (importSettings.importMetadata == true)
+                    {
+                        var metaData = taskReader.GetMetaData(importSettings, fileIndex);
+                        jobMetadata.lasHeaders.Add(metaData);
+                    }
                 }
 
-                lastStatusMessage = "Saving files..";
-                //importSettings.writer.Save(fileIndex);
-                taskWriter.Save(fileIndex);
-                lastStatusMessage = "Finished saving..";
-                //taskReader.Close();
-
-                if (importSettings.importMetadata == true)
-                {
-                    var metaData = taskReader.GetMetaData(importSettings, fileIndex);
-                    jobMetadata.lasHeaders.Add(metaData);
-                }
-
-                //Log.Write("------------ release reader and writer ------------");
-                importSettings.ReleaseReader(taskId);
-                //taskReader.Dispose();
-                importSettings.ReleaseWriter(taskId);
-                //Log.Write("------------ reader and writer released ------------");
-
-                // TODO add event for finished writing this file, and return list of output files
-                //jsonString = "{" +
-                //    "\"event\": \"" + LogEvent.File + "\"," +
-                //    "\"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
-                //    //"\"size\": " + new FileInfo(importSettings.inputFiles[fileIndex]).Length + "," +
-                //    //"\"points\": " + pointCount + "," +
-                //    "\"status\": \"" + LogStatus.Complete + "\"" +
-                //    "}";
-
-                //Log.Write(jsonString, LogEvent.File);
-
-
-            } // if importMetadataOnly == false ^
-            else // only metadata:
-            {
-                if (importSettings.importMetadata == true)
-                {
-                    var metaData = taskReader.GetMetaData(importSettings, fileIndex);
-                    jobMetadata.lasHeaders.Add(metaData);
-                }
+                success = true;
+                return true;
             }
-
-            //Log.Write("taskid: " + taskId + " done");
-            return true;
-        } // ParseFile
+            finally
+            {
+                // Always release, even if canceled or an exception happened
+                importSettings.ReleaseReader(taskId);
+                importSettings.ReleaseWriter(taskId);
+            }
+        }
 
         private void btnConvert_Click(object sender, RoutedEventArgs e)
         {

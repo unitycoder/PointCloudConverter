@@ -473,7 +473,7 @@ namespace PointCloudConverter.Writers
                         }
                     }
                 }
-            }
+            } // checkoverlap
 
             string fileOnly = Path.GetFileNameWithoutExtension(importSettings.outputFile);
             string baseFolder = Path.GetDirectoryName(importSettings.outputFile);
@@ -567,7 +567,7 @@ namespace PointCloudConverter.Writers
             localBounds.Init();
 
             nodeBoundsBag.Clear();
-        }
+        } // Close()
 
         void IWriter.Cleanup(int fileIndex)
         {
