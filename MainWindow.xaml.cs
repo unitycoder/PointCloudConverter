@@ -32,7 +32,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "15.12.2025";
+        static readonly string version = "18.12.2025";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -1943,6 +1943,13 @@ namespace PointCloudConverter
             return importSettings.writer.InitWriter(importSettings, pointCount: 0, Log);
         }
 
-
+        private void btnExploreOutput_Click(object sender, RoutedEventArgs e)
+        {
+            var outputFolder = Path.GetDirectoryName(txtOutput.Text);
+            if (Directory.Exists(outputFolder))
+            {
+                Process.Start(new ProcessStartInfo("explorer.exe", outputFolder));
+            }
+        }
     } // class
 } // namespace
