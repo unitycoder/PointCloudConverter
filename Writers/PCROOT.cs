@@ -849,6 +849,7 @@ namespace PointCloudConverter.Writers
                         for (int i = 0; i < count; i++) order[i] = i;
 
                         int seed = HashKey(key.x, key.y, key.z) ^ count;
+                        if (self.importSettings.seed != -1) seed ^= self.importSettings.seed;
                         var rnd = new Random(seed);
 
                         for (int i = count - 1; i > 0; i--)
