@@ -145,7 +145,7 @@ namespace PointCloudConverter.Writers
                 TotalPoints++;
                 if (addTime) TimeSum += time;
             }
-        }
+        } // struct TileStats
 
         public PCROOT(int? _taskID)
         {
@@ -159,9 +159,7 @@ namespace PointCloudConverter.Writers
         public void Dispose()
         {
             Dispose(true);
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
+            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -550,7 +548,15 @@ namespace PointCloudConverter.Writers
                                         "maxX" + sep + "maxY" + sep + "maxZ" + sep + "cellX" + sep + "cellY" + sep + "cellZ" + sep +
                                         "averageTimeStamp" + sep + "overlapRatio");
 
-            File.WriteAllLines(outputFileRoot, tilerootdata.ToArray());
+            if (nodeBounds.Count > 0)
+            {
+                File.WriteAllLines(outputFileRoot, tilerootdata.ToArray());
+            }
+            else
+            {
+                Log.Write("No point data processed or found");
+            }
+
 
             Log.Write("Done saving v3 : " + outputFileRoot);
 
@@ -565,8 +571,12 @@ namespace PointCloudConverter.Writers
 
             nodeBounds.Clear();
             localBounds.Init();
-
             nodeBoundsBag.Clear();
+
+            skippedNodesCounter = 0;
+            skippedPointsCounter = 0;
+            GlobalBounds.Reset();
+            nodeBoundsBag = new ConcurrentBag<PointCloudTile>();
         } // Close()
 
         void IWriter.Cleanup(int fileIndex)
@@ -783,11 +793,8 @@ namespace PointCloudConverter.Writers
                 y = Grow(y, newCap);
                 z = Grow(z, newCap);
 
-                r = Grow(r, newCap);
-                g = Grow(g, newCap);
-                b = Grow(b, newCap);
-
-                if (s.importRGB) { r = Grow(r, newCap); g = Grow(g, newCap); b = Grow(b, newCap); }
+                // RGB always allocated if intensity or classification value is imported alone
+                if (s.importRGB || (s.importRGB == false && (s.importIntensity || s.importClassification))) { r = Grow(r, newCap); g = Grow(g, newCap); b = Grow(b, newCap); }
                 if (s.importIntensity) intensity = Grow(intensity, newCap);
                 if (s.importClassification) classification = Grow(classification, newCap);
                 if (s.averageTimestamp) time = Grow(time, newCap);
