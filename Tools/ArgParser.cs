@@ -268,12 +268,15 @@ namespace PointCloudConverter
                                         if (importSettings.importFormat == ImportFormat.E57) importExtensions = "e57";
                                         var filePaths = Directory.GetFiles(param).Where(file => Regex.IsMatch(file, @"^.+\.(" + importExtensions + ")$", RegexOptions.IgnoreCase)).ToArray();
 
+                                        importSettings.inputFolder = param;
+
                                         for (int j = 0; j < filePaths.Length; j++)
                                         {
                                             Console.ForegroundColor = ConsoleColor.Gray;
                                             Log.Write("Found file: " + filePaths[j]);
                                             Console.ForegroundColor = ConsoleColor.White;
                                             importSettings.inputFiles.Add(filePaths[j]);
+                                            importSettings.inputFileNames.Add(Path.GetFileName(filePaths[j]));
                                         }
 
                                     }
@@ -295,6 +298,8 @@ namespace PointCloudConverter
                                         //if (ext == "las" ||ext == "laz")
                                         Log.Write("added " + param);
                                         importSettings.inputFiles.Add(param);
+                                        importSettings.inputFileNames.Add(Path.GetFileName(param));
+                                        importSettings.inputFolder = Path.GetDirectoryName(param);
                                     }
                                 }
                                 break;

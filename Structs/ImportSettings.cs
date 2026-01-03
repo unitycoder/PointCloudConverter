@@ -208,7 +208,13 @@ namespace PointCloudConverter
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ExportFormat exportFormat { get; set; }
 
-        public List<string> inputFiles { get; set; } = new List<string>();
+        [Newtonsoft.Json.JsonIgnore]
+        public List<string> inputFiles = new List<string>();
+
+        // these are filenames without path, only used as a helpers for cleaner json output
+        public string inputFolder { get; set; } = null;
+        public List<string> inputFileNames { get; set; } = new List<string>();
+
         public string outputFile { get; set; } = null;
 
         public List<string> errors { get; set; } = new List<string>(); // return errors to UI
