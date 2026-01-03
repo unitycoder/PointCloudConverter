@@ -260,7 +260,7 @@ namespace PointCloudConverter
                                     {
                                         importSettings.errors.Add("Import format not defined before -input folder for batch (use -importformat" + argValueSeparator + "LAS or PLY or E57)");
                                     }
-                                    else
+                                    else // get all files with matching extension
                                     {
                                         string importExtensions = "";
                                         if (importSettings.importFormat == ImportFormat.LAS) importExtensions = "las|laz";

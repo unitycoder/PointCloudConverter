@@ -32,7 +32,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "19.12.2025";
+        static readonly string version = "03.01.2026";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -230,7 +230,7 @@ namespace PointCloudConverter
                 Log.Write("Exited.\nElapsed: " + elapsedString);
                 if (importSettings.useJSONLog)
                 {
-                    Log.Write("{\"event\": \"" + LogEvent.End + "\", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + ",\"errors\":" + errorCounter + "}", LogEvent.End);
+                    Log.Write("{\"event\": \"" + LogEvent.End + "\", \"elapsed\": \"" + elapsedString + "\",\"version\":\"" + version + "\",\"errors\":" + errorCounter + "}", LogEvent.End);
                 }
 
                 // https://stackoverflow.com/a/45620138/5452781
@@ -472,14 +472,14 @@ namespace PointCloudConverter
             // write metadata to file
             if (importSettings.importMetadata == true)
             {
-                string filename = Path.GetFileNameWithoutExtension(importSettings.outputFile);
+                string pathFolderName = Path.GetFileNameWithoutExtension(importSettings.outputFile);
                 // for gltf, there is no output filename
-                if (string.IsNullOrEmpty(filename))
+                if (string.IsNullOrEmpty(pathFolderName))
                 {
-                    // get last folder name
-                    filename = Path.GetFileName(Path.GetDirectoryName(importSettings.inputFiles[0]));
+                    // get final path folder name
+                    pathFolderName = Path.GetFileName(Path.GetDirectoryName(importSettings.inputFiles[0]));
                 }
-                var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), filename + ".json");
+                var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), pathFolderName + ".json");
                 Log.Write("Writing metadata to file: " + jsonFile);
                 File.WriteAllText(jsonFile, jsonMeta);
             }
