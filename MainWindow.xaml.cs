@@ -1037,9 +1037,6 @@ namespace PointCloudConverter
                         progressInfo.CurrentValue = i;
                     } // for all points
 
-                    // hack for missing 100% progress
-                    progressInfo.CurrentValue = maxPointIterations;
-
                     if (importSettings.detectIntensityRange == true)
                     {
                         taskWriter.SetIntensityRange(isCustomIntensityRange);
@@ -1050,6 +1047,10 @@ namespace PointCloudConverter
                     taskWriter.Save(fileIndex);
                     lastStatusMessage = "Finished saving..";
                     //taskReader.Close();
+
+                    // force update last 100% info
+                    progressInfo.CurrentValue = maxPointIterations;
+                    ProgressTick(null, null);
 
                     // Job-level progress
                     var fileSizeBytes = new FileInfo(importSettings.inputFiles[fileIndex]).Length;
