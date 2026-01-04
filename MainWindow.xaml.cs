@@ -64,6 +64,9 @@ namespace PointCloudConverter
         static int progressTotalPoints = 0;
         static int progressFile = 0;
         static int progressTotalFiles = 0;
+        static long processedFileBytes = 0;
+        static long processedPoints = 0;
+
         static DispatcherTimer progressTimerThread;
         public static string lastStatusMessage = "";
         public static int errorCounter = 0; // how many errors when importing or reading files (single file could have multiple errors)
@@ -257,6 +260,10 @@ namespace PointCloudConverter
             var workerParams = (WorkerParams)workerParamsObject;
             var importSettings = workerParams.ImportSettings;
             var cancellationToken = workerParams.CancellationToken;
+
+            processedFileBytes = 0;
+            processedPoints = 0;
+
             // Use cancellationToken to check for cancellation
             if (cancellationToken.IsCancellationRequested)
             {
@@ -410,6 +417,13 @@ namespace PointCloudConverter
                 }
 
                 await semaphore.WaitAsync();
+                
+                int slotIndex;
+                lock (progressSlotLock)
+                {
+                    slotIndex = freeProgressSlots.Pop();
+                }
+
                 int index = i;
                 tasks.Add(Task.Run(() =>
                 {
@@ -420,7 +434,7 @@ namespace PointCloudConverter
                         Log.Write($"task:{taskId}, reading file ({index + 1}/{len}) : " +
                                   $"{importSettings.inputFiles[index]} ({Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[index]).Length)})\n");
 
-                        var ok = ParseFile(importSettings, index, taskId, cancellationToken);
+                        var ok = ParseFile(importSettings, index, taskId, cancellationToken, slotIndex);
                         if (!ok)
                         {
                             Interlocked.Increment(ref errorCounter);
@@ -457,6 +471,10 @@ namespace PointCloudConverter
                     finally
                     {
                         Interlocked.Increment(ref progressFile);
+                        lock (progressSlotLock)
+                        {
+                            freeProgressSlots.Push(slotIndex);
+                        }
                         // release exactly once per WaitAsync
                         semaphore.Release();
                     }
@@ -568,6 +586,8 @@ namespace PointCloudConverter
 
         private static List<ProgressInfo> progressInfos = new List<ProgressInfo>();
         private static object lockObject = new object();
+        private static readonly object progressSlotLock = new object();
+        private static Stack<int> freeProgressSlots;
 
         public class ProgressInfo
         {
@@ -588,9 +608,10 @@ namespace PointCloudConverter
             threadCount = Math.Min(threadCount, importSettings.inputFiles.Count);
             threadCount = Math.Max(threadCount, 1);
 
-            //Log.WriteLine("Creating progress bars: " + threadCount);
             bool useJsonLog = importSettings.useJSONLog;
             progressInfos.Clear();
+
+            freeProgressSlots = new Stack<int>(threadCount);
 
             for (int i = 0; i < threadCount; i++)
             {
@@ -599,27 +620,25 @@ namespace PointCloudConverter
                     Height = 10,
                     Width = 490 / threadCount,
                     Value = 0,
-                    Maximum = 100, // TODO set value in parsefile?
+                    Maximum = 100,
                     HorizontalAlignment = HorizontalAlignment.Left,
                     Margin = new Thickness(1, 0, 1, 0),
                     Foreground = Brushes.Red,
                     Background = null,
-                    //BorderBrush = Brushes.Red,
-                    //ToolTip = $"Thread {i}"
                 };
 
-                // Initialize ProgressInfo for each ProgressBar
                 var progressInfo = new ProgressInfo
                 {
-                    Index = i,           // Index in the StackPanel
-                    CurrentValue = 0,    // Initial value
+                    Index = i,
+                    CurrentValue = 0,
                     MaxValue = 100,
                     UseJsonLog = useJsonLog
                 };
 
                 progressInfos.Add(progressInfo);
-
                 mainWindowStatic.ProgressBarsContainer.Children.Add(newProgressBar);
+
+                freeProgressSlots.Push(i); // mark slot i as free
             }
         }
 
@@ -720,13 +739,13 @@ namespace PointCloudConverter
         }
 
         // process single file
-        static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId, CancellationToken cancellationToken)
+        static bool ParseFile(ImportSettings importSettings, int fileIndex, int? taskId, CancellationToken cancellationToken, int slotIndex)
         {
             progressTotalPoints = 0;
             Log.Write("Started processing file: " + importSettings.inputFiles[fileIndex]);
 
             IReader taskReader = importSettings.GetOrCreateReader(taskId);
-            ProgressInfo progressInfo = progressInfos[fileIndex % progressInfos.Count];
+            ProgressInfo progressInfo = progressInfos[slotIndex];
 
             bool success = false;
 
@@ -828,7 +847,8 @@ namespace PointCloudConverter
                     //progressPoint = 0;
                     progressInfo.CurrentValue = 0;
                     progressInfo.MaxValue = importSettings.useLimit ? pointCount : fullPointCount;
-                    progressInfo.FilePath = importSettings.inputFiles[fileIndex];
+                    progressInfo.FilePath = Path.GetFileName(importSettings.inputFiles[fileIndex]); // NOTE using filename only now 04/01/2026
+                    progressInfo.LastPercent = -1;
 
                     lastStatusMessage = "Processing points..";
 
@@ -1030,6 +1050,38 @@ namespace PointCloudConverter
                     taskWriter.Save(fileIndex);
                     lastStatusMessage = "Finished saving..";
                     //taskReader.Close();
+
+                    // Job-level progress
+                    var fileSizeBytes = new FileInfo(importSettings.inputFiles[fileIndex]).Length;
+                    Interlocked.Add(ref processedFileBytes, fileSizeBytes);
+                    Interlocked.Add(ref processedPoints, pointCount);
+
+                    if (importSettings.trackProgress && importSettings.useJSONLog)
+                    {
+                        long totalFileSizesLocal = jobMetadata.Job.TotalFileSizeBytes;
+                        long totalPointsLocal = jobMetadata.Job.TotalPoints;
+
+                        // avoid divide-by-zero
+                        if (totalFileSizesLocal <= 0) totalFileSizesLocal = 1;
+                        if (totalPointsLocal <= 0) totalPointsLocal = 1;
+
+                        double fileBytesPercent = (double)processedFileBytes / totalFileSizesLocal * 100.0;
+                        double pointsPercent = (double)processedPoints / totalPointsLocal * 100.0;
+                        int overallPercent = (int)Math.Max(fileBytesPercent, pointsPercent);
+
+                        string jobJson = "{" +
+                            "\"event\":\"" + LogEvent.Progress + "\"," +
+                            "\"scope\":\"job\"," +
+                            "\"processedBytes\":" + processedFileBytes + "," +
+                            "\"totalBytes\":" + totalFileSizesLocal + "," +
+                            "\"processedPoints\":" + processedPoints + "," +
+                            "\"totalPoints\":" + totalPointsLocal + "," +
+                            "\"percent\":" + overallPercent +
+                            "}";
+
+                        Log.Write(jobJson, LogEvent.Progress);
+                    }
+
 
                     if (importSettings.importMetadata == true)
                     {
