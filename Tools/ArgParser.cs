@@ -1097,6 +1097,17 @@ namespace PointCloudConverter
 
             if (importSettings.errors.Count > 0) importSettings.haveError = true;
 
+            // drop extra files if over maxfiles limit
+            if (importSettings.maxFiles > 0 && importSettings.inputFiles.Count > importSettings.maxFiles)
+            {
+                int dropCount = importSettings.inputFiles.Count - importSettings.maxFiles;
+                Log.Write("Maxfiles limit reached, removing " + dropCount + " files from source files list..");
+
+                importSettings.inputFiles = importSettings.inputFiles.GetRange(0, importSettings.maxFiles);
+                importSettings.inputFileNames = importSettings.inputFileNames.GetRange(0, importSettings.maxFiles);
+            }
+
+
             // if using jsonlog, print import settings
             if (importSettings.useJSONLog == true)
             {

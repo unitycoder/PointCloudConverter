@@ -19,9 +19,11 @@ namespace PointCloudConverter.Writers
         public ImportSettings importSettings
         {
             get { return __importSettings; }
-            set { __importSettings = value;
+            set
+            {
+                __importSettings = value;
                 //Log.Write("set importsettings");
-                    }
+            }
         }
 
         int pointCount;
@@ -306,7 +308,7 @@ namespace PointCloudConverter.Writers
             string jsonString = "{" +
             "\"event\": \"" + LogEvent.File + "\"," +
             "\"status\": \"" + LogStatus.Complete + "\"," +
-            "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+            "\"path\": " + JsonSerializer.Serialize(Path.GetFileName(importSettings.inputFiles[fileIndex])) + "," +
             "\"output\": " + JsonSerializer.Serialize(importSettings.outputFile) + "}";
 
             Log.Write(jsonString, LogEvent.File);

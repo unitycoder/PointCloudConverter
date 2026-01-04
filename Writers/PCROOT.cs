@@ -415,7 +415,7 @@ namespace PointCloudConverter.Writers
                 string jsonString = "{" +
                                     "\"event\": \"" + LogEvent.File + "\"," +
                                     "\"status\": \"" + LogStatus.Complete + "\"," +
-                                    "\"path\": " + JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+                                    "\"path\": " + JsonSerializer.Serialize(Path.GetFileName(importSettings.inputFiles[fileIndex])) + "," +
                                     "\"tiles\": " + tilesEmitted + "," +
                                     "\"folder\": " + JsonSerializer.Serialize(baseFolder) +
                                     "}";

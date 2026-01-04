@@ -632,7 +632,8 @@ namespace PointCloudConverter
                     Index = i,
                     CurrentValue = 0,
                     MaxValue = 100,
-                    UseJsonLog = useJsonLog
+                    UseJsonLog = useJsonLog,
+                    FilePath = null
                 };
 
                 progressInfos.Add(progressInfo);
@@ -677,6 +678,12 @@ namespace PointCloudConverter
                             bar.Maximum = max;
                             bar.Value = cur;
                             bar.Foreground = ((cur + 1 >= max) ? Brushes.Lime : Brushes.Red);
+                        }
+
+                        // skip printing, if no filepath set yet (happens when file is still initializing)
+                        if (info.FilePath == null)
+                        {
+                            continue;
                         }
 
                         // Emit JSON ONLY when percentage changes
@@ -1048,7 +1055,7 @@ namespace PointCloudConverter
                     lastStatusMessage = "Finished saving..";
                     //taskReader.Close();
 
-                    // force update last 100% info
+                    // force update last 100%
                     progressInfo.CurrentValue = maxPointIterations;
                     ProgressTick(null, null);
 
