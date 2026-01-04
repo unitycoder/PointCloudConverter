@@ -294,6 +294,26 @@ namespace PointCloudConverter
             //Log.Write(istrue1 ? "1" : "0");
             //Log.Write(istrue2 ? "1" : "0");
 
+            long totalFileSizes = 0;
+            long totalPoints = 0;
+            if (importSettings.trackProgress == true)
+            {
+                for (int i = 0; i < importSettings.maxFiles; i++)
+                {
+                    // TODO could cache this data for later (offset use)
+                    var headerData = PeekHeaderData(importSettings, i);
+                    if (headerData.success == true)
+                    {
+                        totalFileSizes += headerData.fileSize;
+                        totalPoints += headerData.pointCount;
+                    }
+                }
+
+                Log.Write("Total input files size: " + Tools.HumanReadableFileSize(totalFileSizes));
+                Log.Write("Total input points: " + Tools.HumanReadableCount(totalPoints));
+            }
+
+
             if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
             {
                 int iterations = importSettings.offsetMode == "min" ? importSettings.maxFiles : 1; // 1 for legacy mode (first cloud only)
@@ -308,11 +328,11 @@ namespace PointCloudConverter
 
                     progressFile = i;
                     Log.Write("\nReading bounds from file (" + (i + 1) + "/" + len + ") : " + importSettings.inputFiles[i] + " (" + Tools.HumanReadableFileSize(new FileInfo(importSettings.inputFiles[i]).Length) + ")");
-                    var res = GetBounds(importSettings, i);
+                    var headerData = PeekHeaderData(importSettings, i);
 
-                    if (res.Item1 == true)
+                    if (headerData.success == true)
                     {
-                        boundsListTemp.Add(new Double3(res.Item2, res.Item3, res.Item4));
+                        boundsListTemp.Add(new Double3(headerData.minX, headerData.minY, headerData.minZ));
                     }
                     else
                     {
@@ -353,7 +373,9 @@ namespace PointCloudConverter
             {
                 ConverterVersion = version,
                 ImportSettings = importSettings,
-                StartTime = DateTime.Now
+                StartTime = DateTime.Now,
+                TotalFileSizeBytes = totalFileSizes, // note defaults to 0, if not using progress tracking
+                TotalPoints = totalPoints
             };
             jobMetadata.lasHeaders.Clear();
             progressFile = 0;
@@ -653,21 +675,48 @@ namespace PointCloudConverter
         } // ProgressTick()
 
 
-        static (bool, float, float, float) GetBounds(ImportSettings importSettings, int fileIndex)
+        static PeekHeaderData PeekHeaderData(ImportSettings importSettings, int fileIndex)
         {
             var res = importSettings.reader.InitReader(importSettings, fileIndex);
+
+            var hd = new PeekHeaderData
+            {
+                success = false,
+                minX = 0,
+                minY = 0,
+                minZ = 0
+            };
+
             if (res == false)
             {
                 Log.Write("Unknown error while initializing reader: " + importSettings.inputFiles[fileIndex]);
                 Environment.ExitCode = (int)ExitCode.Error;
-                return (false, 0, 0, 0);
+                return hd;
             }
             var bounds = importSettings.reader.GetBounds();
             //Console.WriteLine(bounds.minX + " " + bounds.minY + " " + bounds.minZ);
 
+            hd.minX = bounds.minX;
+            hd.minY = bounds.minY;
+            hd.minZ = bounds.minZ;
+
+            hd.fileSize = new FileInfo(importSettings.inputFiles[fileIndex]).Length;
+
+            hd.pointCount = importSettings.reader.GetPointCount();
+
+            if (hd.pointCount == 0)
+            {
+                Log.Write("Warning> Point count is zero in file: " + importSettings.inputFiles[fileIndex]);
+                hd.success = false;
+            }
+            else
+            {
+                hd.success = true;
+            }
+
             importSettings.reader.Close();
 
-            return (true, bounds.minX, bounds.minY, bounds.minZ);
+            return hd;
         }
 
         // process single file
@@ -1162,6 +1211,8 @@ namespace PointCloudConverter
             if (((bool)chkDetectIntensityRange.IsChecked) && ((bool)chkDetectIntensityRange.IsChecked)) args.Add("-detectintensityrange=True");
             if (((bool)chkUseMemoryLimit.IsChecked) && !string.IsNullOrEmpty(txtMemoryLimit.Text)) args.Add("-threadmemgb=" + txtMemoryLimit.Text);
 
+            if ((bool)chkTrackProgress.IsChecked) args.Add("-progress=true");
+
             // check input files
             //Trace.WriteLine("loggeris:" + Log.GetType().ToString());
 
@@ -1598,6 +1649,8 @@ namespace PointCloudConverter
             chkConvertSRGB.IsChecked = Properties.Settings.Default.useSRGB;
             chkUseMemoryLimit.IsChecked = Properties.Settings.Default.useMemoryLimit;
             txtMemoryLimit.Text = Properties.Settings.Default.memoryLimit.ToString();
+            chkTrackProgress.IsChecked = Properties.Settings.Default.trackProgress;
+
             isInitialiazing = false;
         }
 
@@ -1659,6 +1712,8 @@ namespace PointCloudConverter
             int tempMemLimit = 8;
             int.TryParse(txtMemoryLimit.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempMemLimit);
             Properties.Settings.Default.memoryLimit = tempMemLimit;
+            Properties.Settings.Default.trackProgress = (bool)chkTrackProgress.IsChecked;
+
             Properties.Settings.Default.Save();
         }
 

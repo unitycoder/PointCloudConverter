@@ -861,18 +861,22 @@ namespace PointCloudConverter
                                 }
                                 break;
 
-                            // TODO load whole commandline args list from text file
+                            case "-progress":
+                                Log.Write("progress = " + param);
+
+                                if (param != "false" && param != "true")
+                                {
+                                    importSettings.errors.Add("Invalid progress parameter: " + param);
+                                }
+                                else
+                                {
+                                    importSettings.trackProgress = (param == "true");
+                                }
+                                break;
+
                             case "-config":
                                 Log.Write("config = " + param);
                                 // we dont do anything, config is checked at start of Parse()
-                                //if (File.Exists(param) == false)
-                                //{
-                                //    importSettings.errors.Add("Config file not found: " + param);
-                                //}
-                                //else // got value, 
-                                //{
-                                //    //importSettings.config = param;
-                                //}
                                 break;
 
                             case "?":

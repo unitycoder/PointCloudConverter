@@ -153,11 +153,12 @@
                     <TextBox x:Name="txtMemoryLimit" HorizontalAlignment="Left" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40" Text="8"/>
                     <Label Content="GB *Per Thread" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
                 </StackPanel>
+                <CheckBox x:Name="chkTrackProgress" Content="Track total progress (Batch only)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads all point counts at start, to track total batch progress"/>
             </StackPanel>
         </GroupBox>
 
         <!-- shared options -->
-        <GroupBox x:Name="groupBoxShared" HorizontalAlignment="Right" Header="Shared Options" Margin="0,336,10,0" VerticalAlignment="Top" Width="276" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">
+        <GroupBox x:Name="groupBoxShared" HorizontalAlignment="Right" Header="Shared Options" Margin="0,376,10,0" VerticalAlignment="Top" Width="276" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">
             <StackPanel Margin="0,4,0,0">
                 <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
                     <Label x:Name="label_Copy11" Content="Grid size:" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
@@ -169,7 +170,7 @@
         </GroupBox>
 
         <!-- gltf options -->
-        <GroupBox x:Name="groupBoxGLTF" HorizontalAlignment="Right" Header="GLTF (.glb) Options" Margin="0,408,10,0" VerticalAlignment="Top" Width="276" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">
+        <GroupBox x:Name="groupBoxGLTF" HorizontalAlignment="Right" Header="GLTF (.glb) Options" Margin="0,435,10,0" VerticalAlignment="Top" Width="276" BorderBrush="#FF737373" BorderThickness="0.2,0.2,0.2,0.2" Foreground="White">
             <StackPanel Margin="0,4,0,0">
                 <CheckBox x:Name="chkUseGrid" Content="Use grid (split to grid)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="If disabled: LAZ file(s) are exported as single GLB file. If enabled: LAZ file(s) are split into multiple GLB files"/>
             </StackPanel>

@@ -682,5 +682,17 @@ namespace PointCloudConverter.Properties {
                 this["memoryLimit"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool trackProgress {
+            get {
+                return ((bool)(this["trackProgress"]));
+            }
+            set {
+                this["trackProgress"] = value;
+            }
+        }
     }
 }

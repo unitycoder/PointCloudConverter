@@ -268,7 +268,7 @@ namespace PointCloudConverter.Writers
             string fileOnly = fileOnlyCached;
             string baseFolder = baseFolderCached;
 
-            Log.Write("Bucketed Save(): buckets=" + BucketCount + ", budget=" + ThreadMemoryBudgetBytes + " bytes");
+            //Log.Write("Bucketed Save(): buckets=" + BucketCount + ", budget=" + ThreadMemoryBudgetBytes + " bytes");
 
             var startedTiles = new HashSet<(int x, int y, int z)>();
 

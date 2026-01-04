@@ -266,6 +266,8 @@ namespace PointCloudConverter
         public bool sRGB { get; set; } = false; // use sRGB color space for RGB values
         public bool usethreadMemLimit { get; set; } = false;
         public int threadMemGB { get; set; } = 8; // only for PCROOT writer, memory per thread in GB
+        
+        public bool trackProgress { get; set; } = false; // tracks total progress and reads initial point count from all files
 
         public override string ToString()
         {
