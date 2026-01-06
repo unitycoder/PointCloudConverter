@@ -857,7 +857,7 @@ namespace PointCloudConverter
                     //progressPoint = 0;
                     progressInfo.CurrentValue = 0;
                     progressInfo.MaxValue = importSettings.useLimit ? pointCount : fullPointCount;
-                    progressInfo.FilePath = Path.GetFileName(importSettings.inputFiles[fileIndex]); // NOTE using filename only now 04/01/2026
+                    progressInfo.FilePath = Path.GetFileName(importSettings.inputFiles[fileIndex]);  // NOTE using filename only now 04/01/2026
                     progressInfo.LastPercent = -1;
 
                     lastStatusMessage = "Processing points..";
