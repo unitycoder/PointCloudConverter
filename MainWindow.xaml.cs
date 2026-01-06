@@ -32,7 +32,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "03.01.2026";
+        static readonly string version = "06.01.2026";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -359,7 +359,7 @@ namespace PointCloudConverter
                         errorCounter++;
                         if (importSettings.useJSONLog)
                         {
-                            Log.Write("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[i]) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
+                            Log.Write("{\"event\": \"" + LogEvent.File + "\", \"path\": " + System.Text.Json.JsonSerializer.Serialize(Path.GetFileName(importSettings.inputFiles[i])) + ", \"status\": \"" + LogStatus.Processing + "\"}", LogEvent.Error);
                         }
                         else
                         {
@@ -864,7 +864,7 @@ namespace PointCloudConverter
 
                     string jsonString = "{" +
                     "\"event\": \"" + LogEvent.File + "\"," +
-                    "\"path\": " + System.Text.Json.JsonSerializer.Serialize(importSettings.inputFiles[fileIndex]) + "," +
+                    "\"path\": " + System.Text.Json.JsonSerializer.Serialize(Path.GetFileName(importSettings.inputFiles[fileIndex])) + "," +
                     "\"size\": " + new FileInfo(importSettings.inputFiles[fileIndex]).Length + "," +
                     "\"points\": " + pointCount + "," +
                     "\"status\": \"" + LogStatus.Processing + "\"" +

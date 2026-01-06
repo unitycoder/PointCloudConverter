@@ -216,6 +216,7 @@ namespace PointCloudConverter
         public List<string> inputFileNames { get; set; } = new List<string>();
 
         public string outputFile { get; set; } = null;
+        public string outputPath { get; set; } = null; // for cleaner json output
 
         public List<string> errors { get; set; } = new List<string>(); // return errors to UI
 

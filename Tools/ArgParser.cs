@@ -391,6 +391,7 @@ namespace PointCloudConverter
                                 else // we have output folder
                                 {
                                     importSettings.outputFile = param;
+                                    importSettings.outputPath = Path.GetDirectoryName(param);
                                 }
                                 break;
 
@@ -927,6 +928,7 @@ namespace PointCloudConverter
                             if (importSettings.inputFiles != null && importSettings.inputFiles.Count > 1)
                             {
                                 importSettings.outputFile = Path.GetDirectoryName(importSettings.inputFiles[0]) + Path.DirectorySeparatorChar;
+                                importSettings.outputPath = Path.GetDirectoryName(importSettings.inputFiles[0]);
                                 Log.Write("importSettings.outputFile=" + importSettings.outputFile);
                             }
                             else
@@ -972,6 +974,7 @@ namespace PointCloudConverter
                         var outputFolder = Path.GetDirectoryName(importSettings.inputFiles[0]);
                         var outputFilename = Path.GetFileNameWithoutExtension(importSettings.inputFiles[0]);
                         importSettings.outputFile = Path.Combine(outputFolder, outputFilename + ".ucpc");
+                        importSettings.outputPath = outputFolder;
                     }
                 }
             } // have input
