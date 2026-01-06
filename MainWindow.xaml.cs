@@ -302,24 +302,37 @@ namespace PointCloudConverter
             //Log.Write(istrue2 ? "1" : "0");
 
             long totalFileSizes = 0;
-            long totalPoints = 0;
+            long totalPointsRaw = 0;
+            long totalPointsEffective = 0;
+
             if (importSettings.trackProgress == true)
             {
                 for (int i = 0; i < importSettings.maxFiles; i++)
                 {
-                    // TODO could cache this data for later (offset use)
                     var headerData = PeekHeaderData(importSettings, i);
                     if (headerData.success == true)
                     {
                         totalFileSizes += headerData.fileSize;
-                        totalPoints += headerData.pointCount;
+
+                        totalPointsRaw += headerData.pointCount;
+                        totalPointsEffective += AdjustPointCountForSettings(headerData.pointCount, importSettings);
                     }
                 }
 
                 Log.Write("Total input files size: " + Tools.HumanReadableFileSize(totalFileSizes));
-                Log.Write("Total input points: " + Tools.HumanReadableCount(totalPoints));
+                Log.Write("Total input points (raw): " + Tools.HumanReadableCount(totalPointsRaw));
+                Log.Write("Total output points (effective): " + Tools.HumanReadableCount(totalPointsEffective));
             }
 
+            jobMetadata.Job = new Job
+            {
+                ConverterVersion = version,
+                ImportSettings = importSettings,
+                StartTime = DateTime.Now,
+                TotalFileSizeBytes = totalFileSizes,
+                TotalPoints = totalPointsEffective > 0 ? totalPointsEffective : totalPointsRaw
+            };
+            jobMetadata.lasHeaders.Clear();
 
             if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
             {
@@ -376,16 +389,6 @@ namespace PointCloudConverter
 
 
             //lasHeaders.Clear();
-            jobMetadata.Job = new Job
-            {
-                ConverterVersion = version,
-                ImportSettings = importSettings,
-                StartTime = DateTime.Now,
-                TotalFileSizeBytes = totalFileSizes, // note defaults to 0, if not using progress tracking
-                TotalPoints = totalPoints
-            };
-            jobMetadata.lasHeaders.Clear();
-            progressFile = 0;
 
             // clamp to maxfiles
             int maxThreads = Math.Min(importSettings.maxThreads, importSettings.maxFiles);
@@ -618,7 +621,7 @@ namespace PointCloudConverter
                 ProgressBar newProgressBar = new ProgressBar
                 {
                     Height = 10,
-                    Width = 490 / threadCount,
+                    Width = (420 / threadCount),
                     Value = 0,
                     Maximum = 100,
                     HorizontalAlignment = HorizontalAlignment.Left,
@@ -1069,13 +1072,14 @@ namespace PointCloudConverter
                         long totalFileSizesLocal = jobMetadata.Job.TotalFileSizeBytes;
                         long totalPointsLocal = jobMetadata.Job.TotalPoints;
 
-                        // avoid divide-by-zero
                         if (totalFileSizesLocal <= 0) totalFileSizesLocal = 1;
                         if (totalPointsLocal <= 0) totalPointsLocal = 1;
 
                         double fileBytesPercent = (double)processedFileBytes / totalFileSizesLocal * 100.0;
                         double pointsPercent = (double)processedPoints / totalPointsLocal * 100.0;
-                        int overallPercent = (int)Math.Max(fileBytesPercent, pointsPercent);
+
+                        // Keep percentage within [0..100]
+                        int overallPercent = (int)Math.Clamp(Math.Max(fileBytesPercent, pointsPercent), 0.0, 100.0);
 
                         string jobJson = "{" +
                             "\"event\":\"" + LogEvent.Progress + "\"," +
@@ -2066,5 +2070,30 @@ namespace PointCloudConverter
                 Process.Start(new ProcessStartInfo("explorer.exe", outputFolder));
             }
         }
+
+        private static long AdjustPointCountForSettings(long fullPointCount, ImportSettings importSettings)
+        {
+            long pointCount = fullPointCount;
+
+            if (importSettings.skipPoints && importSettings.skipEveryN > 0)
+            {
+                // matches existing logic used for per-file reporting
+                pointCount = (long)Math.Floor(pointCount - (pointCount / (float)importSettings.skipEveryN));
+            }
+
+            if (importSettings.keepPoints && importSettings.keepEveryN > 0)
+            {
+                pointCount /= importSettings.keepEveryN;
+            }
+
+            if (importSettings.useLimit)
+            {
+                pointCount = Math.Min(pointCount, importSettings.limit);
+            }
+
+            return Math.Max(0, pointCount);
+        }
+
+
     } // class
 } // namespace

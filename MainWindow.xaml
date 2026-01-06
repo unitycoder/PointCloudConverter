@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PointCloudConverter"
         mc:Ignorable="d"
-        Title="PointCloudConverter" Height="737" Width="940" Background="#FF252222" Closing="Window_Closing" Loaded="Window_Loaded" MinWidth="940">
+        Title="PointCloudConverter" Height="737" Width="980" Background="#FF252222" Closing="Window_Closing" Loaded="Window_Loaded" MinWidth="940">
     <Grid Margin="0,0,2,0">
         <Button x:Name="btnBrowseInput" Content="..." HorizontalAlignment="Left" Margin="724,48,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseInput_Click" ToolTip="Browse for input file"/>
         <TextBox x:Name="txtInputFile" HorizontalAlignment="Left" AllowDrop="True" Height="23" Margin="20,48,0,0" VerticalAlignment="Top" Width="699" PreviewDrop="txtInputFile_Drop" PreviewDragOver="txtInputFile_DragEnter"/>
@@ -21,7 +21,7 @@
         <ComboBox x:Name="cmbExportFormat" HorizontalAlignment="Right" Margin="0,114,31,0" VerticalAlignment="Top" Width="117" IsReadOnly="True" SelectionChanged="cmbExportFormat_SelectionChanged"/>
         <Button x:Name="btnPlugins" Content=".." HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="Browse plugins folder" Margin="0,114,10,0" Width="16" Click="btnPlugins_Click" Height="22"/>
 
-        <TextBox x:Name="txtConsole" HorizontalAlignment="Left" Height="67" Margin="10,603,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="915" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
+        <TextBox x:Name="txtConsole" Height="67" Margin="10,603,10,0" TextWrapping="Wrap" VerticalAlignment="Top" IsReadOnly="True" UndoLimit="1" Background="#FF404040" BorderBrush="{x:Null}" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
 
         <Label x:Name="label_Copy5" Content="Generated commandline parameters:" HorizontalAlignment="Left" Margin="10,577,0,0" VerticalAlignment="Top" Foreground="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" FontWeight="Bold"/>
         <Button x:Name="btnCopyToClipboard" Content="Copy" HorizontalAlignment="Left" VerticalAlignment="Top" Width="40" Height="20" ToolTip="Browse for output file" Margin="239,580,0,0" Click="btnCopyToClipboard_Click"/>
@@ -180,7 +180,7 @@
 
         <StatusBar Margin="8,0,0,0" VerticalAlignment="Bottom" Background="{x:Null}">
             <StatusBarItem>
-                <ProgressBar x:Name="progressBarFiles" Height="10" Width="190" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Files to process"/>
+                <ProgressBar x:Name="progressBarFiles" Height="10" Width="140" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Files to process"/>
             </StatusBarItem>
             <!--<StatusBarItem>
                 <ProgressBar x:Name="progressBarPoints" Height="10" Width="490" Background="{x:Null}" HorizontalAlignment="Left" Maximum="1" Foreground="Lime" ToolTip="Points to process (in current file)"/>
@@ -196,8 +196,8 @@
             <StatusBarItem>
                 <Label x:Name="lblStatus" Foreground="{DynamicResource MainText}">Status</Label>
             </StatusBarItem>
-            <StatusBarItem>
-                <Label x:Name="lblTimer" Foreground="{DynamicResource MainText}">Timer</Label>
+            <StatusBarItem HorizontalAlignment="Right">
+                <Label x:Name="lblTimer" Foreground="{DynamicResource MainText}" HorizontalAlignment="Right">Timer</Label>
             </StatusBarItem>
         </StatusBar>
 
