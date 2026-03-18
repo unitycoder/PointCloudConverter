@@ -32,7 +32,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "15.03.2026";
+        static readonly string version = "18.03.2026";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -67,10 +67,19 @@ namespace PointCloudConverter
         static long processedFileBytes = 0;
         static long processedPoints = 0;
 
+        static long[] processedFileBytesInFlightBySlot = Array.Empty<long>();
+        static long[] processedPointsInFlightBySlot = Array.Empty<long>();
+
+        static int lastJobPercent = -1;
+        static bool jobProgressCompleted = false;
+
         static DispatcherTimer progressTimerThread;
         public static string lastStatusMessage = "";
         public static int errorCounter = 0; // how many errors when importing or reading files (single file could have multiple errors)
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+
+        // True while `ProcessAllFiles` is active. Used to decide whether to cancel window close.
+        static volatile bool _isProcessing = false;
 
         // filter by distance
         private readonly float cellSize = 0.5f;
@@ -257,40 +266,47 @@ namespace PointCloudConverter
         // main processing loop
         private static async Task ProcessAllFiles(object workerParamsObject)
         {
+            _isProcessing = true;
             var workerParams = (WorkerParams)workerParamsObject;
             var importSettings = workerParams.ImportSettings;
             var cancellationToken = workerParams.CancellationToken;
 
-            processedFileBytes = 0;
-            processedPoints = 0;
-
-            // Use cancellationToken to check for cancellation
-            if (cancellationToken.IsCancellationRequested)
+            try
             {
-                Environment.ExitCode = (int)ExitCode.Cancelled;
-                return;
-            }
+                processedFileBytes = 0;
+                processedPoints = 0;
+                if (processedFileBytesInFlightBySlot.Length > 0) Array.Clear(processedFileBytesInFlightBySlot, 0, processedFileBytesInFlightBySlot.Length);
+                if (processedPointsInFlightBySlot.Length > 0) Array.Clear(processedPointsInFlightBySlot, 0, processedPointsInFlightBySlot.Length);
+                lastJobPercent = -1;
+                jobProgressCompleted = false;
 
-            stopwatch.Reset();
-            stopwatch.Start();
+                // Use cancellationToken to check for cancellation
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    Environment.ExitCode = (int)ExitCode.Cancelled;
+                    return;
+                }
 
-            // if user has set maxFiles param, loop only that many files
-            importSettings.maxFiles = importSettings.maxFiles > 0 ? importSettings.maxFiles : importSettings.inputFiles.Count;
-            importSettings.maxFiles = Math.Min(importSettings.maxFiles, importSettings.inputFiles.Count);
+                stopwatch.Reset();
+                stopwatch.Start();
 
-            StartProgressTimer();
+                // if user has set maxFiles param, loop only that many files
+                importSettings.maxFiles = importSettings.maxFiles > 0 ? importSettings.maxFiles : importSettings.inputFiles.Count;
+                importSettings.maxFiles = Math.Min(importSettings.maxFiles, importSettings.inputFiles.Count);
 
-            // loop input files
-            errorCounter = 0;
+                StartProgressTimer();
 
-            progressFile = 0;
-            progressTotalFiles = importSettings.maxFiles - 1;
-            if (progressTotalFiles < 0) progressTotalFiles = 0;
+                // loop input files
+                errorCounter = 0;
 
-            List<Double3> boundsListTemp = new List<Double3>();
+                progressFile = 0;
+                progressTotalFiles = importSettings.maxFiles - 1;
+                if (progressTotalFiles < 0) progressTotalFiles = 0;
 
-            // clear filter by distance
-            occupiedCells.Clear();
+                List<Double3> boundsListTemp = new List<Double3>();
+
+                // clear filter by distance
+                occupiedCells.Clear();
 
             // get all file bounds, if in batch mode and RGB+INT+PACK
             // TODO: check what happens if its too high? over 128/256?
@@ -301,41 +317,41 @@ namespace PointCloudConverter
             //Log.Write(istrue1 ? "1" : "0");
             //Log.Write(istrue2 ? "1" : "0");
 
-            long totalFileSizes = 0;
-            long totalPointsRaw = 0;
-            long totalPointsEffective = 0;
+                long totalFileSizes = 0;
+                long totalPointsRaw = 0;
+                long totalPointsEffective = 0;
 
-            if (importSettings.trackProgress == true)
-            {
-                for (int i = 0; i < importSettings.maxFiles; i++)
+                if (importSettings.trackProgress == true)
                 {
-                    var headerData = PeekHeaderData(importSettings, i);
-                    if (headerData.success == true)
+                    for (int i = 0; i < importSettings.maxFiles; i++)
                     {
-                        totalFileSizes += headerData.fileSize;
+                        var headerData = PeekHeaderData(importSettings, i);
+                        if (headerData.success == true)
+                        {
+                            totalFileSizes += headerData.fileSize;
 
-                        totalPointsRaw += headerData.pointCount;
-                        totalPointsEffective += AdjustPointCountForSettings(headerData.pointCount, importSettings);
+                            totalPointsRaw += headerData.pointCount;
+                            totalPointsEffective += AdjustPointCountForSettings(headerData.pointCount, importSettings);
+                        }
                     }
+
+                    Log.Write("Total input files size: " + Tools.HumanReadableFileSize(totalFileSizes));
+                    Log.Write("Total input points (raw): " + Tools.HumanReadableCount(totalPointsRaw));
+                    Log.Write("Total output points (effective): " + Tools.HumanReadableCount(totalPointsEffective));
                 }
 
-                Log.Write("Total input files size: " + Tools.HumanReadableFileSize(totalFileSizes));
-                Log.Write("Total input points (raw): " + Tools.HumanReadableCount(totalPointsRaw));
-                Log.Write("Total output points (effective): " + Tools.HumanReadableCount(totalPointsEffective));
-            }
+                jobMetadata.Job = new Job
+                {
+                    ConverterVersion = version,
+                    ImportSettings = importSettings,
+                    StartTime = DateTime.Now,
+                    TotalFileSizeBytes = totalFileSizes,
+                    TotalPoints = totalPointsEffective > 0 ? totalPointsEffective : totalPointsRaw
+                };
+                jobMetadata.lasHeaders.Clear();
 
-            jobMetadata.Job = new Job
-            {
-                ConverterVersion = version,
-                ImportSettings = importSettings,
-                StartTime = DateTime.Now,
-                TotalFileSizeBytes = totalFileSizes,
-                TotalPoints = totalPointsEffective > 0 ? totalPointsEffective : totalPointsRaw
-            };
-            jobMetadata.lasHeaders.Clear();
-
-            if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
-            {
+                if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
+                {
                 int iterations = importSettings.offsetMode == "min" ? importSettings.maxFiles : 1; // 1 for legacy mode (first cloud only)
 
                 for (int i = 0, len = iterations; i < len; i++)
@@ -385,34 +401,34 @@ namespace PointCloudConverter
                 importSettings.offsetX = lowestX;
                 importSettings.offsetY = lowestY;
                 importSettings.offsetZ = lowestZ;
-            } // if useAutoOffset
+                } // if useAutoOffset
 
 
             //lasHeaders.Clear();
 
-            // clamp to maxfiles
-            int maxThreads = Math.Min(importSettings.maxThreads, importSettings.maxFiles);
-            // clamp to min 1
-            maxThreads = Math.Max(maxThreads, 1);
-            Log.Write("Using MaxThreads: " + maxThreads);
+                // clamp to maxfiles
+                int maxThreads = Math.Min(importSettings.maxThreads, importSettings.maxFiles);
+                // clamp to min 1
+                maxThreads = Math.Max(maxThreads, 1);
+                Log.Write("Using MaxThreads: " + maxThreads);
 
-            // init pool
-            importSettings.InitWriterPool(maxThreads, importSettings.exportFormat);
+                // init pool
+                importSettings.InitWriterPool(maxThreads, importSettings.exportFormat);
 
-            if (!EnsureMainWriterInitialized(importSettings))
-            {
-                Log.Write("Error> Failed to initialize main writer", LogEvent.Error);
-                Environment.ExitCode = (int)ExitCode.Error;
-                return;
-            }
+                if (!EnsureMainWriterInitialized(importSettings))
+                {
+                    Log.Write("Error> Failed to initialize main writer", LogEvent.Error);
+                    Environment.ExitCode = (int)ExitCode.Error;
+                    return;
+                }
 
-            var semaphore = new SemaphoreSlim(maxThreads);
+                var semaphore = new SemaphoreSlim(maxThreads);
 
-            var tasks = new List<Task>();
+                var tasks = new List<Task>();
 
-            // launch tasks for all files
-            for (int i = 0, len = importSettings.maxFiles; i < len; i++)
-            {
+                // launch tasks for all files
+                for (int i = 0, len = importSettings.maxFiles; i < len; i++)
+                {
                 if (cancellationToken.IsCancellationRequested)
                 {
                     Environment.ExitCode = (int)ExitCode.Cancelled;
@@ -482,39 +498,39 @@ namespace PointCloudConverter
                         semaphore.Release();
                     }
                 }, cancellationToken));
-            } // for all files
+                } // for all files
 
-            try
-            {
-                await Task.WhenAll(tasks); // Wait for all tasks to complete or be canceled
-            }
-            catch (OperationCanceledException)
-            {
-                // Treat cancellation as a normal outcome
-                Environment.ExitCode = (int)ExitCode.Cancelled;
-            }
+                try
+                {
+                    await Task.WhenAll(tasks); // Wait for all tasks to complete or be canceled
+                }
+                catch (OperationCanceledException)
+                {
+                    // Treat cancellation as a normal outcome
+                    Environment.ExitCode = (int)ExitCode.Cancelled;
+                }
 
-            // now write header for for pcroot (using main writer)
-            if (importSettings.exportFormat != ExportFormat.UCPC)
-            {
-                importSettings.writer.Close();
-                // UCPC calls close in Save() itself
-            }
+                // now write header for for pcroot (using main writer)
+                if (importSettings.exportFormat != ExportFormat.UCPC)
+                {
+                    importSettings.writer.Close();
+                    // UCPC calls close in Save() itself
+                }
 
-            JsonSerializerSettings settings = new JsonSerializerSettings
-            {
-                StringEscapeHandling = StringEscapeHandling.Default // This prevents escaping of characters and write the WKT string properly
-            };
+                JsonSerializerSettings settings = new JsonSerializerSettings
+                {
+                    StringEscapeHandling = StringEscapeHandling.Default // This prevents escaping of characters and write the WKT string properly
+                };
 
-            // add job date
-            jobMetadata.Job.EndTime = DateTime.Now;
-            jobMetadata.Job.Elapsed = jobMetadata.Job.EndTime - jobMetadata.Job.StartTime;
+                // add job date
+                jobMetadata.Job.EndTime = DateTime.Now;
+                jobMetadata.Job.Elapsed = jobMetadata.Job.EndTime - jobMetadata.Job.StartTime;
 
-            string jsonMeta = JsonConvert.SerializeObject(jobMetadata, settings);
+                string jsonMeta = JsonConvert.SerializeObject(jobMetadata, settings);
 
-            // write metadata to file
-            if (importSettings.importMetadata == true)
-            {
+                // write metadata to file
+                if (importSettings.importMetadata == true)
+                {
                 string pathFolderName = Path.GetFileNameWithoutExtension(importSettings.outputFile);
                 // for gltf, there is no output filename
                 if (string.IsNullOrEmpty(pathFolderName))
@@ -525,12 +541,19 @@ namespace PointCloudConverter
                 var jsonFile = Path.Combine(Path.GetDirectoryName(importSettings.outputFile), pathFolderName + ".json");
                 Log.Write("Writing metadata to file: " + jsonFile);
                 File.WriteAllText(jsonFile, jsonMeta);
-            }
+                }
 
-            lastStatusMessage = "Done!";
-            Console.ForegroundColor = ConsoleColor.Green;
-            Log.Write("Finished!");
-            Console.ForegroundColor = ConsoleColor.White;
+                // Emit final job progress after all output writing is complete.
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    EmitJobProgress(force: true);
+                    jobProgressCompleted = true;
+                });
+
+                lastStatusMessage = "Done!";
+                Console.ForegroundColor = ConsoleColor.Green;
+                Log.Write("Finished!");
+                Console.ForegroundColor = ConsoleColor.White;
             mainWindowStatic.Dispatcher.Invoke(() =>
             {
                 if ((bool)mainWindowStatic.chkOpenOutputFolder.IsChecked)
@@ -549,20 +572,25 @@ namespace PointCloudConverter
                 }
             });
 
-            stopwatch.Stop();
-            Log.Write("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
+                stopwatch.Stop();
+                Log.Write("Elapsed: " + (TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds)).ToString(@"hh\h\ mm\m\ ss\s\ ms\m\s"));
 
-            Application.Current.Dispatcher.Invoke(new Action(() =>
+                Application.Current.Dispatcher.Invoke(new Action(() =>
+                {
+                    mainWindowStatic.HideProcessingPanel();
+                    // call update one more time
+                    ProgressTick(null, null);
+                    // clear timer
+                    progressTimerThread.Tick -= ProgressTick;
+                    progressTimerThread.Stop();
+                    progressTimerThread = null;
+                    mainWindowStatic.progressBarFiles.Foreground = Brushes.Green;
+                }));
+            }
+            finally
             {
-                mainWindowStatic.HideProcessingPanel();
-                // call update one more time
-                ProgressTick(null, null);
-                // clear timer
-                progressTimerThread.Tick -= ProgressTick;
-                progressTimerThread.Stop();
-                progressTimerThread = null;
-                mainWindowStatic.progressBarFiles.Foreground = Brushes.Green;
-            }));
+                _isProcessing = false;
+            }
         } // ProcessAllFiles
 
 
@@ -613,6 +641,9 @@ namespace PointCloudConverter
 
             bool useJsonLog = importSettings.useJSONLog;
             progressInfos.Clear();
+
+            processedFileBytesInFlightBySlot = new long[threadCount];
+            processedPointsInFlightBySlot = new long[threadCount];
 
             freeProgressSlots = new Stack<int>(threadCount);
 
@@ -699,9 +730,68 @@ namespace PointCloudConverter
                         } // foreach progressinfo
                     } // lock
                 }
+
+                if (!jobProgressCompleted)
+                {
+                    EmitJobProgress(force: false);
+                }
             });
 
         } // ProgressTick()
+
+
+        static void EmitJobProgress(bool force)
+        {
+            var s = jobMetadata?.Job?.ImportSettings;
+            if (s == null || !s.trackProgress || !s.useJSONLog) return;
+
+            if (!force && jobProgressCompleted) return;
+
+            long totalBytes = jobMetadata.Job.TotalFileSizeBytes;
+            long totalPoints = jobMetadata.Job.TotalPoints;
+
+            if (totalBytes <= 0) totalBytes = 1;
+            if (totalPoints <= 0) totalPoints = 1;
+
+            long bytesDone = Interlocked.Read(ref processedFileBytes);
+            long pointsDone = Interlocked.Read(ref processedPoints);
+
+            if (processedFileBytesInFlightBySlot.Length > 0)
+            {
+                for (int i = 0; i < processedFileBytesInFlightBySlot.Length; i++)
+                {
+                    bytesDone += Interlocked.Read(ref processedFileBytesInFlightBySlot[i]);
+                }
+            }
+
+            if (processedPointsInFlightBySlot.Length > 0)
+            {
+                for (int i = 0; i < processedPointsInFlightBySlot.Length; i++)
+                {
+                    pointsDone += Interlocked.Read(ref processedPointsInFlightBySlot[i]);
+                }
+            }
+
+            double fileBytesPercent = (double)bytesDone / totalBytes * 100.0;
+            double pointsPercent = (double)pointsDone / totalPoints * 100.0;
+
+            int percent = (int)Math.Clamp(Math.Max(fileBytesPercent, pointsPercent), 0.0, 100.0);
+
+            // ProgressTick already runs at 1 Hz; emit job progress every tick.
+            lastJobPercent = percent;
+
+            string jobJson = "{" +
+                "\"event\":\"" + LogEvent.Progress + "\"," +
+                "\"scope\":\"job\"," +
+                "\"processedBytes\":" + bytesDone + "," +
+                "\"totalBytes\":" + totalBytes + "," +
+                "\"processedPoints\":" + pointsDone + "," +
+                "\"totalPoints\":" + totalPoints + "," +
+                "\"percent\":" + percent +
+                "}";
+
+            Log.Write(jobJson, LogEvent.Progress);
+        }
 
 
         static PeekHeaderData PeekHeaderData(ImportSettings importSettings, int fileIndex)
@@ -753,6 +843,8 @@ namespace PointCloudConverter
         {
             progressTotalPoints = 0;
             Log.Write("Started processing file: " + importSettings.inputFiles[fileIndex]);
+
+            var thisFileSizeBytes = new FileInfo(importSettings.inputFiles[fileIndex]).Length;
 
             IReader taskReader = importSettings.GetOrCreateReader(taskId);
             ProgressInfo progressInfo = progressInfos[slotIndex];
@@ -1045,6 +1137,27 @@ namespace PointCloudConverter
                         taskWriter.AddPoint(index: unchecked((int)i), x: (float)px, y: (float)py, z: (float)pz, r: pr, g: pg, b: pb, intensity: intensity, time: time, classification: classification);
                         //progressPoint = i;
                         progressInfo.CurrentValue = i;
+
+                        // Approximate job-scope progress continuously (1/s). bytes are estimated from points.
+                        if (importSettings.trackProgress)
+                        {
+                            long pointsDoneThisFile = i;
+                            if (pointsDoneThisFile < 0) pointsDoneThisFile = 0;
+                            if (pointsDoneThisFile > maxPointIterations) pointsDoneThisFile = maxPointIterations;
+
+                            long bytesDoneThisFile = (maxPointIterations > 0)
+                                ? (long)(thisFileSizeBytes * (pointsDoneThisFile / (double)maxPointIterations))
+                                : 0;
+
+                            if ((uint)slotIndex < (uint)processedPointsInFlightBySlot.Length)
+                            {
+                                Interlocked.Exchange(ref processedPointsInFlightBySlot[slotIndex], pointsDoneThisFile);
+                            }
+                            if ((uint)slotIndex < (uint)processedFileBytesInFlightBySlot.Length)
+                            {
+                                Interlocked.Exchange(ref processedFileBytesInFlightBySlot[slotIndex], bytesDoneThisFile);
+                            }
+                        }
                     } // for all points
 
                     if (importSettings.detectIntensityRange == true)
@@ -1062,37 +1175,21 @@ namespace PointCloudConverter
                     progressInfo.CurrentValue = maxPointIterations;
                     ProgressTick(null, null);
 
+                    // Clear in-flight counters (this file is now complete)
+                    if ((uint)slotIndex < (uint)processedPointsInFlightBySlot.Length)
+                    {
+                        Interlocked.Exchange(ref processedPointsInFlightBySlot[slotIndex], 0);
+                    }
+                    if ((uint)slotIndex < (uint)processedFileBytesInFlightBySlot.Length)
+                    {
+                        Interlocked.Exchange(ref processedFileBytesInFlightBySlot[slotIndex], 0);
+                    }
+
                     // Job-level progress
-                    var fileSizeBytes = new FileInfo(importSettings.inputFiles[fileIndex]).Length;
-                    Interlocked.Add(ref processedFileBytes, fileSizeBytes);
+                    Interlocked.Add(ref processedFileBytes, thisFileSizeBytes);
                     Interlocked.Add(ref processedPoints, pointCount);
 
-                    if (importSettings.trackProgress && importSettings.useJSONLog)
-                    {
-                        long totalFileSizesLocal = jobMetadata.Job.TotalFileSizeBytes;
-                        long totalPointsLocal = jobMetadata.Job.TotalPoints;
-
-                        if (totalFileSizesLocal <= 0) totalFileSizesLocal = 1;
-                        if (totalPointsLocal <= 0) totalPointsLocal = 1;
-
-                        double fileBytesPercent = (double)processedFileBytes / totalFileSizesLocal * 100.0;
-                        double pointsPercent = (double)processedPoints / totalPointsLocal * 100.0;
-
-                        // Keep percentage within [0..100]
-                        int overallPercent = (int)Math.Clamp(Math.Max(fileBytesPercent, pointsPercent), 0.0, 100.0);
-
-                        string jobJson = "{" +
-                            "\"event\":\"" + LogEvent.Progress + "\"," +
-                            "\"scope\":\"job\"," +
-                            "\"processedBytes\":" + processedFileBytes + "," +
-                            "\"totalBytes\":" + totalFileSizesLocal + "," +
-                            "\"processedPoints\":" + processedPoints + "," +
-                            "\"totalPoints\":" + totalPointsLocal + "," +
-                            "\"percent\":" + overallPercent +
-                            "}";
-
-                        Log.Write(jobJson, LogEvent.Progress);
-                    }
+                    // Job-scope JSON progress is emitted by the 1/s ProgressTick timer.
 
 
                     if (importSettings.importMetadata == true)
@@ -1513,8 +1610,14 @@ namespace PointCloudConverter
         {
             SaveSettings();
 
-            // Signal the cancellation to the worker thread
-            _cancellationTokenSource.Cancel();
+            // Only block window close when there is an active conversion.
+            // Otherwise allow the app to exit immediately.
+            if (_isProcessing)
+            {
+                e.Cancel = true;
+                _cancellationTokenSource.Cancel();
+                lastStatusMessage = "Aborting - Please wait..";
+            }
         }
 
         private void btnBrowseInput_Click(object sender, RoutedEventArgs e)
@@ -1585,8 +1688,6 @@ namespace PointCloudConverter
 
         private void btnBrowseOutput_Click(object sender, RoutedEventArgs e)
         {
-            // TODO browse output folder
-
             // select single output filename
             var dialog = new SaveFileDialog();
             dialog.Title = "Set output folder and filename";
@@ -2065,10 +2166,24 @@ namespace PointCloudConverter
         private void btnExploreOutput_Click(object sender, RoutedEventArgs e)
         {
             var outputFolder = Path.GetDirectoryName(txtOutput.Text);
-            if (Directory.Exists(outputFolder))
+
+            string folderToOpen = outputFolder;
+            while (!string.IsNullOrWhiteSpace(folderToOpen) && !Directory.Exists(folderToOpen))
             {
-                Process.Start(new ProcessStartInfo("explorer.exe", outputFolder));
+                folderToOpen = Path.GetDirectoryName(folderToOpen);
             }
+
+            if (string.IsNullOrWhiteSpace(folderToOpen))
+            {
+                folderToOpen = Environment.CurrentDirectory;
+            }
+
+            if (!Directory.Exists(folderToOpen))
+            {
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo("explorer.exe", folderToOpen));
         }
 
         private static long AdjustPointCountForSettings(long fullPointCount, ImportSettings importSettings)
