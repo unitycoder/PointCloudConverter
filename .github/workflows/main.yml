@@ -63,7 +63,7 @@ jobs:
           body: |
             Automated Release by GitHub Action CI
             
-            ${{ format('- {0}', join(github.event.commits.*.message, '\n- ')) }}
+            ${{ format('- {0}', join(github.event.commits.*.message, '- ')) }}
           draft: false
           prerelease: false     
         
