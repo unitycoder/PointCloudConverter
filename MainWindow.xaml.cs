@@ -32,7 +32,7 @@ namespace PointCloudConverter
 {
     public partial class MainWindow : Window
     {
-        static readonly string version = "18.03.2026";
+        static readonly string version = "31.05.2026";
         static readonly string appname = "PointCloud Converter - " + version;
         static readonly string rootFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -1093,27 +1093,9 @@ namespace PointCloudConverter
                         }
 
                         // FIXME cannot have both classification and intensity, because both save into RGB here
-
                         if (importSettings.importClassification == true)
                         {
                             classification = taskReader.GetClassification();
-
-                            //classification = (byte)255;
-
-                            //if (classification<0 || classification>1) Log.Write("****: " + classification.ToString());
-
-                            //if (i < 100000) Log.Write("class: " + classification.ToString());// + " minClass: " + minClass + " maxClass: " + maxClass);
-                            //classification = 0;
-                            //if (intensity.r < minInt)
-                            //{
-                            //    minInt = intensity.r;
-                            //    Log.Write("Min: " + minInt + " Max: " + maxInt);
-                            //}
-                            //if (intensity.r > maxInt)
-                            //{
-                            //    maxInt = intensity.r;
-                            //    Log.Write("Min: " + minInt + " Max: " + maxInt);
-                            //}
 
                             // if no rgb, then replace RGB with intensity
                             if (importSettings.importRGB == false)
@@ -1373,6 +1355,7 @@ namespace PointCloudConverter
             if (((bool)chkUseMemoryLimit.IsChecked) && !string.IsNullOrEmpty(txtMemoryLimit.Text)) args.Add("-threadmemgb=" + txtMemoryLimit.Text);
 
             if ((bool)chkTrackProgress.IsChecked) args.Add("-progress=true");
+            if ((bool)chkClassStats.IsChecked) args.Add("-classstats=true");
 
             // check input files
             //Trace.WriteLine("loggeris:" + Log.GetType().ToString());
@@ -1815,6 +1798,7 @@ namespace PointCloudConverter
             chkUseMemoryLimit.IsChecked = Properties.Settings.Default.useMemoryLimit;
             txtMemoryLimit.Text = Properties.Settings.Default.memoryLimit.ToString();
             chkTrackProgress.IsChecked = Properties.Settings.Default.trackProgress;
+            chkClassStats.IsChecked = Properties.Settings.Default.useClassStats;
 
             isInitialiazing = false;
         }
@@ -1878,6 +1862,7 @@ namespace PointCloudConverter
             int.TryParse(txtMemoryLimit.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out tempMemLimit);
             Properties.Settings.Default.memoryLimit = tempMemLimit;
             Properties.Settings.Default.trackProgress = (bool)chkTrackProgress.IsChecked;
+            Properties.Settings.Default.useClassStats = (bool)chkClassStats.IsChecked;
 
             Properties.Settings.Default.Save();
         }

@@ -266,6 +266,7 @@ namespace PointCloudConverter
         public float filterDistance { get; set; } = 0.5f;
         public bool sRGB { get; set; } = false; // use sRGB color space for RGB values
         public bool usethreadMemLimit { get; set; } = false;
+        public bool useClassStats { get; set; } = false; // outputs extra data about tile classifications
         public int threadMemGB { get; set; } = 8; // only for PCROOT writer, memory per thread in GB
         
         public bool trackProgress { get; set; } = false; // tracks total progress and reads initial point count from all files
@@ -320,6 +321,9 @@ namespace PointCloudConverter
             t += "\n importFormat=" + importFormat;
             t += "\n exportFormat=" + exportFormat;
             t += "\n maxThreads=" + maxThreads;
+            t += "\n usethreadMemLimit=" + usethreadMemLimit;
+            t += "\n threadMemGB=" + threadMemGB;
+            t += "\n useClassStats=" + useClassStats;
             return t;
         }
 

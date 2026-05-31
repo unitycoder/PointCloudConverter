@@ -862,6 +862,19 @@ namespace PointCloudConverter
                                 }
                                 break;
 
+                            case "-classstats":
+                                Log.Write("classstats = " + param);
+
+                                if (param != "false" && param != "true")
+                                {
+                                    importSettings.errors.Add("Invalid classstats value : " + param);
+                                }
+                                else
+                                {
+                                    importSettings.useClassStats = (param == "true");
+                                }
+                                break;
+
                             case "-progress":
                                 Log.Write("progress = " + param);
 
@@ -1085,6 +1098,21 @@ namespace PointCloudConverter
             if (importSettings.useCustomIntensityRange == true && importSettings.detectIntensityRange == true)
             {
                 importSettings.errors.Add("Cannot use -customintensityrange and -detectintensityrange at the same time");
+            }
+
+            if (importSettings.useClassStats == true && importSettings.importClassification == false)
+            {
+                importSettings.errors.Add("Cannot use -classstats without importing -classification");
+            }
+
+            if (importSettings.useClassStats == true && importSettings.importFormat!= ImportFormat.LAS)
+            {
+                importSettings.errors.Add("Can only use -classstats with LAS format");
+            }
+
+            if (importSettings.useClassStats == true && importSettings.exportFormat!= ExportFormat.PCROOT)
+            {
+                importSettings.errors.Add("Can only use -classstats with PCROOT export format");
             }
 
             // disable this error, if user really wants to use it

@@ -416,7 +416,7 @@ namespace PointCloudConverter.Writers
                                     "\"event\": \"" + LogEvent.File + "\"," +
                                     "\"status\": \"" + LogStatus.Complete + "\"," +
                                     "\"path\": " + JsonSerializer.Serialize(Path.GetFileName(importSettings.inputFiles[fileIndex])) + "," +
-                                    "\"tiles\": " + tilesEmitted + 
+                                    "\"tiles\": " + tilesEmitted +
                                     "}";
                 Log.Write(jsonString, LogEvent.End);
             }

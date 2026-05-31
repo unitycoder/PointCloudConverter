@@ -154,6 +154,7 @@
                     <Label Content="GB *Per Thread" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}"/>
                 </StackPanel>
                 <CheckBox x:Name="chkTrackProgress" Content="Track total progress (Batch only)" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Reads all point counts at start, to track total batch progress"/>
+                <CheckBox x:Name="chkClassStats" Content="Get classification stats" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" IsChecked="False" ToolTip="Outputs per tile information about classifications in that tile"/>
             </StackPanel>
         </GroupBox>
 
