@@ -93,7 +93,10 @@ namespace PointCloudConverter.Writers
         private BufferedStream[] bucketBufferedStreams;
 
         // Stats per tile (for pcroot + minimumPointCount skip + average timestamp)
-        private readonly Dictionary<(int x, int y, int z), TileStats> tileStats = new();
+        static ConcurrentDictionary<(int x, int y, int z), TileStats> tileStats = new();
+
+        // Classification counts: key = (cellX, cellY, cellZ, classValue), value = point count
+        static ConcurrentDictionary<(int x, int y, int z, byte cls), long> classStats = new();
 
         // Output folder info cached (one instance handles one file)
         private string baseFolderCached;
@@ -121,14 +124,6 @@ namespace PointCloudConverter.Writers
             public float MinX, MinY, MinZ, MaxX, MaxY, MaxZ;
             public double TimeSum;
             public bool HasAny;
-            public long[] ClassCounts; // 256-entry count per classification byte (null if unused)
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void AddClassification(byte c)
-            {
-                if (ClassCounts == null) ClassCounts = new long[256];
-                ClassCounts[c]++;
-            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void AddPoint(float x, float y, float z, double time, bool addTime)
@@ -241,7 +236,7 @@ namespace PointCloudConverter.Writers
             byte flags = 0;
             if (importSettings.importRGB) flags |= FlagRGB;
             if (importSettings.importIntensity) flags |= FlagIntensity;
-            if (importSettings.importClassification) flags |= FlagClassification;
+            if (importSettings.importClassification || importSettings.useClassStats) flags |= FlagClassification;
             if (importSettings.averageTimestamp) flags |= FlagTime;
 
 
@@ -340,14 +335,22 @@ namespace PointCloudConverter.Writers
 
                             approxBytes += buf.LastAddBytes;
 
-                            // stats (full tile across all flushes)
-                            if (!tileStats.TryGetValue(key, out var st))
-                                st = default;
+                            // stats (full tile across all flushes) - thread-safe update
+                            tileStats.AddOrUpdate(key,
+                                addValueFactory: _ =>
+                                {
+                                    var s = default(TileStats);
+                                    s.AddPoint(x, y, z, time, (flags & FlagTime) != 0);
+                                    return s;
+                                },
+                                updateValueFactory: (_, s) =>
+                                {
+                                    s.AddPoint(x, y, z, time, (flags & FlagTime) != 0);
+                                    return s;
+                                });
 
-                            st.AddPoint(x, y, z, time, (flags & FlagTime) != 0);
                             if (importSettings.useClassStats && (flags & FlagClassification) != 0)
-                                st.AddClassification(classification);
-                            tileStats[key] = st;
+                                classStats.AddOrUpdate((cellX, cellY, cellZ, classification), 1L, (_, old) => old + 1L);
 
                             // Flush on budget
                             if (approxBytes >= ThreadMemoryBudgetBytes)
@@ -582,15 +585,16 @@ namespace PointCloudConverter.Writers
                                    y: int.Parse(nameParts[nameParts.Length - 2]),
                                    z: int.Parse(nameParts[nameParts.Length - 1]));
 
-                    if (!tileStats.TryGetValue(cellKey, out var st) || st.ClassCounts == null) continue;
+                    if (!tileStats.TryGetValue(cellKey, out var st)) continue;
 
+                    // collect non-zero classification counts for this tile from classStats
                     for (int c = 0; c < 256; c++)
                     {
-                        if (st.ClassCounts[c] == 0) continue;
                         byte cls = (byte)c;
+                        if (!classStats.TryGetValue((cellKey.x, cellKey.y, cellKey.z, cls), out long cnt)) continue;
                         if (!invertedIndex.TryGetValue(cls, out var list))
                             invertedIndex[cls] = list = new List<(int, int)>();
-                        list.Add((i, (int)Math.Min(int.MaxValue, st.ClassCounts[c])));
+                        list.Add((i, (int)Math.Min(int.MaxValue, cnt)));
                     }
                 }
 
@@ -605,7 +609,8 @@ namespace PointCloudConverter.Writers
                 //     per entry:
                 //       4 bytes  int   tileIndex
                 //       4 bytes  int   count
-                string statsFile = Path.Combine(baseFolder, fileOnly) + "_classStats.bin";
+                string statsFile = Path.Combine(baseFolder, fileOnly) + "_classStats.clst";
+                Log.Write("ClassStats: " + classStats.Count + " entries, invertedIndex keys: " + invertedIndex.Count);
                 using var bw = new BinaryWriter(new BufferedStream(File.Create(statsFile)));
                 bw.Write(new[] { (byte)'C', (byte)'L', (byte)'S', (byte)'T' });
                 bw.Write(nodeBounds.Count);
@@ -646,7 +651,7 @@ namespace PointCloudConverter.Writers
         {
             CloseBucketWriters();
             DeleteBucketFolderSafe();
-            tileStats.Clear();
+            // note: tileStats and classStats are static/shared - only cleared in InitWriter and Close()
         }
 
 

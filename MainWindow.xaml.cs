@@ -350,6 +350,7 @@ namespace PointCloudConverter
                 };
                 jobMetadata.lasHeaders.Clear();
 
+                // if enabled OR if using packing, then need to move close to 0
                 if ((importSettings.useAutoOffset == true && importSettings.importMetadataOnly == false) || ((importSettings.importIntensity == true || importSettings.importClassification == true) && importSettings.importRGB == true && importSettings.packColors == true && importSettings.importMetadataOnly == false))
                 {
                     int iterations = importSettings.offsetMode == "min" ? importSettings.maxFiles : 1; // 1 for legacy mode (first cloud only)
@@ -402,7 +403,6 @@ namespace PointCloudConverter
                     importSettings.offsetY = lowestY;
                     importSettings.offsetZ = lowestZ;
                 } // if useAutoOffset
-
 
                 //lasHeaders.Clear();
 
