@@ -45,4 +45,3 @@ Pull requests to improve this converter are welcome! (please create Issue first,
 ### Powered by
 [![JetBrains logo.](https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
 
-
