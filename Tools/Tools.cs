@@ -1,6 +1,7 @@
 ﻿using PointCloudConverter.Structs;
 using SharpNeatLib.Maths;
 using System.Collections;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
@@ -61,19 +62,19 @@ namespace PointCloudConverter
                 return num.ToString("0,,,.###B", CultureInfo.InvariantCulture);
             }
             else
-            if (num > 999999 || num < -999999)
-            {
-                return num.ToString("0,,.##M", CultureInfo.InvariantCulture);
-            }
-            else
-            if (num > 999 || num < -999)
-            {
-                return num.ToString("0,.#K", CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                return num.ToString(CultureInfo.InvariantCulture);
-            }
+                if (num > 999999 || num < -999999)
+                {
+                    return num.ToString("0,,.##M", CultureInfo.InvariantCulture);
+                }
+                else
+                    if (num > 999 || num < -999)
+                    {
+                        return num.ToString("0,.#K", CultureInfo.InvariantCulture);
+                    }
+                    else
+                    {
+                        return num.ToString(CultureInfo.InvariantCulture);
+                    }
         }
 
         // https://stackoverflow.com/a/4975942/5452781
@@ -201,6 +202,33 @@ namespace PointCloudConverter
             }
         }
 
+        public static void OpenExplorer(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            var outputFolder = Path.GetDirectoryName(path);
+
+            string folderToOpen = outputFolder;
+            while (!string.IsNullOrWhiteSpace(folderToOpen) && !Directory.Exists(folderToOpen))
+            {
+                folderToOpen = Path.GetDirectoryName(folderToOpen);
+            }
+
+            if (string.IsNullOrWhiteSpace(folderToOpen))
+            {
+                folderToOpen = Environment.CurrentDirectory;
+            }
+
+            if (!Directory.Exists(folderToOpen))
+            {
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo("explorer.exe", folderToOpen));
+        }
 
         //public static void Shuffle(ref List<float> array)
         //{
@@ -449,6 +477,7 @@ namespace PointCloudConverter
             Console.WriteLine("-offsetmode" + argSeparator + "min\t\tGet auto-offset bounds, min=min from all bounds, legacy=first cloud min bound\tDefault is min");
             Console.WriteLine("-srgb" + argSeparator + "false\t\tConvert raw sRGB values to Linear RGB\tDefault is false, enable this is your model seems too bright");
             Console.WriteLine("-threadmemgb" + argSeparator + "4\t\tLimit maximum memory usage per thread (PCROOT only)\tDefault is maximum available Per Thread");
+            Console.WriteLine("-classstats" + argSeparator + "false\t\tGather classification stats per tile");
 
             Console.WriteLine("");
             Console.WriteLine("? /? -? help -help /help");

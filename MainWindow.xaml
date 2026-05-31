@@ -7,9 +7,11 @@
         mc:Ignorable="d"
         Title="PointCloudConverter" Height="737" Width="980" Background="#FF252222" Closing="Window_Closing" Loaded="Window_Loaded" MinWidth="940">
     <Grid Margin="0,0,2,0">
-        <Button x:Name="btnBrowseInput" Content="..." HorizontalAlignment="Left" Margin="724,48,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseInput_Click" ToolTip="Browse for input file"/>
-        <TextBox x:Name="txtInputFile" HorizontalAlignment="Left" AllowDrop="True" Height="23" Margin="20,48,0,0" VerticalAlignment="Top" Width="699" PreviewDrop="txtInputFile_Drop" PreviewDragOver="txtInputFile_DragEnter"/>
         <Label x:Name="label" Content="Input file or folder:&#xD;&#xA;" HorizontalAlignment="Left" Margin="20,22,0,0" VerticalAlignment="Top" Foreground="{DynamicResource MainText}" Height="26"/>
+        <TextBox x:Name="txtInputFile" HorizontalAlignment="Left" AllowDrop="True" Height="23" Margin="20,48,0,0" VerticalAlignment="Top" Width="699" PreviewDrop="txtInputFile_Drop" PreviewDragOver="txtInputFile_DragEnter"/>
+        <Button x:Name="btnBrowseInput" Content="..." HorizontalAlignment="Left" Margin="724,48,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseInput_Click" ToolTip="Browse for input file"/>
+        <Button x:Name="btnExploreInput" Content="🗁" HorizontalAlignment="Left" Margin="761,48,0,0" VerticalAlignment="Top" Width="32" Height="23" ToolTip="Open Explorer here" Click="btnExploreInput_Click"/>
+
         <Button x:Name="btnConvert" Content="Convert" HorizontalAlignment="Right" Margin="0,514,13,0" VerticalAlignment="Top" Width="371" Height="58" Click="btnConvert_Click"/>
         <Button x:Name="btnBrowseOutput" Content="..." HorizontalAlignment="Left" Margin="687,113,0,0" VerticalAlignment="Top" Width="32" Height="23" Click="btnBrowseOutput_Click" ToolTip="Browse for output file"/>
         <Button x:Name="btnExploreOutput" Content="🗁" HorizontalAlignment="Left" Margin="724,113,0,0" VerticalAlignment="Top" Width="32" Height="23" ToolTip="Open Explorer here" Click="btnExploreOutput_Click"/>

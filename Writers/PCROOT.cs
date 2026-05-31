@@ -121,6 +121,14 @@ namespace PointCloudConverter.Writers
             public float MinX, MinY, MinZ, MaxX, MaxY, MaxZ;
             public double TimeSum;
             public bool HasAny;
+            public long[] ClassCounts; // 256-entry count per classification byte (null if unused)
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void AddClassification(byte c)
+            {
+                if (ClassCounts == null) ClassCounts = new long[256];
+                ClassCounts[c]++;
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void AddPoint(float x, float y, float z, double time, bool addTime)
@@ -337,6 +345,8 @@ namespace PointCloudConverter.Writers
                                 st = default;
 
                             st.AddPoint(x, y, z, time, (flags & FlagTime) != 0);
+                            if (importSettings.useClassStats && (flags & FlagClassification) != 0)
+                                st.AddClassification(classification);
                             tileStats[key] = st;
 
                             // Flush on budget
@@ -558,6 +568,60 @@ namespace PointCloudConverter.Writers
 
 
             Log.Write("Done saving v3 : " + outputFileRoot);
+
+            if (importSettings.useClassStats)
+            {
+                // Build inverted index: classValue -> list of (tileIndex, count)
+                var invertedIndex = new Dictionary<byte, List<(int tileIndex, int count)>>();
+
+                for (int i = 0, len = nodeBounds.Count; i < len; i++)
+                {
+                    // fileName format: fileOnly_fileIndex_cellX_cellY_cellZ.pct
+                    var nameParts = Path.GetFileNameWithoutExtension(nodeBounds[i].fileName).Split('_');
+                    var cellKey = (x: int.Parse(nameParts[nameParts.Length - 3]),
+                                   y: int.Parse(nameParts[nameParts.Length - 2]),
+                                   z: int.Parse(nameParts[nameParts.Length - 1]));
+
+                    if (!tileStats.TryGetValue(cellKey, out var st) || st.ClassCounts == null) continue;
+
+                    for (int c = 0; c < 256; c++)
+                    {
+                        if (st.ClassCounts[c] == 0) continue;
+                        byte cls = (byte)c;
+                        if (!invertedIndex.TryGetValue(cls, out var list))
+                            invertedIndex[cls] = list = new List<(int, int)>();
+                        list.Add((i, (int)Math.Min(int.MaxValue, st.ClassCounts[c])));
+                    }
+                }
+
+                // Write binary file
+                // Format:
+                //   4 bytes  magic "CLST"
+                //   4 bytes  int   tileCount
+                //   1 byte   byte  classCount
+                //   per class:
+                //     1 byte   byte  classValue
+                //     4 bytes  int   entryCount
+                //     per entry:
+                //       4 bytes  int   tileIndex
+                //       4 bytes  int   count
+                string statsFile = Path.Combine(baseFolder, fileOnly) + "_classStats.bin";
+                using var bw = new BinaryWriter(new BufferedStream(File.Create(statsFile)));
+                bw.Write(new[] { (byte)'C', (byte)'L', (byte)'S', (byte)'T' });
+                bw.Write(nodeBounds.Count);
+                bw.Write((byte)invertedIndex.Count);
+                foreach (var kv in invertedIndex.OrderBy(k => k.Key))
+                {
+                    bw.Write(kv.Key);                   // classValue
+                    bw.Write(kv.Value.Count);           // entryCount
+                    foreach (var (tileIndex, count) in kv.Value)
+                    {
+                        bw.Write(tileIndex);
+                        bw.Write(count);
+                    }
+                }
+                Log.Write("Classification stats written: " + statsFile);
+            }
 
             if (skippedNodesCounter > 0)
                 Log.Write("*Skipped " + skippedNodesCounter + " nodes with less than " + importSettings.minimumPointCount + " points)");
