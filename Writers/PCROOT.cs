@@ -343,8 +343,7 @@ namespace PointCloudConverter.Writers
                             st.AddPoint(x, y, z, time, (flags & FlagTime) != 0);
                             tileStats[key] = st;
 
-                            if (importSettings.useClassStats && (flags & FlagClassification) != 0)
-                                classStats.AddOrUpdate((cellX, cellY, cellZ, classification), 1L, (_, old) => old + 1L);
+                            if (importSettings.useClassStats) classStats.AddOrUpdate((cellX, cellY, cellZ, classification), 1L, (_, old) => old + 1L);
 
                             // Flush on budget
                             if (approxBytes >= ThreadMemoryBudgetBytes)
@@ -568,9 +567,8 @@ namespace PointCloudConverter.Writers
 
             if (importSettings.useClassStats)
             {
-                // Build inverted index: classValue -> list of (tileIndex, count)
-                var invertedIndex = new Dictionary<byte, List<(int tileIndex, int count)>>();
-
+                // Build tile index lookup: (cellX,cellY,cellZ) -> tileIndex
+                var tileIndexByCell = new Dictionary<(int x, int y, int z), int>(nodeBounds.Count);
                 for (int i = 0, len = nodeBounds.Count; i < len; i++)
                 {
                     // fileName format: fileOnly_fileIndex_cellX_cellY_cellZ.pct
@@ -578,19 +576,25 @@ namespace PointCloudConverter.Writers
                     var cellKey = (x: int.Parse(nameParts[nameParts.Length - 3]),
                                    y: int.Parse(nameParts[nameParts.Length - 2]),
                                    z: int.Parse(nameParts[nameParts.Length - 1]));
-
-                    if (!tileStats.TryGetValue(cellKey, out var st)) continue;
-
-                    // collect non-zero classification counts for this tile from classStats
-                    for (int c = 0; c < 256; c++)
-                    {
-                        byte cls = (byte)c;
-                        if (!classStats.TryGetValue((cellKey.x, cellKey.y, cellKey.z, cls), out long cnt)) continue;
-                        if (!invertedIndex.TryGetValue(cls, out var list))
-                            invertedIndex[cls] = list = new List<(int, int)>();
-                        list.Add((i, (int)Math.Min(int.MaxValue, cnt)));
-                    }
+                    tileIndexByCell[cellKey] = i;
                 }
+
+                // Build inverted index directly from classStats (independent from tileStats)
+                var invertedIndex = new Dictionary<byte, List<(int tileIndex, int count)>>();
+                foreach (var kv in classStats)
+                {
+                    var classKey = kv.Key;
+                    if (!tileIndexByCell.TryGetValue((classKey.x, classKey.y, classKey.z), out int tileIndex)) continue;
+
+                    if (!invertedIndex.TryGetValue(classKey.cls, out var list))
+                        invertedIndex[classKey.cls] = list = new List<(int, int)>();
+
+                    list.Add((tileIndex, (int)Math.Min(int.MaxValue, kv.Value)));
+                }
+
+                // Keep entries sorted by tileIndex (reader uses binary search)
+                foreach (var list in invertedIndex.Values)
+                    list.Sort((a, b) => a.tileIndex.CompareTo(b.tileIndex));
 
                 // Write binary file
                 // Format:
@@ -604,7 +608,6 @@ namespace PointCloudConverter.Writers
                 //       4 bytes  int   tileIndex
                 //       4 bytes  int   count
                 string statsFile = Path.Combine(baseFolder, fileOnly) + "_classStats.clst";
-                Log.Write("ClassStats: " + classStats.Count + " entries, invertedIndex keys: " + invertedIndex.Count);
                 using var bw = new BinaryWriter(new BufferedStream(File.Create(statsFile)));
                 bw.Write(new[] { (byte)'C', (byte)'L', (byte)'S', (byte)'T' });
                 bw.Write(nodeBounds.Count);
@@ -637,6 +640,7 @@ namespace PointCloudConverter.Writers
 
             skippedNodesCounter = 0;
             skippedPointsCounter = 0;
+            classStats.Clear();
             GlobalBounds.Reset();
             nodeBoundsBag = new ConcurrentBag<PointCloudTile>();
         } // Close()
