@@ -96,7 +96,7 @@ namespace PointCloudConverter.Writers
         private ConcurrentDictionary<(int x, int y, int z), TileStats> tileStats = new();
 
         // Classification counts: key = (cellX, cellY, cellZ, classValue), value = point count
-        static ConcurrentDictionary<(int x, int y, int z, byte cls), long> classStats = new();
+        static ConcurrentDictionary<(int fileIndex, int x, int y, int z, byte cls), long> classStats = new();
 
         // Output folder info cached (one instance handles one file)
         private string baseFolderCached;
@@ -343,7 +343,7 @@ namespace PointCloudConverter.Writers
                             st.AddPoint(x, y, z, time, (flags & FlagTime) != 0);
                             tileStats[key] = st;
 
-                            if (importSettings.useClassStats) classStats.AddOrUpdate((cellX, cellY, cellZ, classification), 1L, (_, old) => old + 1L);
+                            if (importSettings.useClassStats) classStats.AddOrUpdate((fileIndex, cellX, cellY, cellZ, classification), 1L, (_, old) => old + 1L);
 
                             // Flush on budget
                             if (approxBytes >= ThreadMemoryBudgetBytes)
@@ -567,16 +567,18 @@ namespace PointCloudConverter.Writers
 
             if (importSettings.useClassStats)
             {
-                // Build tile index lookup: (cellX,cellY,cellZ) -> tileIndex
-                var tileIndexByCell = new Dictionary<(int x, int y, int z), int>(nodeBounds.Count);
-                for (int i = 0, len = nodeBounds.Count; i < len; i++)
+                var tileIndexByCell = new Dictionary<(int fileIndex, int x, int y, int z), int>(nodeBounds.Count);
+
+                for (int i = 0; i < nodeBounds.Count; i++)
                 {
-                    // fileName format: fileOnly_fileIndex_cellX_cellY_cellZ.pct
                     var nameParts = Path.GetFileNameWithoutExtension(nodeBounds[i].fileName).Split('_');
-                    var cellKey = (x: int.Parse(nameParts[nameParts.Length - 3]),
-                                   y: int.Parse(nameParts[nameParts.Length - 2]),
-                                   z: int.Parse(nameParts[nameParts.Length - 1]));
-                    tileIndexByCell[cellKey] = i;
+
+                    int fileIndexFromName = int.Parse(nameParts[nameParts.Length - 4]);
+                    int cellX = int.Parse(nameParts[nameParts.Length - 3]);
+                    int cellY = int.Parse(nameParts[nameParts.Length - 2]);
+                    int cellZ = int.Parse(nameParts[nameParts.Length - 1]);
+
+                    tileIndexByCell[(fileIndexFromName, cellX, cellY, cellZ)] = i;
                 }
 
                 // Build inverted index directly from classStats (independent from tileStats)
@@ -584,7 +586,13 @@ namespace PointCloudConverter.Writers
                 foreach (var kv in classStats)
                 {
                     var classKey = kv.Key;
-                    if (!tileIndexByCell.TryGetValue((classKey.x, classKey.y, classKey.z), out int tileIndex)) continue;
+
+                    if (!tileIndexByCell.TryGetValue(
+                        (classKey.fileIndex, classKey.x, classKey.y, classKey.z),
+                        out int tileIndex))
+                    {
+                        continue;
+                    }
 
                     if (!invertedIndex.TryGetValue(classKey.cls, out var list))
                         invertedIndex[classKey.cls] = list = new List<(int, int)>();
