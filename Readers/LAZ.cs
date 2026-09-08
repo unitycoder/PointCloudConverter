@@ -113,6 +113,13 @@ namespace PointCloudConverter.Readers
             h.MinZ = lazReader.header.min_z;
             h.MaxZ = lazReader.header.max_z;
 
+            byte rawPointFormat = lazReader.header.point_data_format;
+            byte pointFormat = (byte)(rawPointFormat & 0x3F);
+            h.PointDataFormatID = pointFormat;
+            h.HasRGB = PointFormatHasRGB(pointFormat);
+
+            h.HasNir = PointFormatHasNIR(pointFormat);
+
             if (importSettings.importClassification && importSettings.importMetadataOnly == false)
             {
                 h.MinClassification = minClassification;
@@ -237,6 +244,30 @@ namespace PointCloudConverter.Readers
             return h;
         }
 
+        private static bool PointFormatHasRGB(byte pointFormat)
+        {
+            byte format = (byte)(pointFormat & 0x3F);
+
+            switch (format)
+            {
+                case 2:
+                case 3:
+                case 5:
+                case 7:
+                case 8:
+                case 10:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool PointFormatHasNIR(byte pointFormat)
+        {
+            byte format = (byte)(pointFormat & 0x3F);
+            return format == 8 || format == 10;
+        }
 
         public GeoKeys ParseGeoKeysFromByteArray(byte[] byteArray)
         {

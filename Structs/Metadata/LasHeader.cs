@@ -43,6 +43,8 @@ namespace PointCloudConverter.Structs
         public double MinY { get; set; }
         public double MaxZ { get; set; }
         public double MinZ { get; set; }
+        public bool HasRGB { get; set; }
+        public bool HasNir { get; set; }
 
         public byte MinClassification { get; set; }
         public byte MaxClassification { get; set; }
